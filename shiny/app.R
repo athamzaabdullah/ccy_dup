@@ -372,25 +372,8 @@ server <- function(input, output, session) {
     if (nzchar(admin_form_id())) cfg$form_ids <- admin_form_id()
     fetch_chunk_size <- if (!is.null(cfg$batch_size)) as.integer(cfg$batch_size) else 2000L
     master_fetch_status(paste0("Fetching master database in chunks of ", fetch_chunk_size, " rows..."))
-    if (isTRUE(input$fetch_foreground)) {
-      master_fetch_status("Running fetch in foreground...")
-      res <- run_master_fetch_sync(
-        cfg,
-        progress_cb = function(pct, msg) {
-          master_fetch_status(msg)
-        },
-        cancel_cb = function() FALSE
-      )
-      if (!isTRUE(res$canceled)) {
-        last_master_snapshot(res$snapshot_path)
-        stamp <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
-        master_fetch_status(paste0("Last fetched: ", stamp, " (", res$rows, " rows)"))
-        showNotification("Master database fetched successfully.", type = "message")
-      }
-    } else {
-      job_id <- enqueue_master_fetch_job(cfg)
-      master_job(job_id)
-    }
+    job_id <- enqueue_master_fetch_job(cfg)
+    master_job(job_id)
   })
 
   output$fetch_status <- renderUI({

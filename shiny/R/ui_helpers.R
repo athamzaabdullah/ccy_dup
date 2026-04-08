@@ -78,7 +78,6 @@ upload_step_ui <- function() {
           actionButton("fetch_master", "Fetch master database", class = "btn-ghost"),
           uiOutput("cancel_fetch_button")
         ),
-        checkboxInput("fetch_foreground", "Run fetch in foreground (debug)", value = FALSE),
         uiOutput("fetch_status"),
         uiOutput("fetch_feedback_ui"),
         uiOutput("fetch_progress_ui"),
