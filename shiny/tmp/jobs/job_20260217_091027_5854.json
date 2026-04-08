@@ -1,0 +1,1 @@
+{"id":"job_20260217_091027_5854","status":"canceled","progress":5,"message":"Master fetch canceled","result_path":{},"error":{},"started_at":"2026-02-17 09:10:27","updated_at":"2026-02-17 09:13:15","history":["2026-02-17 09:10:27 — Queued","2026-02-17 09:10:27 — Starting master fetch","2026-02-17 09:13:15 — Master fetch canceled"]}
