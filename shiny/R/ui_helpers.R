@@ -67,6 +67,7 @@ upload_step_ui <- function() {
       ),
       card_body(
         fileInput("upload_file", "Excel file (.xlsx)", accept = ".xlsx"),
+        uiOutput("upload_validation"),
         div(
           class = "callout mt-3",
           tags$strong("Tip:"),

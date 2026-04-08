@@ -14,11 +14,7 @@ config <- list(
   required_columns = c(
     "partner",
     "record_id",
-    "qa_code_sn",
-    "system_date",
-    "interviewer",
-    "main_ref",
-    "hoh_ID_number",
+    "ID_number",
     "id_type",
     "phone_number",
     "secondary_phone_number",
