@@ -108,7 +108,6 @@ server <- function(input, output, session) {
   admin_form_id <- reactiveVal("")
   fuzzy_high_threshold <- reactiveVal(config$thresholds$high)
   fuzzy_medium_threshold <- reactiveVal(config$thresholds$medium)
-  age_tolerance <- reactiveVal(config$age_tolerance)
   max_candidates <- reactiveVal(config$max_candidates)
   match_fields <- reactiveVal(c(
     "partner",
@@ -758,7 +757,6 @@ server <- function(input, output, session) {
       upload_time = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
       fuzzy_high_threshold = fuzzy_high_threshold(),
       fuzzy_medium_threshold = fuzzy_medium_threshold(),
-      age_tolerance = age_tolerance(),
       weights = config$weights,
       match_fields = match_fields(),
       max_candidates = max_candidates()
@@ -770,15 +768,10 @@ server <- function(input, output, session) {
   observeEvent(input$confirm_strategy, {
     high <- as.numeric(input$threshold_high)
     medium <- as.numeric(input$threshold_medium)
-    age_tol <- as.numeric(input$age_tolerance)
     max_cand <- as.numeric(input$max_candidates)
 
     if (is.na(high) || is.na(medium) || medium >= high || high > 100 || medium < 0) {
       showNotification("Set valid thresholds where high > medium and both are within 0-100.", type = "error")
-      return()
-    }
-    if (is.na(age_tol) || age_tol < 0) {
-      showNotification("Set a valid non-negative age tolerance.", type = "error")
       return()
     }
     if (is.na(max_cand) || max_cand < 1000) {
@@ -788,7 +781,6 @@ server <- function(input, output, session) {
 
     fuzzy_high_threshold(high)
     fuzzy_medium_threshold(medium)
-    age_tolerance(age_tol)
     max_candidates(as.integer(max_cand))
     current_step("matching")
   })
