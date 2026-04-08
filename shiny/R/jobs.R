@@ -248,10 +248,12 @@ enqueue_master_fetch_job <- function(cfg) {
         chunk_index <- 0L
         rows_fetched <- 0L
         m_chunk <- regexec("chunk ([0-9]+)", msg)
-        hit_chunk <- regmatches(msg, m_chunk)[[1]]
+        hit_chunk_list <- regmatches(msg, m_chunk)
+        hit_chunk <- if (length(hit_chunk_list) >= 1) hit_chunk_list[[1]] else character(0)
         if (length(hit_chunk) >= 2) chunk_index <- as.integer(hit_chunk[2])
         m_rows <- regexec("rows fetched ([0-9]+)", msg)
-        hit_rows <- regmatches(msg, m_rows)[[1]]
+        hit_rows_list <- regmatches(msg, m_rows)
+        hit_rows <- if (length(hit_rows_list) >= 1) hit_rows_list[[1]] else character(0)
         if (length(hit_rows) >= 2) rows_fetched <- as.integer(hit_rows[2])
 
         # Advance progress inside each form so large forms don't appear stuck.
@@ -304,7 +306,8 @@ run_master_fetch_sync <- function(cfg, progress_cb = NULL, cancel_cb = NULL) {
   df <- activityinfo_fetch_all_progress(cfg = cfg, form_ids = form_ids, progress_cb = function(i, total, msg) {
     chunk_index <- 0L
     m_chunk <- regexec("chunk ([0-9]+)", msg)
-    hit_chunk <- regmatches(msg, m_chunk)[[1]]
+    hit_chunk_list <- regmatches(msg, m_chunk)
+    hit_chunk <- if (length(hit_chunk_list) >= 1) hit_chunk_list[[1]] else character(0)
     if (length(hit_chunk) >= 2) chunk_index <- as.integer(hit_chunk[2])
 
     within_form <- if (chunk_index <= 0) 0 else min(0.95, 1 - exp(-chunk_index / 4))

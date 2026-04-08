@@ -4,8 +4,13 @@ exact_pair_id <- function(prefix, a, b) {
 }
 
 safe_char_scalar <- function(x) {
-  if (is.null(x) || length(x) == 0 || is.na(x)) return("")
-  as.character(x[[1]])
+  if (is.null(x) || length(x) == 0) return("")
+  val <- tryCatch(x[[1]], error = function(e) {
+    if (length(x) >= 1) return(x[1])
+    NA
+  })
+  if (is.null(val) || (is.atomic(val) && length(val) == 0) || is.na(val)) return("")
+  as.character(val)
 }
 
 # Vectorized versions of similarity functions
