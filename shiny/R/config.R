@@ -41,6 +41,7 @@ config <- list(
     hoh_spouse_name = 0.20,
     phone_number = 0.25,
     geography = 0.15,
+    hoh_ID_number = 0.00,
     sex = 0.00
   ),
   thresholds = list(

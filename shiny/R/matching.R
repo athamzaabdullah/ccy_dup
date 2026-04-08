@@ -199,7 +199,7 @@ run_dedup <- function(upload_df,
                       upload_time = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
                       fuzzy_high_threshold = 90,
                       fuzzy_medium_threshold = 75,
-                      age_delta = 2,
+
                       weights = config$weights,
                       match_fields = c(
                         "partner",
@@ -274,6 +274,10 @@ run_dedup <- function(upload_df,
     same_cand[, name_score := if (use_name) v_name_similarity(hoh_arabic_name_n_a, hoh_arabic_name_n_b) else 0]
     same_cand[, spouse_score := if (use_spouse) v_name_similarity(hoh_spouse_name_n_a, hoh_spouse_name_n_b) else 0]
     same_cand[, phone_score := if (use_phone) v_phone_similarity(phone_number_n_a, phone_number_n_b) else 0]
+    # Household ID score (binary exact match only)
+    same_cand[, id_score := if (use_id) {
+      ifelse(nzchar(hoh_ID_number_n_a) & hoh_ID_number_n_a == hoh_ID_number_n_b, 100, 0)
+    } else 0]
     # Age-based scoring removed per configuration — no contribution from age
     same_cand[, geo_score := 0]
     if (use_geo) {
@@ -289,6 +293,7 @@ run_dedup <- function(upload_df,
       name_score * weights$hoh_arabic_name +
       spouse_score * weights$hoh_spouse_name +
       phone_score * weights$phone_number +
+      id_score * (if (is.null(weights$hoh_ID_number)) 0 else weights$hoh_ID_number) +
       geo_score * weights$geography +
       sex_score * weights$sex, 1)]
     
@@ -306,7 +311,7 @@ run_dedup <- function(upload_df,
       # Select and rename for output
       out_sl <- same_results[, .(
         match_pair_id, match_type, match_score, confidence,
-        contributing_factors = paste0("name=", name_score, " | phone=", phone_score, " | geo=", geo_score),
+        contributing_factors = paste0("name=", name_score, " | phone=", phone_score, " | id=", id_score, " | geo=", geo_score),
         upload_row_id_a = row_a,
         upload_row_id_b = row_b
       )]
@@ -337,6 +342,10 @@ run_dedup <- function(upload_df,
     cross_cand[, name_score := if (use_name) v_name_similarity(hoh_arabic_name_n_u, hoh_arabic_name_n_m) else 0]
     cross_cand[, spouse_score := if (use_spouse) v_name_similarity(hoh_spouse_name_n_u, hoh_spouse_name_n_m) else 0]
     cross_cand[, phone_score := if (use_phone) v_phone_similarity(phone_number_n_u, phone_number_n_m) else 0]
+    # Household ID score (binary exact match only)
+    cross_cand[, id_score := if (use_id) {
+      ifelse(nzchar(hoh_ID_number_n_u) & hoh_ID_number_n_u == hoh_ID_number_n_m, 100, 0)
+    } else 0]
     # Age-based scoring removed per configuration — do not compute age_score
     cross_cand[, geo_score := 0]
     if (use_geo) {
@@ -352,6 +361,7 @@ run_dedup <- function(upload_df,
       name_score * weights$hoh_arabic_name +
       spouse_score * weights$hoh_spouse_name +
       phone_score * weights$phone_number +
+      id_score * (if (is.null(weights$hoh_ID_number)) 0 else weights$hoh_ID_number) +
       geo_score * weights$geography +
       sex_score * weights$sex, 1)]
     
@@ -366,7 +376,7 @@ run_dedup <- function(upload_df,
       
       out_lm <- ext_results[, .(
         match_pair_id, match_type, match_score, confidence,
-        contributing_factors = paste0("name=", name_score, " | phone=", phone_score, " | geo=", geo_score),
+        contributing_factors = paste0("name=", name_score, " | phone=", phone_score, " | id=", id_score, " | geo=", geo_score),
         upload_row_id, master_row_id,
         master_organization = partner_m,
         master_governorate = governorate_m,
