@@ -309,7 +309,8 @@ run_master_fetch_sync <- function(cfg, progress_cb = NULL, cancel_cb = NULL) {
     chunk_index <- 0L
     m_chunk <- regexec("chunk ([0-9]+)", msg)
     hit_chunk_list <- regmatches(msg, m_chunk)
-    hit_chunk <- if (length(hit_chunk_list) >= 1) hit_chunk_list[[1]] else character(0)
+    hit_chunk <- character(0)
+    if (length(hit_chunk_list) >= 1 && length(hit_chunk_list[[1]]) >= 1) hit_chunk <- hit_chunk_list[[1]] else hit_chunk <- character(0)
     if (length(hit_chunk) >= 2) chunk_index <- as.integer(hit_chunk[2])
 
     within_form <- if (chunk_index <= 0) 0 else min(0.95, 1 - exp(-chunk_index / 4))
