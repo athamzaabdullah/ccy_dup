@@ -274,8 +274,7 @@ run_dedup <- function(upload_df,
     same_cand[, name_score := if (use_name) v_name_similarity(hoh_arabic_name_n_a, hoh_arabic_name_n_b) else 0]
     same_cand[, spouse_score := if (use_spouse) v_name_similarity(hoh_spouse_name_n_a, hoh_spouse_name_n_b) else 0]
     same_cand[, phone_score := if (use_phone) v_phone_similarity(phone_number_n_a, phone_number_n_b) else 0]
-    same_cand[, age_score := v_age_similarity(age_n_a, age_n_b, tolerance = age_delta)]
-    
+    # Age-based scoring removed per configuration — no contribution from age
     same_cand[, geo_score := 0]
     if (use_geo) {
       same_cand[governorate_n_a == governorate_n_b & nzchar(governorate_n_a), geo_score := geo_score + 35]
@@ -291,7 +290,6 @@ run_dedup <- function(upload_df,
       spouse_score * weights$hoh_spouse_name +
       phone_score * weights$phone_number +
       geo_score * weights$geography +
-      age_score * weights$age +
       sex_score * weights$sex, 1)]
     
     same_cand[is_exact == TRUE, match_score := 100]
@@ -339,8 +337,7 @@ run_dedup <- function(upload_df,
     cross_cand[, name_score := if (use_name) v_name_similarity(hoh_arabic_name_n_u, hoh_arabic_name_n_m) else 0]
     cross_cand[, spouse_score := if (use_spouse) v_name_similarity(hoh_spouse_name_n_u, hoh_spouse_name_n_m) else 0]
     cross_cand[, phone_score := if (use_phone) v_phone_similarity(phone_number_n_u, phone_number_n_m) else 0]
-    cross_cand[, age_score := v_age_similarity(age_n_u, age_n_m, tolerance = age_delta)]
-    
+    # Age-based scoring removed per configuration — do not compute age_score
     cross_cand[, geo_score := 0]
     if (use_geo) {
       cross_cand[governorate_n_u == governorate_n_m & nzchar(governorate_n_u), geo_score := geo_score + 35]
@@ -356,7 +353,6 @@ run_dedup <- function(upload_df,
       spouse_score * weights$hoh_spouse_name +
       phone_score * weights$phone_number +
       geo_score * weights$geography +
-      age_score * weights$age +
       sex_score * weights$sex, 1)]
     
     cross_cand[is_exact == TRUE, match_score := 100]

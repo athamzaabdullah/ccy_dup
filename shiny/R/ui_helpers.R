@@ -159,7 +159,6 @@ strategy_step_ui <- function() {
       card_body(
         numericInput("threshold_high", "High confidence threshold", value = 90, min = 50, max = 100, step = 1),
         numericInput("threshold_medium", "Medium confidence threshold", value = 75, min = 50, max = 99, step = 1),
-        numericInput("age_tolerance", "Age tolerance (years)", value = 2, min = 0, max = 20, step = 1),
         numericInput("max_candidates", "Max candidate pairs", value = 500000, min = 1000, max = 2000000, step = 1000),
         div(
           class = "callout mt-3",

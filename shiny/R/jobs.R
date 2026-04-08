@@ -151,7 +151,7 @@ enqueue_match_job <- function(upload_df, snapshot_path, mapping = NULL,
                               upload_time = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
                               fuzzy_high_threshold = config$thresholds$high,
                               fuzzy_medium_threshold = config$thresholds$medium,
-                              age_tolerance = config$age_tolerance,
+                              
                               weights = config$weights,
                               match_fields = c(
                                 "partner",
@@ -206,7 +206,7 @@ enqueue_match_job <- function(upload_df, snapshot_path, mapping = NULL,
         upload_time = upload_time,
         fuzzy_high_threshold = fuzzy_high_threshold,
         fuzzy_medium_threshold = fuzzy_medium_threshold,
-        age_delta = age_tolerance,
+
         weights = weights,
         match_fields = match_fields,
         max_candidates = max_candidates
