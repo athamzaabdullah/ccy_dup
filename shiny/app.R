@@ -113,6 +113,18 @@ server <- function(input, output, session) {
   ))
   last_job_notify <- reactiveVal(NULL)
 
+  # Helper: safe wrapper around DT::datatable to prevent crashes when DT internals fail
+  safe_datatable <- function(df, opts = list(pageLength = 5)) {
+    tryCatch({
+      DT::datatable(df, options = opts)
+    }, error = function(e) {
+      msg <- paste0(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), " — datatable render error: ", conditionMessage(e), "\n")
+      if (!dir.exists("tmp")) dir.create("tmp", recursive = TRUE)
+      cat(msg, file = file.path(getwd(), "tmp", "shiny_error.log"), append = TRUE)
+      DT::datatable(data.frame(Error = conditionMessage(e)), options = list(pageLength = 5))
+    })
+  }
+
   get_latest_master_snapshot <- function() {
     snap_dir <- config$paths$master_snap_dir
     if (!dir.exists(snap_dir)) return(NULL)
@@ -629,7 +641,7 @@ server <- function(input, output, session) {
 
   output$upload_preview <- renderDT({
     req(upload_df())
-    datatable(head(upload_df(), 10), options = list(pageLength = 5))
+    safe_datatable(head(upload_df(), 10), opts = list(pageLength = 5))
   })
 
   output$upload_validation <- renderUI({
@@ -667,7 +679,7 @@ server <- function(input, output, session) {
 
   output$mapping_table <- renderDT({
     req(mapping_suggestions())
-    datatable(mapping_suggestions(), options = list(pageLength = 10))
+    safe_datatable(mapping_suggestions(), opts = list(pageLength = 10))
   })
 
   observeEvent(input$confirm_mapping, {
@@ -920,13 +932,13 @@ server <- function(input, output, session) {
     job <- job_status()
     req(job)
     if (job$status != "completed") {
-      return(datatable(data.frame(), options = list(pageLength = 5)))
+      return(safe_datatable(data.frame(), opts = list(pageLength = 5)))
     }
     res <- get_job_result(job)
     if (is.list(res) && !is.null(res$summary)) {
-      return(datatable(res$summary, options = list(pageLength = 5)))
+      return(safe_datatable(res$summary, opts = list(pageLength = 5)))
     }
-    datatable(res, options = list(pageLength = 10))
+    safe_datatable(res, opts = list(pageLength = 10))
   })
 
   output$export_button <- renderUI({
