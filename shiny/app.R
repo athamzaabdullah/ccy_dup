@@ -679,8 +679,12 @@ server <- function(input, output, session) {
     default_map <- pick_best_mapping(suggestions)
 
     tagList(lapply(required_columns(), function(req_col) {
-      selected <- if (!is.null(default_map[[req_col]])) default_map[[req_col]] else ""
-      selectInput(paste0("map_", req_col), paste0("Map ", req_col), choices = c("", cols), selected = selected)
+      sel_val <- ""
+      if (!is.null(default_map) && length(default_map) > 0 && !is.null(names(default_map)) && req_col %in% names(default_map)) {
+        sel_val <- default_map[[req_col]]
+        if (is.null(sel_val)) sel_val <- ""
+      }
+      selectInput(paste0("map_", req_col), paste0("Map ", req_col), choices = c("", cols), selected = sel_val)
     }))
   })
 
