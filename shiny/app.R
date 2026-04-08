@@ -15,17 +15,23 @@ plan(multisession)
 
 # Log Shiny server errors to tmp/shiny_error.log for diagnostics
 if (!dir.exists("tmp")) dir.create("tmp", recursive = TRUE)
+# Prefer full errors and traces in logs to identify root causes
+options(shiny.sanitize.errors = FALSE)
 options(shiny.error = function(e = NULL, ...) {
   ts <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
+  sess_info <- paste(capture.output(sessionInfo()), collapse = "\n")
   if (is.null(e)) {
     # Shiny may call the handler without passing the condition. Fall back to geterrmessage().
     msg_body <- paste0("unknown error; geterrmessage: ", geterrmessage())
     extra <- ""
+    tb <- paste(capture.output(utils::traceback(max.lines = 100)), collapse = "\n")
   } else {
     msg_body <- conditionMessage(e)
     extra <- paste(capture.output(print(e)), collapse = "\n")
+    # Capture a traceback for the error context
+    tb <- paste(capture.output(traceback()), collapse = "\n")
   }
-  msg <- paste0(ts, " — ", msg_body, "\n", extra, "\n")
+  msg <- paste0(ts, " — ", msg_body, "\n", extra, "\nTraceback:\n", tb, "\nSessionInfo:\n", sess_info, "\n")
   cat(msg, file = file.path(getwd(), "tmp", "shiny_error.log"), append = TRUE)
 })
 
