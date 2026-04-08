@@ -13,6 +13,13 @@ setwd("D:/OneDrive/02. Projects/06_deduplication_app_R/shiny/")
 
 plan(multisession)
 
+# Log Shiny server errors to tmp/shiny_error.log for diagnostics
+if (!dir.exists("tmp")) dir.create("tmp", recursive = TRUE)
+options(shiny.error = function(e) {
+  msg <- paste0(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), " — ", conditionMessage(e), "\n", paste(capture.output(print(e)), collapse = "\n"), "\n")
+  cat(msg, file = file.path(getwd(), "tmp", "shiny_error.log"), append = TRUE)
+})
+
 source("R/config.R")
 source("R/auth.R")
 source("R/activityinfo.R")
