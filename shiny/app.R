@@ -24,14 +24,15 @@ options(shiny.error = function(e = NULL, ...) {
     # Shiny may call the handler without passing the condition. Fall back to geterrmessage().
     msg_body <- paste0("unknown error; geterrmessage: ", geterrmessage())
     extra <- ""
-    tb <- paste(capture.output(utils::traceback(max.lines = 100)), collapse = "\n")
+    # sys.calls provides a reliable call stack in all environments
+    tb <- paste(capture.output(sys.calls()), collapse = "\n")
   } else {
     msg_body <- conditionMessage(e)
     extra <- paste(capture.output(print(e)), collapse = "\n")
-    # Capture a traceback for the error context
-    tb <- paste(capture.output(traceback()), collapse = "\n")
+    # Capture call stack for the error context
+    tb <- paste(capture.output(sys.calls()), collapse = "\n")
   }
-  msg <- paste0(ts, " — ", msg_body, "\n", extra, "\nTraceback:\n", tb, "\nSessionInfo:\n", sess_info, "\n")
+  msg <- paste0(ts, " — ", msg_body, "\n", extra, "\nCallStack:\n", tb, "\nSessionInfo:\n", sess_info, "\n")
   cat(msg, file = file.path(getwd(), "tmp", "shiny_error.log"), append = TRUE)
 })
 
