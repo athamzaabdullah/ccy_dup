@@ -780,6 +780,17 @@ server <- function(input, output, session) {
     current_step("strategy")
   })
 
+  observeEvent(input$back_to_upload, {
+    # Allow user to navigate back to the upload step from mapping
+    job <- job_status()
+    if (!is.null(job) && job$status %in% c("queued", "running")) {
+      showNotification("Cannot go back while matching is running.", type = "message")
+      return()
+    }
+    # Keep uploaded data intact so user can re-map or replace file
+    current_step("upload")
+  })
+
   job_timer <- reactiveTimer(1000)
   job_status <- reactive({
     id <- current_job()

@@ -131,6 +131,7 @@ mapping_step_ui <- function() {
         ),
         uiOutput("mapping_ui"),
         actionButton("confirm_mapping", "Confirm mapping", class = "btn-primary mt-3"),
+        actionButton("back_to_upload", "Back to upload", class = "btn-secondary ms-2"),
         uiOutput("cancel_button")
       )
     ),
