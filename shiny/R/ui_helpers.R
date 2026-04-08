@@ -163,7 +163,7 @@ strategy_step_ui <- function() {
         div(
           class = "callout mt-3",
           tags$strong("Matching model:"),
-          "Exact rules: ID/phones/name+geo/name+ID/phone+age. Fuzzy score uses name+spouse+phone+geography+age+sex with explainable factors."
+          "Exact rules: ID/phones/name+geo/name+ID/phone. Fuzzy score uses name+spouse+phone+geography+sex with explainable factors."
         ),
         actionButton("confirm_strategy", "Continue", class = "btn-primary mt-3"),
         uiOutput("cancel_button")
