@@ -195,7 +195,7 @@ reorder_upload_master_columns <- function(df) {
       if (length(hit) == 0) {
         hit <- which(grepl(base_n, master_n, fixed = TRUE) | grepl(master_n, base_n, fixed = TRUE))
       }
-      if (length(hit) > 0) m <- master_remaining[[hit[[1]]]]
+      if (length(hit) > 0 && hit[1] <= length(master_remaining)) m <- master_remaining[hit[1]]
     }
 
     if (!is.na(m) && m %in% master_remaining) {

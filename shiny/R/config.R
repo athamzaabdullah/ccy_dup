@@ -4,8 +4,9 @@ get_env <- function(name, default = NULL) {
 }
 
 split_csv <- function(x) {
-  if (is.null(x) || x == "") return(character(0))
-  parts <- trimws(strsplit(x, ",", fixed = TRUE)[[1]])
+  if (is.null(x) || !nzchar(as.character(x))) return(character(0))
+  s <- strsplit(as.character(x), ",", fixed = TRUE)
+  parts <- if (length(s) >= 1 && length(s[[1]]) >= 1) trimws(s[[1]]) else character(0)
   parts[nzchar(parts)]
 }
 
@@ -14,15 +15,22 @@ config <- list(
   required_columns = c(
     "partner",
     "record_id",
+    "qa_code_sn",
+    "system_date",
+    "interviewer",
+    "main_ref",
     "hoh_ID_number",
     "id_type",
     "phone_number",
+    "secondary_phone_number",
     "hoh_arabic_name",
     "marital_status",
     "hoh_spouse_name",
     "age",
     "household_size",
     "sex",
+    "beneficiary_status",
+    "dist_type",
     "governorate",
     "district",
     "subdistrict",
