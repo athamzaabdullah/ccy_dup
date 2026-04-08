@@ -305,7 +305,7 @@ run_dedup <- function(upload_df,
     # Format results
     if (nrow(same_results) > 0) {
       same_results[, confidence := ifelse(match_score >= fuzzy_high_threshold, "high", "medium")]
-      same_results[, match_type := ifelse(is_exact, "exact", "fuzzy")]
+      # match_type consolidated into confidence only; exact/fuzzy removed
       same_results[, match_pair_id := exact_pair_id("SL", row_a, row_b), by = 1:nrow(same_results)]
       
       # Select and rename for output
@@ -371,7 +371,7 @@ run_dedup <- function(upload_df,
     
     if (nrow(ext_results) > 0) {
       ext_results[, confidence := ifelse(match_score >= fuzzy_high_threshold, "high", "medium")]
-      ext_results[, match_type := ifelse(is_exact, "exact", "fuzzy")]
+      # match_type consolidated into confidence only; exact/fuzzy removed
       ext_results[, match_pair_id := exact_pair_id("LM", upload_row_id, master_row_id), by = 1:nrow(ext_results)]
       
       out_lm <- ext_results[, .(
@@ -408,10 +408,15 @@ run_dedup <- function(upload_df,
   )
   
   subset_by_match_type <- function(df, match_type_value) {
+    # Backwards-compatible subset: map 'exact' -> confidence == 'high', 'fuzzy' -> confidence == 'medium'
     x <- as.data.frame(df)
-    if (nrow(x) == 0 || !"match_type" %in% names(x)) {
-      return(x[0, , drop = FALSE])
+    if (nrow(x) == 0) return(x[0, , drop = FALSE])
+    if ("confidence" %in% names(x)) {
+      if (match_type_value == "exact") return(x[x$confidence == "high", , drop = FALSE])
+      if (match_type_value == "fuzzy") return(x[x$confidence == "medium", , drop = FALSE])
     }
+    # Fallback: if original match_type field exists, use it
+    if (!"match_type" %in% names(x)) return(x[0, , drop = FALSE])
     x[x$match_type == match_type_value, , drop = FALSE]
   }
 
