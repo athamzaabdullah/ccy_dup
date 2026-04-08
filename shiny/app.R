@@ -15,8 +15,17 @@ plan(multisession)
 
 # Log Shiny server errors to tmp/shiny_error.log for diagnostics
 if (!dir.exists("tmp")) dir.create("tmp", recursive = TRUE)
-options(shiny.error = function(e) {
-  msg <- paste0(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), " — ", conditionMessage(e), "\n", paste(capture.output(print(e)), collapse = "\n"), "\n")
+options(shiny.error = function(e = NULL, ...) {
+  ts <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
+  if (is.null(e)) {
+    # Shiny may call the handler without passing the condition. Fall back to geterrmessage().
+    msg_body <- paste0("unknown error; geterrmessage: ", geterrmessage())
+    extra <- ""
+  } else {
+    msg_body <- conditionMessage(e)
+    extra <- paste(capture.output(print(e)), collapse = "\n")
+  }
+  msg <- paste0(ts, " — ", msg_body, "\n", extra, "\n")
   cat(msg, file = file.path(getwd(), "tmp", "shiny_error.log"), append = TRUE)
 })
 
