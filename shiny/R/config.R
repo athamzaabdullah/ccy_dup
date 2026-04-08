@@ -37,18 +37,17 @@ config <- list(
     "village"
   ),
   weights = list(
-    hoh_arabic_name = 0.35,
-    hoh_spouse_name = 0.15,
-    phone_number = 0.20,
+    hoh_arabic_name = 0.40,
+    hoh_spouse_name = 0.20,
+    phone_number = 0.25,
     geography = 0.15,
-    age = 0.10,
-    sex = 0.05
+    sex = 0.00
   ),
   thresholds = list(
     high = 90,
     medium = 75
   ),
-  age_tolerance = 2,
+
   max_candidates = 500000,
   mapping_min_score = 75
 )
