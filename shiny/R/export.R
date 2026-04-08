@@ -285,7 +285,7 @@ build_summary_sheet <- function(result) {
   if (!"metric" %in% names(summary_df)) return(summary_df)
 
   total <- suppressWarnings(as.numeric(summary_df$value[summary_df$metric == "Total Records Examined"]))
-  total <- ifelse(length(total) == 0 || is.na(total), NA_real_, total[[1]])
+  total <- ifelse(length(total) == 0 || all(is.na(total)), NA_real_, total[1])
 
   if (!is.na(total)) {
     row_metrics <- c("Same List Exact", "Same List Fuzzy", "List vs Master Exact", "List vs Master Fuzzy")
