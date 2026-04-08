@@ -255,7 +255,7 @@ run_dedup <- function(upload_df,
   
   # 2. Internal Matching (Same List)
   same_cand <- build_self_candidates(u_prep, limit = max_candidates)
-  out_sl <- data.table::data.table(match_type = character(0), match_score = numeric(0))
+  out_sl <- data.table::data.table(match_score = numeric(0))
   
   if (nrow(same_cand) > 0) {
     # Join with features
@@ -310,7 +310,7 @@ run_dedup <- function(upload_df,
       
       # Select and rename for output
       out_sl <- same_results[, .(
-        match_pair_id, match_type, match_score, confidence,
+        match_pair_id, match_score, confidence,
         contributing_factors = paste0("name=", name_score, " | phone=", phone_score, " | id=", id_score, " | geo=", geo_score),
         upload_row_id_a = row_a,
         upload_row_id_b = row_b
@@ -329,7 +329,7 @@ run_dedup <- function(upload_df,
   
   # 3. External Matching (List vs Master)
   cross_cand <- build_cross_candidates(u_prep, m_prep, limit = max_candidates)
-  out_lm <- data.table::data.table(match_type = character(0), match_score = numeric(0))
+  out_lm <- data.table::data.table(match_score = numeric(0))
   
   if (nrow(cross_cand) > 0) {
     cross_cand <- merge(cross_cand, u_prep, by.x = "upload_row_id", by.y = "row_id")
@@ -375,7 +375,7 @@ run_dedup <- function(upload_df,
       ext_results[, match_pair_id := exact_pair_id("LM", upload_row_id, master_row_id), by = 1:nrow(ext_results)]
       
       out_lm <- ext_results[, .(
-        match_pair_id, match_type, match_score, confidence,
+        match_pair_id, match_score, confidence,
         contributing_factors = paste0("name=", name_score, " | phone=", phone_score, " | id=", id_score, " | geo=", geo_score),
         upload_row_id, master_row_id,
         master_organization = partner_m,
