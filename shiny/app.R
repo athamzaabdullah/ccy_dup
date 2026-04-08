@@ -68,6 +68,8 @@ ui <- fluidPage(
 server <- function(input, output, session) {
   auth <- reactiveValues(logged_in = FALSE, role = NULL, email = NULL)
   upload_df <- reactiveVal(NULL)
+  # upload_error holds validation messages related to the uploaded file
+  upload_error <- reactiveVal(NULL)
   mapping_suggestions <- reactiveVal(data.frame())
   current_job <- reactiveVal(NULL)
   current_step <- reactiveVal("upload")
@@ -313,7 +315,43 @@ server <- function(input, output, session) {
 
   observeEvent(input$upload_file, {
     req(input$upload_file)
-    df <- readxl::read_excel(input$upload_file$datapath)
+    # Attempt to read the uploaded Excel file and validate column count
+    df <- NULL
+    read_error <- NULL
+    tryCatch({
+      df <- readxl::read_excel(input$upload_file$datapath)
+    }, error = function(e) {
+      read_error <<- paste0("Unable to read Excel file: ", e$message)
+    })
+
+    if (!is.null(read_error)) {
+      upload_error(read_error)
+      upload_df(NULL)
+      return()
+    }
+
+    if (is.null(df)) {
+      upload_error("Uploaded file could not be read or is empty.")
+      upload_df(NULL)
+      return()
+    }
+
+    ncols <- ncol(df)
+    if (is.null(ncols) || ncols == 0) {
+      upload_error("Uploaded file has no columns. Please provide a valid Excel file.")
+      upload_df(NULL)
+      return()
+    }
+
+    # Validation: require between 10 and 20 columns
+    if (ncols < 10 || ncols > 20) {
+      upload_error(paste0("Upload rejected: spreadsheet has ", ncols, " columns; must have between 10 and 20 columns."))
+      upload_df(NULL)
+      return()
+    }
+
+    # Passed validation — clear any previous error and store the dataframe
+    upload_error(NULL)
     upload_df(df)
   })
 
@@ -593,6 +631,15 @@ server <- function(input, output, session) {
   output$upload_preview <- renderDT({
     req(upload_df())
     datatable(head(upload_df(), 10), options = list(pageLength = 5))
+  })
+
+  output$upload_validation <- renderUI({
+    msg <- upload_error()
+    if (!is.null(msg) && nzchar(msg)) {
+      tags$div(style = "color:#b91c1c; margin-top:8px; font-weight:600;", msg)
+    } else {
+      NULL
+    }
   })
 
   observeEvent(input$confirm_upload, {
