@@ -1,0 +1,14 @@
+{
+  "users": [
+    {
+      "email": "admin@nrc.org",
+      "password_hash": "$2a$12$VOu691Dd7BMSdChTCZQAReSBsa7cXMBqMUe3w.WyXReWFFXFk82vC",
+      "role": "admin"
+    },
+    {
+      "email": "user@nrc.org",
+      "password_hash": "$2a$12$VOu691Dd7BMSdChTCZQAReSBsa7cXMBqMUe3w.WyXReWFFXFk82vC",
+      "role": "user"
+    }
+  ]
+}
