@@ -5,10 +5,12 @@ exact_pair_id <- function(prefix, a, b) {
 
 safe_char_scalar <- function(x) {
   if (is.null(x) || length(x) == 0) return("")
-  val <- tryCatch(x[[1]], error = function(e) {
-    if (length(x) >= 1) return(x[1])
-    NA
-  })
+  # Prefer [1] extraction which works for vectors and lists; guard against NULL/NA
+  if (length(x) >= 1) {
+    val <- x[1]
+  } else {
+    val <- NA
+  }
   if (is.null(val) || (is.atomic(val) && length(val) == 0) || is.na(val)) return("")
   as.character(val)
 }

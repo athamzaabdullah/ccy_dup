@@ -249,11 +249,13 @@ enqueue_master_fetch_job <- function(cfg) {
         rows_fetched <- 0L
         m_chunk <- regexec("chunk ([0-9]+)", msg)
         hit_chunk_list <- regmatches(msg, m_chunk)
-        hit_chunk <- if (length(hit_chunk_list) >= 1) hit_chunk_list[[1]] else character(0)
+        hit_chunk <- character(0)
+        if (length(hit_chunk_list) >= 1 && length(hit_chunk_list[[1]]) >= 1) hit_chunk <- hit_chunk_list[[1]] else hit_chunk <- character(0)
         if (length(hit_chunk) >= 2) chunk_index <- as.integer(hit_chunk[2])
         m_rows <- regexec("rows fetched ([0-9]+)", msg)
         hit_rows_list <- regmatches(msg, m_rows)
-        hit_rows <- if (length(hit_rows_list) >= 1) hit_rows_list[[1]] else character(0)
+        hit_rows <- character(0)
+        if (length(hit_rows_list) >= 1 && length(hit_rows_list[[1]]) >= 1) hit_rows <- hit_rows_list[[1]] else hit_rows <- character(0)
         if (length(hit_rows) >= 2) rows_fetched <- as.integer(hit_rows[2])
 
         # Advance progress inside each form so large forms don't appear stuck.

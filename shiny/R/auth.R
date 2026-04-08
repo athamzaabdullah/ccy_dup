@@ -41,7 +41,10 @@ get_user_token <- function(path, email) {
   tokens <- load_user_tokens(path)
   row <- tokens[tokens$email == email, , drop = FALSE]
   if (nrow(row) == 0) return("")
-  row$token[[1]]
+  val <- NULL
+  if ("token" %in% names(row) && length(row$token) >= 1) val <- row$token[1]
+  if (is.null(val) || length(val) == 0 || is.na(val)) return("")
+  as.character(val)
 }
 
 load_admin_settings <- function(path) {
@@ -77,10 +80,13 @@ authenticate_user <- function(email, password, user_store_path) {
   if (nrow(row) == 0) {
     return(list(ok = FALSE, error = "Invalid credentials"))
   }
-  if (!bcrypt::checkpw(password, row$password_hash[[1]])) {
+  pw_hash <- NULL
+  if ("password_hash" %in% names(row) && length(row$password_hash) >= 1) pw_hash <- row$password_hash[1]
+  if (is.null(pw_hash) || !nzchar(pw_hash) || !bcrypt::checkpw(password, pw_hash)) {
     return(list(ok = FALSE, error = "Invalid credentials"))
   }
-  list(ok = TRUE, user = list(email = email, role = row$role[[1]]))
+  role_val <- if ("role" %in% names(row) && length(row$role) >= 1) as.character(row$role[1]) else NULL
+  list(ok = TRUE, user = list(email = email, role = role_val))
 }
 
 verify_sso_token <- function(token, verify_url) {
