@@ -1,0 +1,12 @@
+name: shiny
+title: shiny
+username: hamzaabdullah
+account: hamzaabdullah
+server: connect.posit.cloud
+hostUrl: https://api.connect.posit.cloud/v1
+appId: 019e1cb3-5a9d-3338-3c54-c24d6e710593
+bundleId:
+url:
+version: 1
+asMultiple: FALSE
+asStatic: FALSE

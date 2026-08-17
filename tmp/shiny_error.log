@@ -1,0 +1,6172 @@
+2026-04-08 11:59:02 — unknown error; geterrmessage: object 'datatables_html' not found
+
+2026-04-08 12:05:19 — unknown error; geterrmessage: object 'datatables_html' not found
+
+2026-04-08 12:09:54 — unknown error; geterrmessage: object 'datatables_html' not found
+
+2026-04-08 12:11:40 — unknown error; geterrmessage: object 'datatables_html' not found
+
+2026-04-08 12:16:13 — unknown error; geterrmessage: object 'datatables_html' not found
+
+2026-04-08 12:19:33 — unknown error; geterrmessage: object 'datatables_html' not found
+
+2026-04-08 12:38:18 — unknown error; geterrmessage: object 'datatables_html' not found
+
+CallStack:
+[[1]]
+(function (x, ...) 
+UseMethod("print"))(x)
+
+[[2]]
+print.shiny.appobj(x)
+
+[[3]]
+runApp(x)
+
+[[4]]
+..stacktraceoff..(captureStackTraces({
+    while (!.globals$stopped) {
+        ..stacktracefloor..(serviceApp())
+    }
+}))
+
+[[5]]
+captureStackTraces({
+    while (!.globals$stopped) {
+        ..stacktracefloor..(serviceApp())
+    }
+})
+
+[[6]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[7]]
+domain$wrapSync(expr)
+
+[[8]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[9]]
+..stacktracefloor..(serviceApp())
+
+[[10]]
+serviceApp()
+
+[[11]]
+flushReact()
+
+[[12]]
+.getReactiveEnvironment()$flush()
+
+[[13]]
+ctx$executeFlushCallbacks()
+
+[[14]]
+lapply(.flushCallbacks, function(flushCallback) {
+    flushCallback()
+})
+
+[[15]]
+FUN(X[[i]], ...)
+
+[[16]]
+flushCallback()
+
+[[17]]
+hybrid_chain({
+    if (!.destroyed) {
+        shinyCallingHandlers(run())
+    }
+}, catch = function(e) {
+    if (cnd_inherits(e, "shiny.silent.error")) {
+        return()
+    }
+    printError(e)
+    if (!is.null(.domain)) {
+        .domain$unhandledError(e, close = TRUE)
+    }
+}, finally = .domain$decrementBusyCount)
+
+[[18]]
+do()
+
+[[19]]
+tryCatch({
+    captureStackTraces({
+        result <- withVisible(force(expr))
+        if (is.promising(result$value)) {
+            p <- promise_chain(valueWithVisible(result), ..., 
+                catch = catch, finally = finally)
+            runFinally <- FALSE
+            p
+        }
+        else {
+            result <- Reduce(function(v, func) {
+                if (v$visible) {
+                  withVisible(func(v$value))
+                }
+                else {
+                  withVisible(func(invisible(v$value)))
+                }
+            }, list(...), result)
+            valueWithVisible(result)
+        }
+    })
+}, error = function(e) {
+    if (!is.null(catch)) 
+        catch(e)
+    else stop(e)
+}, finally = if (runFinally && !is.null(finally)) finally())
+
+[[20]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[21]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[22]]
+doTryCatch(return(expr), name, parentenv, handler)
+
+[[23]]
+captureStackTraces({
+    result <- withVisible(force(expr))
+    if (is.promising(result$value)) {
+        p <- promise_chain(valueWithVisible(result), ..., catch = catch, 
+            finally = finally)
+        runFinally <- FALSE
+        p
+    }
+    else {
+        result <- Reduce(function(v, func) {
+            if (v$visible) {
+                withVisible(func(v$value))
+            }
+            else {
+                withVisible(func(invisible(v$value)))
+            }
+        }, list(...), result)
+        valueWithVisible(result)
+    }
+})
+
+[[24]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[25]]
+domain$wrapSync(expr)
+
+[[26]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[27]]
+withVisible(force(expr))
+
+[[28]]
+force(expr)
+
+[[29]]
+shinyCallingHandlers(run())
+
+[[30]]
+withCallingHandlers(captureStackTraces(expr), error = function(e) {
+    if (cnd_inherits(e, "shiny.silent.error")) 
+        return()
+    handle <- getOption("shiny.error")
+    if (is.function(handle)) 
+        handle()
+})
+
+[[31]]
+captureStackTraces(expr)
+
+[[32]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[33]]
+domain$wrapSync(expr)
+
+[[34]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[35]]
+run()
+
+[[36]]
+ctx$run(.func)
+
+[[37]]
+promises::with_promise_domain(reactivePromiseDomain(), {
+    withReactiveDomain(.domain, {
+        with_otel_span_context(.otel_info, domain = .domain, 
+            {
+                captureStackTraces({
+                  env <- .getReactiveEnvironment()
+                  rLog$enter(.reactId, id, .reactType, .domain)
+                  on.exit(rLog$exit(.reactId, id, .reactType, 
+                    .domain), add = TRUE)
+                  env$runWith(self, func)
+                })
+            })
+    })
+})
+
+[[38]]
+domain$wrapSync(expr)
+
+[[39]]
+withReactiveDomain(.domain, {
+    with_otel_span_context(.otel_info, domain = .domain, {
+        captureStackTraces({
+            env <- .getReactiveEnvironment()
+            rLog$enter(.reactId, id, .reactType, .domain)
+            on.exit(rLog$exit(.reactId, id, .reactType, .domain), 
+                add = TRUE)
+            env$runWith(self, func)
+        })
+    })
+})
+
+[[40]]
+promises::with_promise_domain(createVarPromiseDomain(.globals, 
+    "domain", domain), expr)
+
+[[41]]
+domain$wrapSync(expr)
+
+[[42]]
+force(expr)
+
+[[43]]
+with_otel_span_context(.otel_info, domain = .domain, {
+    captureStackTraces({
+        env <- .getReactiveEnvironment()
+        rLog$enter(.reactId, id, .reactType, .domain)
+        on.exit(rLog$exit(.reactId, id, .reactType, .domain), 
+            add = TRUE)
+        env$runWith(self, func)
+    })
+})
+
+[[44]]
+force(expr)
+
+[[45]]
+captureStackTraces({
+    env <- .getReactiveEnvironment()
+    rLog$enter(.reactId, id, .reactType, .domain)
+    on.exit(rLog$exit(.reactId, id, .reactType, .domain), add = TRUE)
+    env$runWith(self, func)
+})
+
+[[46]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[47]]
+domain$wrapSync(expr)
+
+[[48]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[49]]
+env$runWith(self, func)
+
+[[50]]
+contextFunc()
+
+[[51]]
+`<observer:output$mapping_ui>`(...)
+
+[[52]]
+observe()
+
+[[53]]
+hybrid_chain(hybrid_chain({
+    private$withCurrentOutput(name, {
+        maybe_with_otel_span_reactive_update({
+            shinyCallingHandlers(func())
+        }, domain = self)
+    })
+}, catch = function(cond) {
+    if (inherits(cond, "shiny.custom.error")) {
+        if (isTRUE(getOption("show.error.messages"))) 
+            printError(cond)
+        structure(list(), class = "try-error", condition = cond)
+    }
+    else if (inherits(cond, "shiny.output.cancel")) {
+        structure(list(), class = "cancel-output")
+    }
+    else if (inherits(cond, "shiny.output.progress")) {
+        structure(list(), class = "progress-output")
+    }
+    else if (cnd_inherits(cond, "shiny.silent.error")) {
+        while (!inherits(cond, "shiny.silent.error")) {
+            cond <- cond$parent
+        }
+        structure(list(), class = "try-error", condition = cond)
+    }
+    else {
+        if (isTRUE(getOption("show.error.messages"))) 
+            printError(cond)
+        if (getOption("shiny.sanitize.errors", FALSE)) {
+            cond <- sanitized_error()
+        }
+        self$unhandledError(cond, close = FALSE)
+        invisible(structure(list(), class = "try-error", condition = cond))
+    }
+}), function(value) {
+    self$requestFlush()
+    if (inherits(value, "progress-output")) {
+        self$showProgress(name, persistent = TRUE)
+        private$invalidatedOutputErrors$remove(name)
+        private$invalidatedOutputValues$remove(name)
+        return()
+    }
+    private$sendMessage(recalculating = list(name = name, status = "recalculated"))
+    if (inherits(value, "cancel-output")) {
+        return()
+    }
+    private$invalidatedOutputErrors$remove(name)
+    private$invalidatedOutputValues$remove(name)
+    if (inherits(value, "try-error")) {
+        cond <- attr(value, "condition")
+        type <- setdiff(class(cond), c("simpleError", "error", 
+            "condition"))
+        private$invalidatedOutputErrors$set(name, list(message = cond$message, 
+            call = utils::capture.output(print(cond$call)), type = if (length(type)) type))
+    }
+    else private$invalidatedOutputValues$set(name, value)
+})
+
+[[54]]
+do()
+
+[[55]]
+tryCatch({
+    captureStackTraces({
+        result <- withVisible(force(expr))
+        if (is.promising(result$value)) {
+            p <- promise_chain(valueWithVisible(result), ..., 
+                catch = catch, finally = finally)
+            runFinally <- FALSE
+            p
+        }
+        else {
+            result <- Reduce(function(v, func) {
+                if (v$visible) {
+                  withVisible(func(v$value))
+                }
+                else {
+                  withVisible(func(invisible(v$value)))
+                }
+            }, list(...), result)
+            valueWithVisible(result)
+        }
+    })
+}, error = function(e) {
+    if (!is.null(catch)) 
+        catch(e)
+    else stop(e)
+}, finally = if (runFinally && !is.null(finally)) finally())
+
+[[56]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[57]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[58]]
+doTryCatch(return(expr), name, parentenv, handler)
+
+[[59]]
+captureStackTraces({
+    result <- withVisible(force(expr))
+    if (is.promising(result$value)) {
+        p <- promise_chain(valueWithVisible(result), ..., catch = catch, 
+            finally = finally)
+        runFinally <- FALSE
+        p
+    }
+    else {
+        result <- Reduce(function(v, func) {
+            if (v$visible) {
+                withVisible(func(v$value))
+            }
+            else {
+                withVisible(func(invisible(v$value)))
+            }
+        }, list(...), result)
+        valueWithVisible(result)
+    }
+})
+
+[[60]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[61]]
+domain$wrapSync(expr)
+
+[[62]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[63]]
+withVisible(force(expr))
+
+[[64]]
+force(expr)
+
+[[65]]
+hybrid_chain({
+    private$withCurrentOutput(name, {
+        maybe_with_otel_span_reactive_update({
+            shinyCallingHandlers(func())
+        }, domain = self)
+    })
+}, catch = function(cond) {
+    if (inherits(cond, "shiny.custom.error")) {
+        if (isTRUE(getOption("show.error.messages"))) 
+            printError(cond)
+        structure(list(), class = "try-error", condition = cond)
+    }
+    else if (inherits(cond, "shiny.output.cancel")) {
+        structure(list(), class = "cancel-output")
+    }
+    else if (inherits(cond, "shiny.output.progress")) {
+        structure(list(), class = "progress-output")
+    }
+    else if (cnd_inherits(cond, "shiny.silent.error")) {
+        while (!inherits(cond, "shiny.silent.error")) {
+            cond <- cond$parent
+        }
+        structure(list(), class = "try-error", condition = cond)
+    }
+    else {
+        if (isTRUE(getOption("show.error.messages"))) 
+            printError(cond)
+        if (getOption("shiny.sanitize.errors", FALSE)) {
+            cond <- sanitized_error()
+        }
+        self$unhandledError(cond, close = FALSE)
+        invisible(structure(list(), class = "try-error", condition = cond))
+    }
+})
+
+[[66]]
+do()
+
+[[67]]
+tryCatch({
+    captureStackTraces({
+        result <- withVisible(force(expr))
+        if (is.promising(result$value)) {
+            p <- promise_chain(valueWithVisible(result), ..., 
+                catch = catch, finally = finally)
+            runFinally <- FALSE
+            p
+        }
+        else {
+            result <- Reduce(function(v, func) {
+                if (v$visible) {
+                  withVisible(func(v$value))
+                }
+                else {
+                  withVisible(func(invisible(v$value)))
+                }
+            }, list(...), result)
+            valueWithVisible(result)
+        }
+    })
+}, error = function(e) {
+    if (!is.null(catch)) 
+        catch(e)
+    else stop(e)
+}, finally = if (runFinally && !is.null(finally)) finally())
+
+[[68]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[69]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[70]]
+doTryCatch(return(expr), name, parentenv, handler)
+
+[[71]]
+captureStackTraces({
+    result <- withVisible(force(expr))
+    if (is.promising(result$value)) {
+        p <- promise_chain(valueWithVisible(result), ..., catch = catch, 
+            finally = finally)
+        runFinally <- FALSE
+        p
+    }
+    else {
+        result <- Reduce(function(v, func) {
+            if (v$visible) {
+                withVisible(func(v$value))
+            }
+            else {
+                withVisible(func(invisible(v$value)))
+            }
+        }, list(...), result)
+        valueWithVisible(result)
+    }
+})
+
+[[72]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[73]]
+domain$wrapSync(expr)
+
+[[74]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[75]]
+withVisible(force(expr))
+
+[[76]]
+force(expr)
+
+[[77]]
+private$withCurrentOutput(name, {
+    maybe_with_otel_span_reactive_update({
+        shinyCallingHandlers(func())
+    }, domain = self)
+})
+
+[[78]]
+with_promise_domain(createVarPromiseDomain(private, "currentOutputName", 
+    name), expr)
+
+[[79]]
+domain$wrapSync(expr)
+
+[[80]]
+force(expr)
+
+[[81]]
+maybe_with_otel_span_reactive_update({
+    shinyCallingHandlers(func())
+}, domain = self)
+
+[[82]]
+hybrid_then({
+    with_otel_span_reactive_update(domain = domain, expr)
+}, on_success = function(value) {
+    domain$userData[["_otel_reactive_update_is_active"]] <- NULL
+}, on_failure = function(e) {
+    domain$userData[["_otel_reactive_update_is_active"]] <- NULL
+}, tee = TRUE)
+
+[[83]]
+withVisible(tryCatch(expr, error = function(e) {
+    if (is.null(on_failure)) {
+        stop(e)
+    }
+    result_on_error <- withVisible(on_failure(e))
+    if (tee) {
+        stop(e)
+    }
+    else {
+        result_is_sync_error <<- TRUE
+        return_with_visible(result_on_error)
+    }
+}))
+
+[[84]]
+tryCatch(expr, error = function(e) {
+    if (is.null(on_failure)) {
+        stop(e)
+    }
+    result_on_error <- withVisible(on_failure(e))
+    if (tee) {
+        stop(e)
+    }
+    else {
+        result_is_sync_error <<- TRUE
+        return_with_visible(result_on_error)
+    }
+})
+
+[[85]]
+base::tryCatch(withCallingHandlers(expr, error = function(e) {
+    promiseDomain$onError(e)
+}), ..., finally = finally)
+
+[[86]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[87]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[88]]
+doTryCatch(return(expr), name, parentenv, handler)
+
+[[89]]
+withCallingHandlers(expr, error = function(e) {
+    promiseDomain$onError(e)
+})
+
+[[90]]
+with_otel_span_reactive_update(domain = domain, expr)
+
+[[91]]
+force(expr)
+
+[[92]]
+shinyCallingHandlers(func())
+
+[[93]]
+withCallingHandlers(captureStackTraces(expr), error = function(e) {
+    if (cnd_inherits(e, "shiny.silent.error")) 
+        return()
+    handle <- getOption("shiny.error")
+    if (is.function(handle)) 
+        handle()
+})
+
+[[94]]
+captureStackTraces(expr)
+
+[[95]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[96]]
+domain$wrapSync(expr)
+
+[[97]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[98]]
+func()
+
+[[99]]
+orig(name = name, shinysession = self)
+
+[[100]]
+..stacktraceon..(`output$mapping_ui`(...))
+
+[[101]]
+`output$mapping_ui`(...)
+
+[[102]]
+..stacktraceoff..(if (is.null(formals(renderFunc))) renderFunc() else renderFunc(...))
+
+[[103]]
+renderFunc(...)
+
+[[104]]
+hybrid_chain(..stacktraceon..(func()), function(value) {
+    transform(value, shinysession, name, ...)
+})
+
+[[105]]
+do()
+
+[[106]]
+tryCatch({
+    captureStackTraces({
+        result <- withVisible(force(expr))
+        if (is.promising(result$value)) {
+            p <- promise_chain(valueWithVisible(result), ..., 
+                catch = catch, finally = finally)
+            runFinally <- FALSE
+            p
+        }
+        else {
+            result <- Reduce(function(v, func) {
+                if (v$visible) {
+                  withVisible(func(v$value))
+                }
+                else {
+                  withVisible(func(invisible(v$value)))
+                }
+            }, list(...), result)
+            valueWithVisible(result)
+        }
+    })
+}, error = function(e) {
+    if (!is.null(catch)) 
+        catch(e)
+    else stop(e)
+}, finally = if (runFinally && !is.null(finally)) finally())
+
+[[107]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[108]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[109]]
+value[[3L]](cond)
+
+[[110]]
+stop(e)
+
+[[111]]
+(function (e) 
+{
+    if (is.null(attr(e, "stack.trace", exact = TRUE))) {
+        calls <- sys.calls()
+        parents <- sys.parents()
+        attr(calls, "parents") <- parents
+        calls <- saveCallStackDigest(calls)
+        attr(e, "stack.trace") <- calls
+    }
+    if (deepStacksEnabled()) {
+        if (is.null(attr(e, "deep.stack.trace", exact = TRUE)) && 
+            !is.null(.globals$deepStack)) {
+            attr(e, "deep.stack.trace") <- .globals$deepStack
+        }
+    }
+    stop(e)
+})(list(message = "subscript out of bounds", call = default_map[[req_col]], 
+    object = c(governorate = "Governorate Label", partner = "Partner Prefix"
+    ), subscript = NA_integer_, index = "hoh_ID_number"))
+
+[[112]]
+stop(e)
+
+[[113]]
+(function (e) 
+{
+    if (cnd_inherits(e, "shiny.silent.error")) 
+        return()
+    handle <- getOption("shiny.error")
+    if (is.function(handle)) 
+        handle()
+})(list(message = "subscript out of bounds", call = default_map[[req_col]], 
+    object = c(governorate = "Governorate Label", partner = "Partner Prefix"
+    ), subscript = NA_integer_, index = "hoh_ID_number"))
+
+[[114]]
+handle()
+
+SessionInfo:
+R version 4.5.3 (2026-03-11 ucrt)
+Platform: x86_64-w64-mingw32/x64
+Running under: Windows 11 x64 (build 26200)
+
+Matrix products: default
+  LAPACK version 3.12.1
+
+locale:
+[1] LC_COLLATE=English_United States.utf8  LC_CTYPE=English_United States.utf8    LC_MONETARY=English_United States.utf8 LC_NUMERIC=C                          
+[5] LC_TIME=English_United States.utf8    
+
+time zone: Asia/Aden
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+[1] future_1.69.0    promises_1.5.0   shiny_1.13.0     openxlsx_4.2.8.1 readxl_1.4.5     DT_0.34.0        bslib_0.10.0     dplyr_1.2.0     
+
+loaded via a namespace (and not attached):
+ [1] sass_0.4.10       generics_0.1.4    stringi_1.8.7     listenv_0.10.0    digest_0.6.39     magrittr_2.0.4    bcrypt_1.2.1      fastmap_1.2.0     cellranger_1.1.0 
+[10] jsonlite_2.0.0    zip_2.3.3         crosstalk_1.2.2   stringdist_0.9.17 codetools_0.2-20  jquerylib_0.1.4   cli_3.6.5         rlang_1.1.7       parallelly_1.46.1
+[19] withr_3.0.2       cachem_1.1.0      yaml_2.3.12       otel_0.2.0        tools_4.5.3       parallel_4.5.3    memoise_2.0.1     httpuv_1.6.16     globals_0.19.0   
+[28] vctrs_0.7.1       R6_2.6.1          mime_0.13         lifecycle_1.0.5   fs_1.6.7          htmlwidgets_1.6.4 pkgconfig_2.0.3   pillar_1.11.1     later_1.4.8      
+[37] glue_1.8.0        Rcpp_1.1.1        tibble_3.3.1      tidyselect_1.2.1  rstudioapi_0.18.0 xtable_1.8-8      htmltools_0.5.9   compiler_4.5.3    askpass_1.2.1    
+[46] openssl_2.3.5    
+2026-04-08 18:40:50 — unknown error; geterrmessage: missing value where TRUE/FALSE needed
+
+CallStack:
+[[1]]
+(function (x, ...) 
+UseMethod("print"))(x)
+
+[[2]]
+print.shiny.appobj(x)
+
+[[3]]
+runApp(x)
+
+[[4]]
+..stacktraceoff..(captureStackTraces({
+    while (!.globals$stopped) {
+        ..stacktracefloor..(serviceApp())
+    }
+}))
+
+[[5]]
+captureStackTraces({
+    while (!.globals$stopped) {
+        ..stacktracefloor..(serviceApp())
+    }
+})
+
+[[6]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[7]]
+domain$wrapSync(expr)
+
+[[8]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[9]]
+..stacktracefloor..(serviceApp())
+
+[[10]]
+serviceApp()
+
+[[11]]
+flushReact()
+
+[[12]]
+.getReactiveEnvironment()$flush()
+
+[[13]]
+ctx$executeFlushCallbacks()
+
+[[14]]
+lapply(.flushCallbacks, function(flushCallback) {
+    flushCallback()
+})
+
+[[15]]
+FUN(X[[i]], ...)
+
+[[16]]
+flushCallback()
+
+[[17]]
+hybrid_chain({
+    if (!.destroyed) {
+        shinyCallingHandlers(run())
+    }
+}, catch = function(e) {
+    if (cnd_inherits(e, "shiny.silent.error")) {
+        return()
+    }
+    printError(e)
+    if (!is.null(.domain)) {
+        .domain$unhandledError(e, close = TRUE)
+    }
+}, finally = .domain$decrementBusyCount)
+
+[[18]]
+do()
+
+[[19]]
+tryCatch({
+    captureStackTraces({
+        result <- withVisible(force(expr))
+        if (is.promising(result$value)) {
+            p <- promise_chain(valueWithVisible(result), ..., 
+                catch = catch, finally = finally)
+            runFinally <- FALSE
+            p
+        }
+        else {
+            result <- Reduce(function(v, func) {
+                if (v$visible) {
+                  withVisible(func(v$value))
+                }
+                else {
+                  withVisible(func(invisible(v$value)))
+                }
+            }, list(...), result)
+            valueWithVisible(result)
+        }
+    })
+}, error = function(e) {
+    if (!is.null(catch)) 
+        catch(e)
+    else stop(e)
+}, finally = if (runFinally && !is.null(finally)) finally())
+
+[[20]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[21]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[22]]
+doTryCatch(return(expr), name, parentenv, handler)
+
+[[23]]
+captureStackTraces({
+    result <- withVisible(force(expr))
+    if (is.promising(result$value)) {
+        p <- promise_chain(valueWithVisible(result), ..., catch = catch, 
+            finally = finally)
+        runFinally <- FALSE
+        p
+    }
+    else {
+        result <- Reduce(function(v, func) {
+            if (v$visible) {
+                withVisible(func(v$value))
+            }
+            else {
+                withVisible(func(invisible(v$value)))
+            }
+        }, list(...), result)
+        valueWithVisible(result)
+    }
+})
+
+[[24]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[25]]
+domain$wrapSync(expr)
+
+[[26]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[27]]
+withVisible(force(expr))
+
+[[28]]
+force(expr)
+
+[[29]]
+shinyCallingHandlers(run())
+
+[[30]]
+withCallingHandlers(captureStackTraces(expr), error = function(e) {
+    if (cnd_inherits(e, "shiny.silent.error")) 
+        return()
+    handle <- getOption("shiny.error")
+    if (is.function(handle)) 
+        handle()
+})
+
+[[31]]
+captureStackTraces(expr)
+
+[[32]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[33]]
+domain$wrapSync(expr)
+
+[[34]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[35]]
+run()
+
+[[36]]
+ctx$run(.func)
+
+[[37]]
+promises::with_promise_domain(reactivePromiseDomain(), {
+    withReactiveDomain(.domain, {
+        with_otel_span_context(.otel_info, domain = .domain, 
+            {
+                captureStackTraces({
+                  env <- .getReactiveEnvironment()
+                  rLog$enter(.reactId, id, .reactType, .domain)
+                  on.exit(rLog$exit(.reactId, id, .reactType, 
+                    .domain), add = TRUE)
+                  env$runWith(self, func)
+                })
+            })
+    })
+})
+
+[[38]]
+domain$wrapSync(expr)
+
+[[39]]
+withReactiveDomain(.domain, {
+    with_otel_span_context(.otel_info, domain = .domain, {
+        captureStackTraces({
+            env <- .getReactiveEnvironment()
+            rLog$enter(.reactId, id, .reactType, .domain)
+            on.exit(rLog$exit(.reactId, id, .reactType, .domain), 
+                add = TRUE)
+            env$runWith(self, func)
+        })
+    })
+})
+
+[[40]]
+promises::with_promise_domain(createVarPromiseDomain(.globals, 
+    "domain", domain), expr)
+
+[[41]]
+domain$wrapSync(expr)
+
+[[42]]
+force(expr)
+
+[[43]]
+with_otel_span_context(.otel_info, domain = .domain, {
+    captureStackTraces({
+        env <- .getReactiveEnvironment()
+        rLog$enter(.reactId, id, .reactType, .domain)
+        on.exit(rLog$exit(.reactId, id, .reactType, .domain), 
+            add = TRUE)
+        env$runWith(self, func)
+    })
+})
+
+[[44]]
+force(expr)
+
+[[45]]
+captureStackTraces({
+    env <- .getReactiveEnvironment()
+    rLog$enter(.reactId, id, .reactType, .domain)
+    on.exit(rLog$exit(.reactId, id, .reactType, .domain), add = TRUE)
+    env$runWith(self, func)
+})
+
+[[46]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[47]]
+domain$wrapSync(expr)
+
+[[48]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[49]]
+env$runWith(self, func)
+
+[[50]]
+contextFunc()
+
+[[51]]
+`<observer:output$breadcrumb_nav>`(...)
+
+[[52]]
+observe()
+
+[[53]]
+hybrid_chain(hybrid_chain({
+    private$withCurrentOutput(name, {
+        maybe_with_otel_span_reactive_update({
+            shinyCallingHandlers(func())
+        }, domain = self)
+    })
+}, catch = function(cond) {
+    if (inherits(cond, "shiny.custom.error")) {
+        if (isTRUE(getOption("show.error.messages"))) 
+            printError(cond)
+        structure(list(), class = "try-error", condition = cond)
+    }
+    else if (inherits(cond, "shiny.output.cancel")) {
+        structure(list(), class = "cancel-output")
+    }
+    else if (inherits(cond, "shiny.output.progress")) {
+        structure(list(), class = "progress-output")
+    }
+    else if (cnd_inherits(cond, "shiny.silent.error")) {
+        while (!inherits(cond, "shiny.silent.error")) {
+            cond <- cond$parent
+        }
+        structure(list(), class = "try-error", condition = cond)
+    }
+    else {
+        if (isTRUE(getOption("show.error.messages"))) 
+            printError(cond)
+        if (getOption("shiny.sanitize.errors", FALSE)) {
+            cond <- sanitized_error()
+        }
+        self$unhandledError(cond, close = FALSE)
+        invisible(structure(list(), class = "try-error", condition = cond))
+    }
+}), function(value) {
+    self$requestFlush()
+    if (inherits(value, "progress-output")) {
+        self$showProgress(name, persistent = TRUE)
+        private$invalidatedOutputErrors$remove(name)
+        private$invalidatedOutputValues$remove(name)
+        return()
+    }
+    private$sendMessage(recalculating = list(name = name, status = "recalculated"))
+    if (inherits(value, "cancel-output")) {
+        return()
+    }
+    private$invalidatedOutputErrors$remove(name)
+    private$invalidatedOutputValues$remove(name)
+    if (inherits(value, "try-error")) {
+        cond <- attr(value, "condition")
+        type <- setdiff(class(cond), c("simpleError", "error", 
+            "condition"))
+        private$invalidatedOutputErrors$set(name, list(message = cond$message, 
+            call = utils::capture.output(print(cond$call)), type = if (length(type)) type))
+    }
+    else private$invalidatedOutputValues$set(name, value)
+})
+
+[[54]]
+do()
+
+[[55]]
+tryCatch({
+    captureStackTraces({
+        result <- withVisible(force(expr))
+        if (is.promising(result$value)) {
+            p <- promise_chain(valueWithVisible(result), ..., 
+                catch = catch, finally = finally)
+            runFinally <- FALSE
+            p
+        }
+        else {
+            result <- Reduce(function(v, func) {
+                if (v$visible) {
+                  withVisible(func(v$value))
+                }
+                else {
+                  withVisible(func(invisible(v$value)))
+                }
+            }, list(...), result)
+            valueWithVisible(result)
+        }
+    })
+}, error = function(e) {
+    if (!is.null(catch)) 
+        catch(e)
+    else stop(e)
+}, finally = if (runFinally && !is.null(finally)) finally())
+
+[[56]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[57]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[58]]
+doTryCatch(return(expr), name, parentenv, handler)
+
+[[59]]
+captureStackTraces({
+    result <- withVisible(force(expr))
+    if (is.promising(result$value)) {
+        p <- promise_chain(valueWithVisible(result), ..., catch = catch, 
+            finally = finally)
+        runFinally <- FALSE
+        p
+    }
+    else {
+        result <- Reduce(function(v, func) {
+            if (v$visible) {
+                withVisible(func(v$value))
+            }
+            else {
+                withVisible(func(invisible(v$value)))
+            }
+        }, list(...), result)
+        valueWithVisible(result)
+    }
+})
+
+[[60]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[61]]
+domain$wrapSync(expr)
+
+[[62]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[63]]
+withVisible(force(expr))
+
+[[64]]
+force(expr)
+
+[[65]]
+hybrid_chain({
+    private$withCurrentOutput(name, {
+        maybe_with_otel_span_reactive_update({
+            shinyCallingHandlers(func())
+        }, domain = self)
+    })
+}, catch = function(cond) {
+    if (inherits(cond, "shiny.custom.error")) {
+        if (isTRUE(getOption("show.error.messages"))) 
+            printError(cond)
+        structure(list(), class = "try-error", condition = cond)
+    }
+    else if (inherits(cond, "shiny.output.cancel")) {
+        structure(list(), class = "cancel-output")
+    }
+    else if (inherits(cond, "shiny.output.progress")) {
+        structure(list(), class = "progress-output")
+    }
+    else if (cnd_inherits(cond, "shiny.silent.error")) {
+        while (!inherits(cond, "shiny.silent.error")) {
+            cond <- cond$parent
+        }
+        structure(list(), class = "try-error", condition = cond)
+    }
+    else {
+        if (isTRUE(getOption("show.error.messages"))) 
+            printError(cond)
+        if (getOption("shiny.sanitize.errors", FALSE)) {
+            cond <- sanitized_error()
+        }
+        self$unhandledError(cond, close = FALSE)
+        invisible(structure(list(), class = "try-error", condition = cond))
+    }
+})
+
+[[66]]
+do()
+
+[[67]]
+tryCatch({
+    captureStackTraces({
+        result <- withVisible(force(expr))
+        if (is.promising(result$value)) {
+            p <- promise_chain(valueWithVisible(result), ..., 
+                catch = catch, finally = finally)
+            runFinally <- FALSE
+            p
+        }
+        else {
+            result <- Reduce(function(v, func) {
+                if (v$visible) {
+                  withVisible(func(v$value))
+                }
+                else {
+                  withVisible(func(invisible(v$value)))
+                }
+            }, list(...), result)
+            valueWithVisible(result)
+        }
+    })
+}, error = function(e) {
+    if (!is.null(catch)) 
+        catch(e)
+    else stop(e)
+}, finally = if (runFinally && !is.null(finally)) finally())
+
+[[68]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[69]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[70]]
+doTryCatch(return(expr), name, parentenv, handler)
+
+[[71]]
+captureStackTraces({
+    result <- withVisible(force(expr))
+    if (is.promising(result$value)) {
+        p <- promise_chain(valueWithVisible(result), ..., catch = catch, 
+            finally = finally)
+        runFinally <- FALSE
+        p
+    }
+    else {
+        result <- Reduce(function(v, func) {
+            if (v$visible) {
+                withVisible(func(v$value))
+            }
+            else {
+                withVisible(func(invisible(v$value)))
+            }
+        }, list(...), result)
+        valueWithVisible(result)
+    }
+})
+
+[[72]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[73]]
+domain$wrapSync(expr)
+
+[[74]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[75]]
+withVisible(force(expr))
+
+[[76]]
+force(expr)
+
+[[77]]
+private$withCurrentOutput(name, {
+    maybe_with_otel_span_reactive_update({
+        shinyCallingHandlers(func())
+    }, domain = self)
+})
+
+[[78]]
+with_promise_domain(createVarPromiseDomain(private, "currentOutputName", 
+    name), expr)
+
+[[79]]
+domain$wrapSync(expr)
+
+[[80]]
+force(expr)
+
+[[81]]
+maybe_with_otel_span_reactive_update({
+    shinyCallingHandlers(func())
+}, domain = self)
+
+[[82]]
+hybrid_then({
+    with_otel_span_reactive_update(domain = domain, expr)
+}, on_success = function(value) {
+    domain$userData[["_otel_reactive_update_is_active"]] <- NULL
+}, on_failure = function(e) {
+    domain$userData[["_otel_reactive_update_is_active"]] <- NULL
+}, tee = TRUE)
+
+[[83]]
+withVisible(tryCatch(expr, error = function(e) {
+    if (is.null(on_failure)) {
+        stop(e)
+    }
+    result_on_error <- withVisible(on_failure(e))
+    if (tee) {
+        stop(e)
+    }
+    else {
+        result_is_sync_error <<- TRUE
+        return_with_visible(result_on_error)
+    }
+}))
+
+[[84]]
+tryCatch(expr, error = function(e) {
+    if (is.null(on_failure)) {
+        stop(e)
+    }
+    result_on_error <- withVisible(on_failure(e))
+    if (tee) {
+        stop(e)
+    }
+    else {
+        result_is_sync_error <<- TRUE
+        return_with_visible(result_on_error)
+    }
+})
+
+[[85]]
+base::tryCatch(withCallingHandlers(expr, error = function(e) {
+    promiseDomain$onError(e)
+}), ..., finally = finally)
+
+[[86]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[87]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[88]]
+doTryCatch(return(expr), name, parentenv, handler)
+
+[[89]]
+withCallingHandlers(expr, error = function(e) {
+    promiseDomain$onError(e)
+})
+
+[[90]]
+with_otel_span_reactive_update(domain = domain, expr)
+
+[[91]]
+force(expr)
+
+[[92]]
+shinyCallingHandlers(func())
+
+[[93]]
+withCallingHandlers(captureStackTraces(expr), error = function(e) {
+    if (cnd_inherits(e, "shiny.silent.error")) 
+        return()
+    handle <- getOption("shiny.error")
+    if (is.function(handle)) 
+        handle()
+})
+
+[[94]]
+captureStackTraces(expr)
+
+[[95]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[96]]
+domain$wrapSync(expr)
+
+[[97]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[98]]
+func()
+
+[[99]]
+orig(name = name, shinysession = self)
+
+[[100]]
+..stacktraceon..(`output$breadcrumb_nav`(...))
+
+[[101]]
+`output$breadcrumb_nav`(...)
+
+[[102]]
+..stacktraceoff..(if (is.null(formals(renderFunc))) renderFunc() else renderFunc(...))
+
+[[103]]
+renderFunc(...)
+
+[[104]]
+hybrid_chain(..stacktraceon..(func()), function(value) {
+    transform(value, shinysession, name, ...)
+})
+
+[[105]]
+do()
+
+[[106]]
+tryCatch({
+    captureStackTraces({
+        result <- withVisible(force(expr))
+        if (is.promising(result$value)) {
+            p <- promise_chain(valueWithVisible(result), ..., 
+                catch = catch, finally = finally)
+            runFinally <- FALSE
+            p
+        }
+        else {
+            result <- Reduce(function(v, func) {
+                if (v$visible) {
+                  withVisible(func(v$value))
+                }
+                else {
+                  withVisible(func(invisible(v$value)))
+                }
+            }, list(...), result)
+            valueWithVisible(result)
+        }
+    })
+}, error = function(e) {
+    if (!is.null(catch)) 
+        catch(e)
+    else stop(e)
+}, finally = if (runFinally && !is.null(finally)) finally())
+
+[[107]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[108]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[109]]
+value[[3L]](cond)
+
+[[110]]
+stop(e)
+
+[[111]]
+(function (e) 
+{
+    if (is.null(attr(e, "stack.trace", exact = TRUE))) {
+        calls <- sys.calls()
+        parents <- sys.parents()
+        attr(calls, "parents") <- parents
+        calls <- saveCallStackDigest(calls)
+        attr(e, "stack.trace") <- calls
+    }
+    if (deepStacksEnabled()) {
+        if (is.null(attr(e, "deep.stack.trace", exact = TRUE)) && 
+            !is.null(.globals$deepStack)) {
+            attr(e, "deep.stack.trace") <- .globals$deepStack
+        }
+    }
+    stop(e)
+})(list(message = "missing value where TRUE/FALSE needed", call = if (i <= 
+    cur_idx && !running) {
+    actionLink(paste0("crumb_", step_key), label)
+} else {
+    tags$span(style = "color:#9ca3af;", label)
+}))
+
+[[112]]
+stop(e)
+
+[[113]]
+(function (e) 
+{
+    if (cnd_inherits(e, "shiny.silent.error")) 
+        return()
+    handle <- getOption("shiny.error")
+    if (is.function(handle)) 
+        handle()
+})(list(message = "missing value where TRUE/FALSE needed", call = if (i <= 
+    cur_idx && !running) {
+    actionLink(paste0("crumb_", step_key), label)
+} else {
+    tags$span(style = "color:#9ca3af;", label)
+}))
+
+[[114]]
+handle()
+
+SessionInfo:
+R version 4.5.3 (2026-03-11 ucrt)
+Platform: x86_64-w64-mingw32/x64
+Running under: Windows 11 x64 (build 26200)
+
+Matrix products: default
+  LAPACK version 3.12.1
+
+locale:
+[1] LC_COLLATE=English_United States.utf8  LC_CTYPE=English_United States.utf8    LC_MONETARY=English_United States.utf8 LC_NUMERIC=C                          
+[5] LC_TIME=English_United States.utf8    
+
+time zone: Asia/Aden
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+ [1] textclean_0.9.7     kutils_1.73         stringdist_0.9.17   data.table_1.18.2.1 rjson_0.2.23        httr_1.4.8          robotoolbox_1.4     activityinfo_4.39  
+ [9] lubridate_1.9.5     forcats_1.0.1       stringr_1.6.0       purrr_1.2.1         readr_2.2.0         tidyr_1.3.2         tibble_3.3.1        ggplot2_4.0.2      
+[17] tidyverse_2.0.0     plyr_1.8.9          future_1.69.0       promises_1.5.0      shiny_1.13.0        openxlsx_4.2.8.1    readxl_1.4.5        DT_0.34.0          
+[25] bslib_0.10.0        dplyr_1.2.0        
+
+loaded via a namespace (and not attached):
+ [1] tidyselect_1.2.1    farver_2.1.2        S7_0.2.1            fastmap_1.2.0       labelled_2.16.0     digest_0.6.39       timechange_0.4.0    mime_0.13          
+ [9] lifecycle_1.0.5     magrittr_2.0.4      compiler_4.5.3      rlang_1.1.7         sass_0.4.10         tools_4.5.3         qdapRegex_0.7.10    igraph_2.2.2       
+[17] yaml_2.3.12         askpass_1.2.1       htmlwidgets_1.6.4   curl_7.0.0          RColorBrewer_1.1-3  httpcode_0.3.0      withr_3.0.2         RcppSimdJson_0.1.15
+[25] foreign_0.8-91      grid_4.5.3          xtable_1.8-8        globals_0.19.0      scales_1.4.0        crul_1.6.0          cli_3.6.5           generics_0.1.4     
+[33] otel_0.2.0          rstudioapi_0.18.0   tzdb_0.5.0          DBI_1.3.0           cachem_1.1.0        parallel_4.5.3      cellranger_1.1.0    vctrs_0.7.1        
+[41] jsonlite_2.0.0      dm_1.1.1            hms_1.1.4           listenv_0.10.0      crosstalk_1.2.2     fontawesome_0.5.3   jquerylib_0.1.4     glue_1.8.0         
+[49] parallelly_1.46.1   codetools_0.2-20    bcrypt_1.2.1        stringi_1.8.7       gtable_0.3.6        later_1.4.8         pillar_1.11.1       htmltools_0.5.9    
+[57] openssl_2.3.5       R6_2.6.1            dbplyr_2.5.2        haven_2.5.5         backports_1.5.0     memoise_2.0.1       httpuv_1.6.16       Rcpp_1.1.1         
+[65] zip_2.3.3           fs_1.6.7            pkgconfig_2.0.3    
+2026-04-08 18:46:29 — unknown error; geterrmessage: missing value where TRUE/FALSE needed
+
+CallStack:
+[[1]]
+(function (x, ...) 
+UseMethod("print"))(x)
+
+[[2]]
+print.shiny.appobj(x)
+
+[[3]]
+runApp(x)
+
+[[4]]
+..stacktraceoff..(captureStackTraces({
+    while (!.globals$stopped) {
+        ..stacktracefloor..(serviceApp())
+    }
+}))
+
+[[5]]
+captureStackTraces({
+    while (!.globals$stopped) {
+        ..stacktracefloor..(serviceApp())
+    }
+})
+
+[[6]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[7]]
+domain$wrapSync(expr)
+
+[[8]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[9]]
+..stacktracefloor..(serviceApp())
+
+[[10]]
+serviceApp()
+
+[[11]]
+flushReact()
+
+[[12]]
+.getReactiveEnvironment()$flush()
+
+[[13]]
+ctx$executeFlushCallbacks()
+
+[[14]]
+lapply(.flushCallbacks, function(flushCallback) {
+    flushCallback()
+})
+
+[[15]]
+FUN(X[[i]], ...)
+
+[[16]]
+flushCallback()
+
+[[17]]
+hybrid_chain({
+    if (!.destroyed) {
+        shinyCallingHandlers(run())
+    }
+}, catch = function(e) {
+    if (cnd_inherits(e, "shiny.silent.error")) {
+        return()
+    }
+    printError(e)
+    if (!is.null(.domain)) {
+        .domain$unhandledError(e, close = TRUE)
+    }
+}, finally = .domain$decrementBusyCount)
+
+[[18]]
+do()
+
+[[19]]
+tryCatch({
+    captureStackTraces({
+        result <- withVisible(force(expr))
+        if (is.promising(result$value)) {
+            p <- promise_chain(valueWithVisible(result), ..., 
+                catch = catch, finally = finally)
+            runFinally <- FALSE
+            p
+        }
+        else {
+            result <- Reduce(function(v, func) {
+                if (v$visible) {
+                  withVisible(func(v$value))
+                }
+                else {
+                  withVisible(func(invisible(v$value)))
+                }
+            }, list(...), result)
+            valueWithVisible(result)
+        }
+    })
+}, error = function(e) {
+    if (!is.null(catch)) 
+        catch(e)
+    else stop(e)
+}, finally = if (runFinally && !is.null(finally)) finally())
+
+[[20]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[21]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[22]]
+doTryCatch(return(expr), name, parentenv, handler)
+
+[[23]]
+captureStackTraces({
+    result <- withVisible(force(expr))
+    if (is.promising(result$value)) {
+        p <- promise_chain(valueWithVisible(result), ..., catch = catch, 
+            finally = finally)
+        runFinally <- FALSE
+        p
+    }
+    else {
+        result <- Reduce(function(v, func) {
+            if (v$visible) {
+                withVisible(func(v$value))
+            }
+            else {
+                withVisible(func(invisible(v$value)))
+            }
+        }, list(...), result)
+        valueWithVisible(result)
+    }
+})
+
+[[24]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[25]]
+domain$wrapSync(expr)
+
+[[26]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[27]]
+withVisible(force(expr))
+
+[[28]]
+force(expr)
+
+[[29]]
+shinyCallingHandlers(run())
+
+[[30]]
+withCallingHandlers(captureStackTraces(expr), error = function(e) {
+    if (cnd_inherits(e, "shiny.silent.error")) 
+        return()
+    handle <- getOption("shiny.error")
+    if (is.function(handle)) 
+        handle()
+})
+
+[[31]]
+captureStackTraces(expr)
+
+[[32]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[33]]
+domain$wrapSync(expr)
+
+[[34]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[35]]
+run()
+
+[[36]]
+ctx$run(.func)
+
+[[37]]
+promises::with_promise_domain(reactivePromiseDomain(), {
+    withReactiveDomain(.domain, {
+        with_otel_span_context(.otel_info, domain = .domain, 
+            {
+                captureStackTraces({
+                  env <- .getReactiveEnvironment()
+                  rLog$enter(.reactId, id, .reactType, .domain)
+                  on.exit(rLog$exit(.reactId, id, .reactType, 
+                    .domain), add = TRUE)
+                  env$runWith(self, func)
+                })
+            })
+    })
+})
+
+[[38]]
+domain$wrapSync(expr)
+
+[[39]]
+withReactiveDomain(.domain, {
+    with_otel_span_context(.otel_info, domain = .domain, {
+        captureStackTraces({
+            env <- .getReactiveEnvironment()
+            rLog$enter(.reactId, id, .reactType, .domain)
+            on.exit(rLog$exit(.reactId, id, .reactType, .domain), 
+                add = TRUE)
+            env$runWith(self, func)
+        })
+    })
+})
+
+[[40]]
+promises::with_promise_domain(createVarPromiseDomain(.globals, 
+    "domain", domain), expr)
+
+[[41]]
+domain$wrapSync(expr)
+
+[[42]]
+force(expr)
+
+[[43]]
+with_otel_span_context(.otel_info, domain = .domain, {
+    captureStackTraces({
+        env <- .getReactiveEnvironment()
+        rLog$enter(.reactId, id, .reactType, .domain)
+        on.exit(rLog$exit(.reactId, id, .reactType, .domain), 
+            add = TRUE)
+        env$runWith(self, func)
+    })
+})
+
+[[44]]
+force(expr)
+
+[[45]]
+captureStackTraces({
+    env <- .getReactiveEnvironment()
+    rLog$enter(.reactId, id, .reactType, .domain)
+    on.exit(rLog$exit(.reactId, id, .reactType, .domain), add = TRUE)
+    env$runWith(self, func)
+})
+
+[[46]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[47]]
+domain$wrapSync(expr)
+
+[[48]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[49]]
+env$runWith(self, func)
+
+[[50]]
+contextFunc()
+
+[[51]]
+`<observer:output$breadcrumb_nav>`(...)
+
+[[52]]
+observe()
+
+[[53]]
+hybrid_chain(hybrid_chain({
+    private$withCurrentOutput(name, {
+        maybe_with_otel_span_reactive_update({
+            shinyCallingHandlers(func())
+        }, domain = self)
+    })
+}, catch = function(cond) {
+    if (inherits(cond, "shiny.custom.error")) {
+        if (isTRUE(getOption("show.error.messages"))) 
+            printError(cond)
+        structure(list(), class = "try-error", condition = cond)
+    }
+    else if (inherits(cond, "shiny.output.cancel")) {
+        structure(list(), class = "cancel-output")
+    }
+    else if (inherits(cond, "shiny.output.progress")) {
+        structure(list(), class = "progress-output")
+    }
+    else if (cnd_inherits(cond, "shiny.silent.error")) {
+        while (!inherits(cond, "shiny.silent.error")) {
+            cond <- cond$parent
+        }
+        structure(list(), class = "try-error", condition = cond)
+    }
+    else {
+        if (isTRUE(getOption("show.error.messages"))) 
+            printError(cond)
+        if (getOption("shiny.sanitize.errors", FALSE)) {
+            cond <- sanitized_error()
+        }
+        self$unhandledError(cond, close = FALSE)
+        invisible(structure(list(), class = "try-error", condition = cond))
+    }
+}), function(value) {
+    self$requestFlush()
+    if (inherits(value, "progress-output")) {
+        self$showProgress(name, persistent = TRUE)
+        private$invalidatedOutputErrors$remove(name)
+        private$invalidatedOutputValues$remove(name)
+        return()
+    }
+    private$sendMessage(recalculating = list(name = name, status = "recalculated"))
+    if (inherits(value, "cancel-output")) {
+        return()
+    }
+    private$invalidatedOutputErrors$remove(name)
+    private$invalidatedOutputValues$remove(name)
+    if (inherits(value, "try-error")) {
+        cond <- attr(value, "condition")
+        type <- setdiff(class(cond), c("simpleError", "error", 
+            "condition"))
+        private$invalidatedOutputErrors$set(name, list(message = cond$message, 
+            call = utils::capture.output(print(cond$call)), type = if (length(type)) type))
+    }
+    else private$invalidatedOutputValues$set(name, value)
+})
+
+[[54]]
+do()
+
+[[55]]
+tryCatch({
+    captureStackTraces({
+        result <- withVisible(force(expr))
+        if (is.promising(result$value)) {
+            p <- promise_chain(valueWithVisible(result), ..., 
+                catch = catch, finally = finally)
+            runFinally <- FALSE
+            p
+        }
+        else {
+            result <- Reduce(function(v, func) {
+                if (v$visible) {
+                  withVisible(func(v$value))
+                }
+                else {
+                  withVisible(func(invisible(v$value)))
+                }
+            }, list(...), result)
+            valueWithVisible(result)
+        }
+    })
+}, error = function(e) {
+    if (!is.null(catch)) 
+        catch(e)
+    else stop(e)
+}, finally = if (runFinally && !is.null(finally)) finally())
+
+[[56]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[57]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[58]]
+doTryCatch(return(expr), name, parentenv, handler)
+
+[[59]]
+captureStackTraces({
+    result <- withVisible(force(expr))
+    if (is.promising(result$value)) {
+        p <- promise_chain(valueWithVisible(result), ..., catch = catch, 
+            finally = finally)
+        runFinally <- FALSE
+        p
+    }
+    else {
+        result <- Reduce(function(v, func) {
+            if (v$visible) {
+                withVisible(func(v$value))
+            }
+            else {
+                withVisible(func(invisible(v$value)))
+            }
+        }, list(...), result)
+        valueWithVisible(result)
+    }
+})
+
+[[60]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[61]]
+domain$wrapSync(expr)
+
+[[62]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[63]]
+withVisible(force(expr))
+
+[[64]]
+force(expr)
+
+[[65]]
+hybrid_chain({
+    private$withCurrentOutput(name, {
+        maybe_with_otel_span_reactive_update({
+            shinyCallingHandlers(func())
+        }, domain = self)
+    })
+}, catch = function(cond) {
+    if (inherits(cond, "shiny.custom.error")) {
+        if (isTRUE(getOption("show.error.messages"))) 
+            printError(cond)
+        structure(list(), class = "try-error", condition = cond)
+    }
+    else if (inherits(cond, "shiny.output.cancel")) {
+        structure(list(), class = "cancel-output")
+    }
+    else if (inherits(cond, "shiny.output.progress")) {
+        structure(list(), class = "progress-output")
+    }
+    else if (cnd_inherits(cond, "shiny.silent.error")) {
+        while (!inherits(cond, "shiny.silent.error")) {
+            cond <- cond$parent
+        }
+        structure(list(), class = "try-error", condition = cond)
+    }
+    else {
+        if (isTRUE(getOption("show.error.messages"))) 
+            printError(cond)
+        if (getOption("shiny.sanitize.errors", FALSE)) {
+            cond <- sanitized_error()
+        }
+        self$unhandledError(cond, close = FALSE)
+        invisible(structure(list(), class = "try-error", condition = cond))
+    }
+})
+
+[[66]]
+do()
+
+[[67]]
+tryCatch({
+    captureStackTraces({
+        result <- withVisible(force(expr))
+        if (is.promising(result$value)) {
+            p <- promise_chain(valueWithVisible(result), ..., 
+                catch = catch, finally = finally)
+            runFinally <- FALSE
+            p
+        }
+        else {
+            result <- Reduce(function(v, func) {
+                if (v$visible) {
+                  withVisible(func(v$value))
+                }
+                else {
+                  withVisible(func(invisible(v$value)))
+                }
+            }, list(...), result)
+            valueWithVisible(result)
+        }
+    })
+}, error = function(e) {
+    if (!is.null(catch)) 
+        catch(e)
+    else stop(e)
+}, finally = if (runFinally && !is.null(finally)) finally())
+
+[[68]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[69]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[70]]
+doTryCatch(return(expr), name, parentenv, handler)
+
+[[71]]
+captureStackTraces({
+    result <- withVisible(force(expr))
+    if (is.promising(result$value)) {
+        p <- promise_chain(valueWithVisible(result), ..., catch = catch, 
+            finally = finally)
+        runFinally <- FALSE
+        p
+    }
+    else {
+        result <- Reduce(function(v, func) {
+            if (v$visible) {
+                withVisible(func(v$value))
+            }
+            else {
+                withVisible(func(invisible(v$value)))
+            }
+        }, list(...), result)
+        valueWithVisible(result)
+    }
+})
+
+[[72]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[73]]
+domain$wrapSync(expr)
+
+[[74]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[75]]
+withVisible(force(expr))
+
+[[76]]
+force(expr)
+
+[[77]]
+private$withCurrentOutput(name, {
+    maybe_with_otel_span_reactive_update({
+        shinyCallingHandlers(func())
+    }, domain = self)
+})
+
+[[78]]
+with_promise_domain(createVarPromiseDomain(private, "currentOutputName", 
+    name), expr)
+
+[[79]]
+domain$wrapSync(expr)
+
+[[80]]
+force(expr)
+
+[[81]]
+maybe_with_otel_span_reactive_update({
+    shinyCallingHandlers(func())
+}, domain = self)
+
+[[82]]
+hybrid_then({
+    with_otel_span_reactive_update(domain = domain, expr)
+}, on_success = function(value) {
+    domain$userData[["_otel_reactive_update_is_active"]] <- NULL
+}, on_failure = function(e) {
+    domain$userData[["_otel_reactive_update_is_active"]] <- NULL
+}, tee = TRUE)
+
+[[83]]
+withVisible(tryCatch(expr, error = function(e) {
+    if (is.null(on_failure)) {
+        stop(e)
+    }
+    result_on_error <- withVisible(on_failure(e))
+    if (tee) {
+        stop(e)
+    }
+    else {
+        result_is_sync_error <<- TRUE
+        return_with_visible(result_on_error)
+    }
+}))
+
+[[84]]
+tryCatch(expr, error = function(e) {
+    if (is.null(on_failure)) {
+        stop(e)
+    }
+    result_on_error <- withVisible(on_failure(e))
+    if (tee) {
+        stop(e)
+    }
+    else {
+        result_is_sync_error <<- TRUE
+        return_with_visible(result_on_error)
+    }
+})
+
+[[85]]
+base::tryCatch(withCallingHandlers(expr, error = function(e) {
+    promiseDomain$onError(e)
+}), ..., finally = finally)
+
+[[86]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[87]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[88]]
+doTryCatch(return(expr), name, parentenv, handler)
+
+[[89]]
+withCallingHandlers(expr, error = function(e) {
+    promiseDomain$onError(e)
+})
+
+[[90]]
+with_otel_span_reactive_update(domain = domain, expr)
+
+[[91]]
+force(expr)
+
+[[92]]
+shinyCallingHandlers(func())
+
+[[93]]
+withCallingHandlers(captureStackTraces(expr), error = function(e) {
+    if (cnd_inherits(e, "shiny.silent.error")) 
+        return()
+    handle <- getOption("shiny.error")
+    if (is.function(handle)) 
+        handle()
+})
+
+[[94]]
+captureStackTraces(expr)
+
+[[95]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[96]]
+domain$wrapSync(expr)
+
+[[97]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[98]]
+func()
+
+[[99]]
+orig(name = name, shinysession = self)
+
+[[100]]
+..stacktraceon..(`output$breadcrumb_nav`(...))
+
+[[101]]
+`output$breadcrumb_nav`(...)
+
+[[102]]
+..stacktraceoff..(if (is.null(formals(renderFunc))) renderFunc() else renderFunc(...))
+
+[[103]]
+renderFunc(...)
+
+[[104]]
+hybrid_chain(..stacktraceon..(func()), function(value) {
+    transform(value, shinysession, name, ...)
+})
+
+[[105]]
+do()
+
+[[106]]
+tryCatch({
+    captureStackTraces({
+        result <- withVisible(force(expr))
+        if (is.promising(result$value)) {
+            p <- promise_chain(valueWithVisible(result), ..., 
+                catch = catch, finally = finally)
+            runFinally <- FALSE
+            p
+        }
+        else {
+            result <- Reduce(function(v, func) {
+                if (v$visible) {
+                  withVisible(func(v$value))
+                }
+                else {
+                  withVisible(func(invisible(v$value)))
+                }
+            }, list(...), result)
+            valueWithVisible(result)
+        }
+    })
+}, error = function(e) {
+    if (!is.null(catch)) 
+        catch(e)
+    else stop(e)
+}, finally = if (runFinally && !is.null(finally)) finally())
+
+[[107]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[108]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[109]]
+value[[3L]](cond)
+
+[[110]]
+stop(e)
+
+[[111]]
+(function (e) 
+{
+    if (is.null(attr(e, "stack.trace", exact = TRUE))) {
+        calls <- sys.calls()
+        parents <- sys.parents()
+        attr(calls, "parents") <- parents
+        calls <- saveCallStackDigest(calls)
+        attr(e, "stack.trace") <- calls
+    }
+    if (deepStacksEnabled()) {
+        if (is.null(attr(e, "deep.stack.trace", exact = TRUE)) && 
+            !is.null(.globals$deepStack)) {
+            attr(e, "deep.stack.trace") <- .globals$deepStack
+        }
+    }
+    stop(e)
+})(list(message = "missing value where TRUE/FALSE needed", call = if (i <= 
+    cur_idx && !running) {
+    actionLink(paste0("crumb_", step_key), label)
+} else {
+    tags$span(style = "color:#9ca3af;", label)
+}))
+
+[[112]]
+stop(e)
+
+[[113]]
+(function (e) 
+{
+    if (cnd_inherits(e, "shiny.silent.error")) 
+        return()
+    handle <- getOption("shiny.error")
+    if (is.function(handle)) 
+        handle()
+})(list(message = "missing value where TRUE/FALSE needed", call = if (i <= 
+    cur_idx && !running) {
+    actionLink(paste0("crumb_", step_key), label)
+} else {
+    tags$span(style = "color:#9ca3af;", label)
+}))
+
+[[114]]
+handle()
+
+SessionInfo:
+R version 4.5.3 (2026-03-11 ucrt)
+Platform: x86_64-w64-mingw32/x64
+Running under: Windows 11 x64 (build 26200)
+
+Matrix products: default
+  LAPACK version 3.12.1
+
+locale:
+[1] LC_COLLATE=English_United States.utf8  LC_CTYPE=English_United States.utf8    LC_MONETARY=English_United States.utf8 LC_NUMERIC=C                          
+[5] LC_TIME=English_United States.utf8    
+
+time zone: Asia/Aden
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+ [1] textclean_0.9.7     kutils_1.73         stringdist_0.9.17   data.table_1.18.2.1 rjson_0.2.23        httr_1.4.8          robotoolbox_1.4     activityinfo_4.39  
+ [9] lubridate_1.9.5     forcats_1.0.1       stringr_1.6.0       purrr_1.2.1         readr_2.2.0         tidyr_1.3.2         tibble_3.3.1        ggplot2_4.0.2      
+[17] tidyverse_2.0.0     plyr_1.8.9          future_1.69.0       promises_1.5.0      shiny_1.13.0        openxlsx_4.2.8.1    readxl_1.4.5        DT_0.34.0          
+[25] bslib_0.10.0        dplyr_1.2.0        
+
+loaded via a namespace (and not attached):
+ [1] tidyselect_1.2.1    farver_2.1.2        S7_0.2.1            fastmap_1.2.0       labelled_2.16.0     digest_0.6.39       timechange_0.4.0    mime_0.13          
+ [9] lifecycle_1.0.5     magrittr_2.0.4      compiler_4.5.3      rlang_1.1.7         sass_0.4.10         tools_4.5.3         qdapRegex_0.7.10    igraph_2.2.2       
+[17] yaml_2.3.12         askpass_1.2.1       htmlwidgets_1.6.4   curl_7.0.0          RColorBrewer_1.1-3  httpcode_0.3.0      withr_3.0.2         RcppSimdJson_0.1.15
+[25] foreign_0.8-91      grid_4.5.3          xtable_1.8-8        globals_0.19.0      scales_1.4.0        crul_1.6.0          cli_3.6.5           generics_0.1.4     
+[33] otel_0.2.0          rstudioapi_0.18.0   tzdb_0.5.0          DBI_1.3.0           cachem_1.1.0        parallel_4.5.3      cellranger_1.1.0    vctrs_0.7.1        
+[41] jsonlite_2.0.0      dm_1.1.1            hms_1.1.4           listenv_0.10.0      crosstalk_1.2.2     fontawesome_0.5.3   jquerylib_0.1.4     glue_1.8.0         
+[49] parallelly_1.46.1   codetools_0.2-20    bcrypt_1.2.1        stringi_1.8.7       gtable_0.3.6        later_1.4.8         pillar_1.11.1       htmltools_0.5.9    
+[57] openssl_2.3.5       R6_2.6.1            dbplyr_2.5.2        haven_2.5.5         backports_1.5.0     memoise_2.0.1       httpuv_1.6.16       Rcpp_1.1.1         
+[65] zip_2.3.3           fs_1.6.7            pkgconfig_2.0.3    
+2026-04-08 18:53:18 — unknown error; geterrmessage: missing value where TRUE/FALSE needed
+
+CallStack:
+[[1]]
+(function (x, ...) 
+UseMethod("print"))(x)
+
+[[2]]
+print.shiny.appobj(x)
+
+[[3]]
+runApp(x)
+
+[[4]]
+..stacktraceoff..(captureStackTraces({
+    while (!.globals$stopped) {
+        ..stacktracefloor..(serviceApp())
+    }
+}))
+
+[[5]]
+captureStackTraces({
+    while (!.globals$stopped) {
+        ..stacktracefloor..(serviceApp())
+    }
+})
+
+[[6]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[7]]
+domain$wrapSync(expr)
+
+[[8]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[9]]
+..stacktracefloor..(serviceApp())
+
+[[10]]
+serviceApp()
+
+[[11]]
+flushReact()
+
+[[12]]
+.getReactiveEnvironment()$flush()
+
+[[13]]
+ctx$executeFlushCallbacks()
+
+[[14]]
+lapply(.flushCallbacks, function(flushCallback) {
+    flushCallback()
+})
+
+[[15]]
+FUN(X[[i]], ...)
+
+[[16]]
+flushCallback()
+
+[[17]]
+hybrid_chain({
+    if (!.destroyed) {
+        shinyCallingHandlers(run())
+    }
+}, catch = function(e) {
+    if (cnd_inherits(e, "shiny.silent.error")) {
+        return()
+    }
+    printError(e)
+    if (!is.null(.domain)) {
+        .domain$unhandledError(e, close = TRUE)
+    }
+}, finally = .domain$decrementBusyCount)
+
+[[18]]
+do()
+
+[[19]]
+tryCatch({
+    captureStackTraces({
+        result <- withVisible(force(expr))
+        if (is.promising(result$value)) {
+            p <- promise_chain(valueWithVisible(result), ..., 
+                catch = catch, finally = finally)
+            runFinally <- FALSE
+            p
+        }
+        else {
+            result <- Reduce(function(v, func) {
+                if (v$visible) {
+                  withVisible(func(v$value))
+                }
+                else {
+                  withVisible(func(invisible(v$value)))
+                }
+            }, list(...), result)
+            valueWithVisible(result)
+        }
+    })
+}, error = function(e) {
+    if (!is.null(catch)) 
+        catch(e)
+    else stop(e)
+}, finally = if (runFinally && !is.null(finally)) finally())
+
+[[20]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[21]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[22]]
+doTryCatch(return(expr), name, parentenv, handler)
+
+[[23]]
+captureStackTraces({
+    result <- withVisible(force(expr))
+    if (is.promising(result$value)) {
+        p <- promise_chain(valueWithVisible(result), ..., catch = catch, 
+            finally = finally)
+        runFinally <- FALSE
+        p
+    }
+    else {
+        result <- Reduce(function(v, func) {
+            if (v$visible) {
+                withVisible(func(v$value))
+            }
+            else {
+                withVisible(func(invisible(v$value)))
+            }
+        }, list(...), result)
+        valueWithVisible(result)
+    }
+})
+
+[[24]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[25]]
+domain$wrapSync(expr)
+
+[[26]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[27]]
+withVisible(force(expr))
+
+[[28]]
+force(expr)
+
+[[29]]
+shinyCallingHandlers(run())
+
+[[30]]
+withCallingHandlers(captureStackTraces(expr), error = function(e) {
+    if (cnd_inherits(e, "shiny.silent.error")) 
+        return()
+    handle <- getOption("shiny.error")
+    if (is.function(handle)) 
+        handle()
+})
+
+[[31]]
+captureStackTraces(expr)
+
+[[32]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[33]]
+domain$wrapSync(expr)
+
+[[34]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[35]]
+run()
+
+[[36]]
+ctx$run(.func)
+
+[[37]]
+promises::with_promise_domain(reactivePromiseDomain(), {
+    withReactiveDomain(.domain, {
+        with_otel_span_context(.otel_info, domain = .domain, 
+            {
+                captureStackTraces({
+                  env <- .getReactiveEnvironment()
+                  rLog$enter(.reactId, id, .reactType, .domain)
+                  on.exit(rLog$exit(.reactId, id, .reactType, 
+                    .domain), add = TRUE)
+                  env$runWith(self, func)
+                })
+            })
+    })
+})
+
+[[38]]
+domain$wrapSync(expr)
+
+[[39]]
+withReactiveDomain(.domain, {
+    with_otel_span_context(.otel_info, domain = .domain, {
+        captureStackTraces({
+            env <- .getReactiveEnvironment()
+            rLog$enter(.reactId, id, .reactType, .domain)
+            on.exit(rLog$exit(.reactId, id, .reactType, .domain), 
+                add = TRUE)
+            env$runWith(self, func)
+        })
+    })
+})
+
+[[40]]
+promises::with_promise_domain(createVarPromiseDomain(.globals, 
+    "domain", domain), expr)
+
+[[41]]
+domain$wrapSync(expr)
+
+[[42]]
+force(expr)
+
+[[43]]
+with_otel_span_context(.otel_info, domain = .domain, {
+    captureStackTraces({
+        env <- .getReactiveEnvironment()
+        rLog$enter(.reactId, id, .reactType, .domain)
+        on.exit(rLog$exit(.reactId, id, .reactType, .domain), 
+            add = TRUE)
+        env$runWith(self, func)
+    })
+})
+
+[[44]]
+force(expr)
+
+[[45]]
+captureStackTraces({
+    env <- .getReactiveEnvironment()
+    rLog$enter(.reactId, id, .reactType, .domain)
+    on.exit(rLog$exit(.reactId, id, .reactType, .domain), add = TRUE)
+    env$runWith(self, func)
+})
+
+[[46]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[47]]
+domain$wrapSync(expr)
+
+[[48]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[49]]
+env$runWith(self, func)
+
+[[50]]
+contextFunc()
+
+[[51]]
+`<observer:output$breadcrumb_nav>`(...)
+
+[[52]]
+observe()
+
+[[53]]
+hybrid_chain(hybrid_chain({
+    private$withCurrentOutput(name, {
+        maybe_with_otel_span_reactive_update({
+            shinyCallingHandlers(func())
+        }, domain = self)
+    })
+}, catch = function(cond) {
+    if (inherits(cond, "shiny.custom.error")) {
+        if (isTRUE(getOption("show.error.messages"))) 
+            printError(cond)
+        structure(list(), class = "try-error", condition = cond)
+    }
+    else if (inherits(cond, "shiny.output.cancel")) {
+        structure(list(), class = "cancel-output")
+    }
+    else if (inherits(cond, "shiny.output.progress")) {
+        structure(list(), class = "progress-output")
+    }
+    else if (cnd_inherits(cond, "shiny.silent.error")) {
+        while (!inherits(cond, "shiny.silent.error")) {
+            cond <- cond$parent
+        }
+        structure(list(), class = "try-error", condition = cond)
+    }
+    else {
+        if (isTRUE(getOption("show.error.messages"))) 
+            printError(cond)
+        if (getOption("shiny.sanitize.errors", FALSE)) {
+            cond <- sanitized_error()
+        }
+        self$unhandledError(cond, close = FALSE)
+        invisible(structure(list(), class = "try-error", condition = cond))
+    }
+}), function(value) {
+    self$requestFlush()
+    if (inherits(value, "progress-output")) {
+        self$showProgress(name, persistent = TRUE)
+        private$invalidatedOutputErrors$remove(name)
+        private$invalidatedOutputValues$remove(name)
+        return()
+    }
+    private$sendMessage(recalculating = list(name = name, status = "recalculated"))
+    if (inherits(value, "cancel-output")) {
+        return()
+    }
+    private$invalidatedOutputErrors$remove(name)
+    private$invalidatedOutputValues$remove(name)
+    if (inherits(value, "try-error")) {
+        cond <- attr(value, "condition")
+        type <- setdiff(class(cond), c("simpleError", "error", 
+            "condition"))
+        private$invalidatedOutputErrors$set(name, list(message = cond$message, 
+            call = utils::capture.output(print(cond$call)), type = if (length(type)) type))
+    }
+    else private$invalidatedOutputValues$set(name, value)
+})
+
+[[54]]
+do()
+
+[[55]]
+tryCatch({
+    captureStackTraces({
+        result <- withVisible(force(expr))
+        if (is.promising(result$value)) {
+            p <- promise_chain(valueWithVisible(result), ..., 
+                catch = catch, finally = finally)
+            runFinally <- FALSE
+            p
+        }
+        else {
+            result <- Reduce(function(v, func) {
+                if (v$visible) {
+                  withVisible(func(v$value))
+                }
+                else {
+                  withVisible(func(invisible(v$value)))
+                }
+            }, list(...), result)
+            valueWithVisible(result)
+        }
+    })
+}, error = function(e) {
+    if (!is.null(catch)) 
+        catch(e)
+    else stop(e)
+}, finally = if (runFinally && !is.null(finally)) finally())
+
+[[56]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[57]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[58]]
+doTryCatch(return(expr), name, parentenv, handler)
+
+[[59]]
+captureStackTraces({
+    result <- withVisible(force(expr))
+    if (is.promising(result$value)) {
+        p <- promise_chain(valueWithVisible(result), ..., catch = catch, 
+            finally = finally)
+        runFinally <- FALSE
+        p
+    }
+    else {
+        result <- Reduce(function(v, func) {
+            if (v$visible) {
+                withVisible(func(v$value))
+            }
+            else {
+                withVisible(func(invisible(v$value)))
+            }
+        }, list(...), result)
+        valueWithVisible(result)
+    }
+})
+
+[[60]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[61]]
+domain$wrapSync(expr)
+
+[[62]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[63]]
+withVisible(force(expr))
+
+[[64]]
+force(expr)
+
+[[65]]
+hybrid_chain({
+    private$withCurrentOutput(name, {
+        maybe_with_otel_span_reactive_update({
+            shinyCallingHandlers(func())
+        }, domain = self)
+    })
+}, catch = function(cond) {
+    if (inherits(cond, "shiny.custom.error")) {
+        if (isTRUE(getOption("show.error.messages"))) 
+            printError(cond)
+        structure(list(), class = "try-error", condition = cond)
+    }
+    else if (inherits(cond, "shiny.output.cancel")) {
+        structure(list(), class = "cancel-output")
+    }
+    else if (inherits(cond, "shiny.output.progress")) {
+        structure(list(), class = "progress-output")
+    }
+    else if (cnd_inherits(cond, "shiny.silent.error")) {
+        while (!inherits(cond, "shiny.silent.error")) {
+            cond <- cond$parent
+        }
+        structure(list(), class = "try-error", condition = cond)
+    }
+    else {
+        if (isTRUE(getOption("show.error.messages"))) 
+            printError(cond)
+        if (getOption("shiny.sanitize.errors", FALSE)) {
+            cond <- sanitized_error()
+        }
+        self$unhandledError(cond, close = FALSE)
+        invisible(structure(list(), class = "try-error", condition = cond))
+    }
+})
+
+[[66]]
+do()
+
+[[67]]
+tryCatch({
+    captureStackTraces({
+        result <- withVisible(force(expr))
+        if (is.promising(result$value)) {
+            p <- promise_chain(valueWithVisible(result), ..., 
+                catch = catch, finally = finally)
+            runFinally <- FALSE
+            p
+        }
+        else {
+            result <- Reduce(function(v, func) {
+                if (v$visible) {
+                  withVisible(func(v$value))
+                }
+                else {
+                  withVisible(func(invisible(v$value)))
+                }
+            }, list(...), result)
+            valueWithVisible(result)
+        }
+    })
+}, error = function(e) {
+    if (!is.null(catch)) 
+        catch(e)
+    else stop(e)
+}, finally = if (runFinally && !is.null(finally)) finally())
+
+[[68]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[69]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[70]]
+doTryCatch(return(expr), name, parentenv, handler)
+
+[[71]]
+captureStackTraces({
+    result <- withVisible(force(expr))
+    if (is.promising(result$value)) {
+        p <- promise_chain(valueWithVisible(result), ..., catch = catch, 
+            finally = finally)
+        runFinally <- FALSE
+        p
+    }
+    else {
+        result <- Reduce(function(v, func) {
+            if (v$visible) {
+                withVisible(func(v$value))
+            }
+            else {
+                withVisible(func(invisible(v$value)))
+            }
+        }, list(...), result)
+        valueWithVisible(result)
+    }
+})
+
+[[72]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[73]]
+domain$wrapSync(expr)
+
+[[74]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[75]]
+withVisible(force(expr))
+
+[[76]]
+force(expr)
+
+[[77]]
+private$withCurrentOutput(name, {
+    maybe_with_otel_span_reactive_update({
+        shinyCallingHandlers(func())
+    }, domain = self)
+})
+
+[[78]]
+with_promise_domain(createVarPromiseDomain(private, "currentOutputName", 
+    name), expr)
+
+[[79]]
+domain$wrapSync(expr)
+
+[[80]]
+force(expr)
+
+[[81]]
+maybe_with_otel_span_reactive_update({
+    shinyCallingHandlers(func())
+}, domain = self)
+
+[[82]]
+hybrid_then({
+    with_otel_span_reactive_update(domain = domain, expr)
+}, on_success = function(value) {
+    domain$userData[["_otel_reactive_update_is_active"]] <- NULL
+}, on_failure = function(e) {
+    domain$userData[["_otel_reactive_update_is_active"]] <- NULL
+}, tee = TRUE)
+
+[[83]]
+withVisible(tryCatch(expr, error = function(e) {
+    if (is.null(on_failure)) {
+        stop(e)
+    }
+    result_on_error <- withVisible(on_failure(e))
+    if (tee) {
+        stop(e)
+    }
+    else {
+        result_is_sync_error <<- TRUE
+        return_with_visible(result_on_error)
+    }
+}))
+
+[[84]]
+tryCatch(expr, error = function(e) {
+    if (is.null(on_failure)) {
+        stop(e)
+    }
+    result_on_error <- withVisible(on_failure(e))
+    if (tee) {
+        stop(e)
+    }
+    else {
+        result_is_sync_error <<- TRUE
+        return_with_visible(result_on_error)
+    }
+})
+
+[[85]]
+base::tryCatch(withCallingHandlers(expr, error = function(e) {
+    promiseDomain$onError(e)
+}), ..., finally = finally)
+
+[[86]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[87]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[88]]
+doTryCatch(return(expr), name, parentenv, handler)
+
+[[89]]
+withCallingHandlers(expr, error = function(e) {
+    promiseDomain$onError(e)
+})
+
+[[90]]
+with_otel_span_reactive_update(domain = domain, expr)
+
+[[91]]
+force(expr)
+
+[[92]]
+shinyCallingHandlers(func())
+
+[[93]]
+withCallingHandlers(captureStackTraces(expr), error = function(e) {
+    if (cnd_inherits(e, "shiny.silent.error")) 
+        return()
+    handle <- getOption("shiny.error")
+    if (is.function(handle)) 
+        handle()
+})
+
+[[94]]
+captureStackTraces(expr)
+
+[[95]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[96]]
+domain$wrapSync(expr)
+
+[[97]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[98]]
+func()
+
+[[99]]
+orig(name = name, shinysession = self)
+
+[[100]]
+..stacktraceon..(`output$breadcrumb_nav`(...))
+
+[[101]]
+`output$breadcrumb_nav`(...)
+
+[[102]]
+..stacktraceoff..(if (is.null(formals(renderFunc))) renderFunc() else renderFunc(...))
+
+[[103]]
+renderFunc(...)
+
+[[104]]
+hybrid_chain(..stacktraceon..(func()), function(value) {
+    transform(value, shinysession, name, ...)
+})
+
+[[105]]
+do()
+
+[[106]]
+tryCatch({
+    captureStackTraces({
+        result <- withVisible(force(expr))
+        if (is.promising(result$value)) {
+            p <- promise_chain(valueWithVisible(result), ..., 
+                catch = catch, finally = finally)
+            runFinally <- FALSE
+            p
+        }
+        else {
+            result <- Reduce(function(v, func) {
+                if (v$visible) {
+                  withVisible(func(v$value))
+                }
+                else {
+                  withVisible(func(invisible(v$value)))
+                }
+            }, list(...), result)
+            valueWithVisible(result)
+        }
+    })
+}, error = function(e) {
+    if (!is.null(catch)) 
+        catch(e)
+    else stop(e)
+}, finally = if (runFinally && !is.null(finally)) finally())
+
+[[107]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[108]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[109]]
+value[[3L]](cond)
+
+[[110]]
+stop(e)
+
+[[111]]
+(function (e) 
+{
+    if (is.null(attr(e, "stack.trace", exact = TRUE))) {
+        calls <- sys.calls()
+        parents <- sys.parents()
+        attr(calls, "parents") <- parents
+        calls <- saveCallStackDigest(calls)
+        attr(e, "stack.trace") <- calls
+    }
+    if (deepStacksEnabled()) {
+        if (is.null(attr(e, "deep.stack.trace", exact = TRUE)) && 
+            !is.null(.globals$deepStack)) {
+            attr(e, "deep.stack.trace") <- .globals$deepStack
+        }
+    }
+    stop(e)
+})(list(message = "missing value where TRUE/FALSE needed", call = if (i <= 
+    cur_idx && !running) {
+    actionLink(paste0("crumb_", step_key), label)
+} else {
+    tags$span(style = "color:#9ca3af;", label)
+}))
+
+[[112]]
+stop(e)
+
+[[113]]
+(function (e) 
+{
+    if (cnd_inherits(e, "shiny.silent.error")) 
+        return()
+    handle <- getOption("shiny.error")
+    if (is.function(handle)) 
+        handle()
+})(list(message = "missing value where TRUE/FALSE needed", call = if (i <= 
+    cur_idx && !running) {
+    actionLink(paste0("crumb_", step_key), label)
+} else {
+    tags$span(style = "color:#9ca3af;", label)
+}))
+
+[[114]]
+handle()
+
+SessionInfo:
+R version 4.5.3 (2026-03-11 ucrt)
+Platform: x86_64-w64-mingw32/x64
+Running under: Windows 11 x64 (build 26200)
+
+Matrix products: default
+  LAPACK version 3.12.1
+
+locale:
+[1] LC_COLLATE=English_United States.utf8  LC_CTYPE=English_United States.utf8    LC_MONETARY=English_United States.utf8 LC_NUMERIC=C                          
+[5] LC_TIME=English_United States.utf8    
+
+time zone: Asia/Aden
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+ [1] textclean_0.9.7     kutils_1.73         stringdist_0.9.17   data.table_1.18.2.1 rjson_0.2.23        httr_1.4.8          robotoolbox_1.4     activityinfo_4.39  
+ [9] lubridate_1.9.5     forcats_1.0.1       stringr_1.6.0       purrr_1.2.1         readr_2.2.0         tidyr_1.3.2         tibble_3.3.1        ggplot2_4.0.2      
+[17] tidyverse_2.0.0     plyr_1.8.9          future_1.69.0       promises_1.5.0      shiny_1.13.0        openxlsx_4.2.8.1    readxl_1.4.5        DT_0.34.0          
+[25] bslib_0.10.0        dplyr_1.2.0        
+
+loaded via a namespace (and not attached):
+ [1] tidyselect_1.2.1    farver_2.1.2        S7_0.2.1            fastmap_1.2.0       labelled_2.16.0     digest_0.6.39       timechange_0.4.0    mime_0.13          
+ [9] lifecycle_1.0.5     magrittr_2.0.4      compiler_4.5.3      rlang_1.1.7         sass_0.4.10         tools_4.5.3         qdapRegex_0.7.10    igraph_2.2.2       
+[17] yaml_2.3.12         askpass_1.2.1       htmlwidgets_1.6.4   curl_7.0.0          RColorBrewer_1.1-3  httpcode_0.3.0      withr_3.0.2         RcppSimdJson_0.1.15
+[25] foreign_0.8-91      grid_4.5.3          xtable_1.8-8        globals_0.19.0      scales_1.4.0        crul_1.6.0          cli_3.6.5           generics_0.1.4     
+[33] otel_0.2.0          rstudioapi_0.18.0   tzdb_0.5.0          DBI_1.3.0           cachem_1.1.0        parallel_4.5.3      cellranger_1.1.0    vctrs_0.7.1        
+[41] jsonlite_2.0.0      dm_1.1.1            hms_1.1.4           listenv_0.10.0      crosstalk_1.2.2     fontawesome_0.5.3   jquerylib_0.1.4     glue_1.8.0         
+[49] parallelly_1.46.1   codetools_0.2-20    bcrypt_1.2.1        stringi_1.8.7       gtable_0.3.6        later_1.4.8         pillar_1.11.1       htmltools_0.5.9    
+[57] openssl_2.3.5       R6_2.6.1            dbplyr_2.5.2        haven_2.5.5         backports_1.5.0     memoise_2.0.1       httpuv_1.6.16       Rcpp_1.1.1         
+[65] zip_2.3.3           fs_1.6.7            pkgconfig_2.0.3    
+2026-04-08 18:55:59 — unknown error; geterrmessage: missing value where TRUE/FALSE needed
+
+CallStack:
+[[1]]
+(function (x, ...) 
+UseMethod("print"))(x)
+
+[[2]]
+print.shiny.appobj(x)
+
+[[3]]
+runApp(x)
+
+[[4]]
+..stacktraceoff..(captureStackTraces({
+    while (!.globals$stopped) {
+        ..stacktracefloor..(serviceApp())
+    }
+}))
+
+[[5]]
+captureStackTraces({
+    while (!.globals$stopped) {
+        ..stacktracefloor..(serviceApp())
+    }
+})
+
+[[6]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[7]]
+domain$wrapSync(expr)
+
+[[8]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[9]]
+..stacktracefloor..(serviceApp())
+
+[[10]]
+serviceApp()
+
+[[11]]
+flushReact()
+
+[[12]]
+.getReactiveEnvironment()$flush()
+
+[[13]]
+ctx$executeFlushCallbacks()
+
+[[14]]
+lapply(.flushCallbacks, function(flushCallback) {
+    flushCallback()
+})
+
+[[15]]
+FUN(X[[i]], ...)
+
+[[16]]
+flushCallback()
+
+[[17]]
+hybrid_chain({
+    if (!.destroyed) {
+        shinyCallingHandlers(run())
+    }
+}, catch = function(e) {
+    if (cnd_inherits(e, "shiny.silent.error")) {
+        return()
+    }
+    printError(e)
+    if (!is.null(.domain)) {
+        .domain$unhandledError(e, close = TRUE)
+    }
+}, finally = .domain$decrementBusyCount)
+
+[[18]]
+do()
+
+[[19]]
+tryCatch({
+    captureStackTraces({
+        result <- withVisible(force(expr))
+        if (is.promising(result$value)) {
+            p <- promise_chain(valueWithVisible(result), ..., 
+                catch = catch, finally = finally)
+            runFinally <- FALSE
+            p
+        }
+        else {
+            result <- Reduce(function(v, func) {
+                if (v$visible) {
+                  withVisible(func(v$value))
+                }
+                else {
+                  withVisible(func(invisible(v$value)))
+                }
+            }, list(...), result)
+            valueWithVisible(result)
+        }
+    })
+}, error = function(e) {
+    if (!is.null(catch)) 
+        catch(e)
+    else stop(e)
+}, finally = if (runFinally && !is.null(finally)) finally())
+
+[[20]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[21]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[22]]
+doTryCatch(return(expr), name, parentenv, handler)
+
+[[23]]
+captureStackTraces({
+    result <- withVisible(force(expr))
+    if (is.promising(result$value)) {
+        p <- promise_chain(valueWithVisible(result), ..., catch = catch, 
+            finally = finally)
+        runFinally <- FALSE
+        p
+    }
+    else {
+        result <- Reduce(function(v, func) {
+            if (v$visible) {
+                withVisible(func(v$value))
+            }
+            else {
+                withVisible(func(invisible(v$value)))
+            }
+        }, list(...), result)
+        valueWithVisible(result)
+    }
+})
+
+[[24]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[25]]
+domain$wrapSync(expr)
+
+[[26]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[27]]
+withVisible(force(expr))
+
+[[28]]
+force(expr)
+
+[[29]]
+shinyCallingHandlers(run())
+
+[[30]]
+withCallingHandlers(captureStackTraces(expr), error = function(e) {
+    if (cnd_inherits(e, "shiny.silent.error")) 
+        return()
+    handle <- getOption("shiny.error")
+    if (is.function(handle)) 
+        handle()
+})
+
+[[31]]
+captureStackTraces(expr)
+
+[[32]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[33]]
+domain$wrapSync(expr)
+
+[[34]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[35]]
+run()
+
+[[36]]
+ctx$run(.func)
+
+[[37]]
+promises::with_promise_domain(reactivePromiseDomain(), {
+    withReactiveDomain(.domain, {
+        with_otel_span_context(.otel_info, domain = .domain, 
+            {
+                captureStackTraces({
+                  env <- .getReactiveEnvironment()
+                  rLog$enter(.reactId, id, .reactType, .domain)
+                  on.exit(rLog$exit(.reactId, id, .reactType, 
+                    .domain), add = TRUE)
+                  env$runWith(self, func)
+                })
+            })
+    })
+})
+
+[[38]]
+domain$wrapSync(expr)
+
+[[39]]
+withReactiveDomain(.domain, {
+    with_otel_span_context(.otel_info, domain = .domain, {
+        captureStackTraces({
+            env <- .getReactiveEnvironment()
+            rLog$enter(.reactId, id, .reactType, .domain)
+            on.exit(rLog$exit(.reactId, id, .reactType, .domain), 
+                add = TRUE)
+            env$runWith(self, func)
+        })
+    })
+})
+
+[[40]]
+promises::with_promise_domain(createVarPromiseDomain(.globals, 
+    "domain", domain), expr)
+
+[[41]]
+domain$wrapSync(expr)
+
+[[42]]
+force(expr)
+
+[[43]]
+with_otel_span_context(.otel_info, domain = .domain, {
+    captureStackTraces({
+        env <- .getReactiveEnvironment()
+        rLog$enter(.reactId, id, .reactType, .domain)
+        on.exit(rLog$exit(.reactId, id, .reactType, .domain), 
+            add = TRUE)
+        env$runWith(self, func)
+    })
+})
+
+[[44]]
+force(expr)
+
+[[45]]
+captureStackTraces({
+    env <- .getReactiveEnvironment()
+    rLog$enter(.reactId, id, .reactType, .domain)
+    on.exit(rLog$exit(.reactId, id, .reactType, .domain), add = TRUE)
+    env$runWith(self, func)
+})
+
+[[46]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[47]]
+domain$wrapSync(expr)
+
+[[48]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[49]]
+env$runWith(self, func)
+
+[[50]]
+contextFunc()
+
+[[51]]
+`<observer:output$breadcrumb_nav>`(...)
+
+[[52]]
+observe()
+
+[[53]]
+hybrid_chain(hybrid_chain({
+    private$withCurrentOutput(name, {
+        maybe_with_otel_span_reactive_update({
+            shinyCallingHandlers(func())
+        }, domain = self)
+    })
+}, catch = function(cond) {
+    if (inherits(cond, "shiny.custom.error")) {
+        if (isTRUE(getOption("show.error.messages"))) 
+            printError(cond)
+        structure(list(), class = "try-error", condition = cond)
+    }
+    else if (inherits(cond, "shiny.output.cancel")) {
+        structure(list(), class = "cancel-output")
+    }
+    else if (inherits(cond, "shiny.output.progress")) {
+        structure(list(), class = "progress-output")
+    }
+    else if (cnd_inherits(cond, "shiny.silent.error")) {
+        while (!inherits(cond, "shiny.silent.error")) {
+            cond <- cond$parent
+        }
+        structure(list(), class = "try-error", condition = cond)
+    }
+    else {
+        if (isTRUE(getOption("show.error.messages"))) 
+            printError(cond)
+        if (getOption("shiny.sanitize.errors", FALSE)) {
+            cond <- sanitized_error()
+        }
+        self$unhandledError(cond, close = FALSE)
+        invisible(structure(list(), class = "try-error", condition = cond))
+    }
+}), function(value) {
+    self$requestFlush()
+    if (inherits(value, "progress-output")) {
+        self$showProgress(name, persistent = TRUE)
+        private$invalidatedOutputErrors$remove(name)
+        private$invalidatedOutputValues$remove(name)
+        return()
+    }
+    private$sendMessage(recalculating = list(name = name, status = "recalculated"))
+    if (inherits(value, "cancel-output")) {
+        return()
+    }
+    private$invalidatedOutputErrors$remove(name)
+    private$invalidatedOutputValues$remove(name)
+    if (inherits(value, "try-error")) {
+        cond <- attr(value, "condition")
+        type <- setdiff(class(cond), c("simpleError", "error", 
+            "condition"))
+        private$invalidatedOutputErrors$set(name, list(message = cond$message, 
+            call = utils::capture.output(print(cond$call)), type = if (length(type)) type))
+    }
+    else private$invalidatedOutputValues$set(name, value)
+})
+
+[[54]]
+do()
+
+[[55]]
+tryCatch({
+    captureStackTraces({
+        result <- withVisible(force(expr))
+        if (is.promising(result$value)) {
+            p <- promise_chain(valueWithVisible(result), ..., 
+                catch = catch, finally = finally)
+            runFinally <- FALSE
+            p
+        }
+        else {
+            result <- Reduce(function(v, func) {
+                if (v$visible) {
+                  withVisible(func(v$value))
+                }
+                else {
+                  withVisible(func(invisible(v$value)))
+                }
+            }, list(...), result)
+            valueWithVisible(result)
+        }
+    })
+}, error = function(e) {
+    if (!is.null(catch)) 
+        catch(e)
+    else stop(e)
+}, finally = if (runFinally && !is.null(finally)) finally())
+
+[[56]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[57]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[58]]
+doTryCatch(return(expr), name, parentenv, handler)
+
+[[59]]
+captureStackTraces({
+    result <- withVisible(force(expr))
+    if (is.promising(result$value)) {
+        p <- promise_chain(valueWithVisible(result), ..., catch = catch, 
+            finally = finally)
+        runFinally <- FALSE
+        p
+    }
+    else {
+        result <- Reduce(function(v, func) {
+            if (v$visible) {
+                withVisible(func(v$value))
+            }
+            else {
+                withVisible(func(invisible(v$value)))
+            }
+        }, list(...), result)
+        valueWithVisible(result)
+    }
+})
+
+[[60]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[61]]
+domain$wrapSync(expr)
+
+[[62]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[63]]
+withVisible(force(expr))
+
+[[64]]
+force(expr)
+
+[[65]]
+hybrid_chain({
+    private$withCurrentOutput(name, {
+        maybe_with_otel_span_reactive_update({
+            shinyCallingHandlers(func())
+        }, domain = self)
+    })
+}, catch = function(cond) {
+    if (inherits(cond, "shiny.custom.error")) {
+        if (isTRUE(getOption("show.error.messages"))) 
+            printError(cond)
+        structure(list(), class = "try-error", condition = cond)
+    }
+    else if (inherits(cond, "shiny.output.cancel")) {
+        structure(list(), class = "cancel-output")
+    }
+    else if (inherits(cond, "shiny.output.progress")) {
+        structure(list(), class = "progress-output")
+    }
+    else if (cnd_inherits(cond, "shiny.silent.error")) {
+        while (!inherits(cond, "shiny.silent.error")) {
+            cond <- cond$parent
+        }
+        structure(list(), class = "try-error", condition = cond)
+    }
+    else {
+        if (isTRUE(getOption("show.error.messages"))) 
+            printError(cond)
+        if (getOption("shiny.sanitize.errors", FALSE)) {
+            cond <- sanitized_error()
+        }
+        self$unhandledError(cond, close = FALSE)
+        invisible(structure(list(), class = "try-error", condition = cond))
+    }
+})
+
+[[66]]
+do()
+
+[[67]]
+tryCatch({
+    captureStackTraces({
+        result <- withVisible(force(expr))
+        if (is.promising(result$value)) {
+            p <- promise_chain(valueWithVisible(result), ..., 
+                catch = catch, finally = finally)
+            runFinally <- FALSE
+            p
+        }
+        else {
+            result <- Reduce(function(v, func) {
+                if (v$visible) {
+                  withVisible(func(v$value))
+                }
+                else {
+                  withVisible(func(invisible(v$value)))
+                }
+            }, list(...), result)
+            valueWithVisible(result)
+        }
+    })
+}, error = function(e) {
+    if (!is.null(catch)) 
+        catch(e)
+    else stop(e)
+}, finally = if (runFinally && !is.null(finally)) finally())
+
+[[68]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[69]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[70]]
+doTryCatch(return(expr), name, parentenv, handler)
+
+[[71]]
+captureStackTraces({
+    result <- withVisible(force(expr))
+    if (is.promising(result$value)) {
+        p <- promise_chain(valueWithVisible(result), ..., catch = catch, 
+            finally = finally)
+        runFinally <- FALSE
+        p
+    }
+    else {
+        result <- Reduce(function(v, func) {
+            if (v$visible) {
+                withVisible(func(v$value))
+            }
+            else {
+                withVisible(func(invisible(v$value)))
+            }
+        }, list(...), result)
+        valueWithVisible(result)
+    }
+})
+
+[[72]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[73]]
+domain$wrapSync(expr)
+
+[[74]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[75]]
+withVisible(force(expr))
+
+[[76]]
+force(expr)
+
+[[77]]
+private$withCurrentOutput(name, {
+    maybe_with_otel_span_reactive_update({
+        shinyCallingHandlers(func())
+    }, domain = self)
+})
+
+[[78]]
+with_promise_domain(createVarPromiseDomain(private, "currentOutputName", 
+    name), expr)
+
+[[79]]
+domain$wrapSync(expr)
+
+[[80]]
+force(expr)
+
+[[81]]
+maybe_with_otel_span_reactive_update({
+    shinyCallingHandlers(func())
+}, domain = self)
+
+[[82]]
+hybrid_then({
+    with_otel_span_reactive_update(domain = domain, expr)
+}, on_success = function(value) {
+    domain$userData[["_otel_reactive_update_is_active"]] <- NULL
+}, on_failure = function(e) {
+    domain$userData[["_otel_reactive_update_is_active"]] <- NULL
+}, tee = TRUE)
+
+[[83]]
+withVisible(tryCatch(expr, error = function(e) {
+    if (is.null(on_failure)) {
+        stop(e)
+    }
+    result_on_error <- withVisible(on_failure(e))
+    if (tee) {
+        stop(e)
+    }
+    else {
+        result_is_sync_error <<- TRUE
+        return_with_visible(result_on_error)
+    }
+}))
+
+[[84]]
+tryCatch(expr, error = function(e) {
+    if (is.null(on_failure)) {
+        stop(e)
+    }
+    result_on_error <- withVisible(on_failure(e))
+    if (tee) {
+        stop(e)
+    }
+    else {
+        result_is_sync_error <<- TRUE
+        return_with_visible(result_on_error)
+    }
+})
+
+[[85]]
+base::tryCatch(withCallingHandlers(expr, error = function(e) {
+    promiseDomain$onError(e)
+}), ..., finally = finally)
+
+[[86]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[87]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[88]]
+doTryCatch(return(expr), name, parentenv, handler)
+
+[[89]]
+withCallingHandlers(expr, error = function(e) {
+    promiseDomain$onError(e)
+})
+
+[[90]]
+with_otel_span_reactive_update(domain = domain, expr)
+
+[[91]]
+force(expr)
+
+[[92]]
+shinyCallingHandlers(func())
+
+[[93]]
+withCallingHandlers(captureStackTraces(expr), error = function(e) {
+    if (cnd_inherits(e, "shiny.silent.error")) 
+        return()
+    handle <- getOption("shiny.error")
+    if (is.function(handle)) 
+        handle()
+})
+
+[[94]]
+captureStackTraces(expr)
+
+[[95]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[96]]
+domain$wrapSync(expr)
+
+[[97]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[98]]
+func()
+
+[[99]]
+orig(name = name, shinysession = self)
+
+[[100]]
+..stacktraceon..(`output$breadcrumb_nav`(...))
+
+[[101]]
+`output$breadcrumb_nav`(...)
+
+[[102]]
+..stacktraceoff..(if (is.null(formals(renderFunc))) renderFunc() else renderFunc(...))
+
+[[103]]
+renderFunc(...)
+
+[[104]]
+hybrid_chain(..stacktraceon..(func()), function(value) {
+    transform(value, shinysession, name, ...)
+})
+
+[[105]]
+do()
+
+[[106]]
+tryCatch({
+    captureStackTraces({
+        result <- withVisible(force(expr))
+        if (is.promising(result$value)) {
+            p <- promise_chain(valueWithVisible(result), ..., 
+                catch = catch, finally = finally)
+            runFinally <- FALSE
+            p
+        }
+        else {
+            result <- Reduce(function(v, func) {
+                if (v$visible) {
+                  withVisible(func(v$value))
+                }
+                else {
+                  withVisible(func(invisible(v$value)))
+                }
+            }, list(...), result)
+            valueWithVisible(result)
+        }
+    })
+}, error = function(e) {
+    if (!is.null(catch)) 
+        catch(e)
+    else stop(e)
+}, finally = if (runFinally && !is.null(finally)) finally())
+
+[[107]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[108]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[109]]
+value[[3L]](cond)
+
+[[110]]
+stop(e)
+
+[[111]]
+(function (e) 
+{
+    if (is.null(attr(e, "stack.trace", exact = TRUE))) {
+        calls <- sys.calls()
+        parents <- sys.parents()
+        attr(calls, "parents") <- parents
+        calls <- saveCallStackDigest(calls)
+        attr(e, "stack.trace") <- calls
+    }
+    if (deepStacksEnabled()) {
+        if (is.null(attr(e, "deep.stack.trace", exact = TRUE)) && 
+            !is.null(.globals$deepStack)) {
+            attr(e, "deep.stack.trace") <- .globals$deepStack
+        }
+    }
+    stop(e)
+})(list(message = "missing value where TRUE/FALSE needed", call = if (i <= 
+    cur_idx && !running) {
+    actionLink(paste0("crumb_", step_key), label)
+} else {
+    tags$span(style = "color:#9ca3af;", label)
+}))
+
+[[112]]
+stop(e)
+
+[[113]]
+(function (e) 
+{
+    if (cnd_inherits(e, "shiny.silent.error")) 
+        return()
+    handle <- getOption("shiny.error")
+    if (is.function(handle)) 
+        handle()
+})(list(message = "missing value where TRUE/FALSE needed", call = if (i <= 
+    cur_idx && !running) {
+    actionLink(paste0("crumb_", step_key), label)
+} else {
+    tags$span(style = "color:#9ca3af;", label)
+}))
+
+[[114]]
+handle()
+
+SessionInfo:
+R version 4.5.3 (2026-03-11 ucrt)
+Platform: x86_64-w64-mingw32/x64
+Running under: Windows 11 x64 (build 26200)
+
+Matrix products: default
+  LAPACK version 3.12.1
+
+locale:
+[1] LC_COLLATE=English_United States.utf8  LC_CTYPE=English_United States.utf8    LC_MONETARY=English_United States.utf8 LC_NUMERIC=C                          
+[5] LC_TIME=English_United States.utf8    
+
+time zone: Asia/Aden
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+ [1] textclean_0.9.7     kutils_1.73         stringdist_0.9.17   data.table_1.18.2.1 rjson_0.2.23        httr_1.4.8          robotoolbox_1.4     activityinfo_4.39  
+ [9] lubridate_1.9.5     forcats_1.0.1       stringr_1.6.0       purrr_1.2.1         readr_2.2.0         tidyr_1.3.2         tibble_3.3.1        ggplot2_4.0.2      
+[17] tidyverse_2.0.0     plyr_1.8.9          future_1.69.0       promises_1.5.0      shiny_1.13.0        openxlsx_4.2.8.1    readxl_1.4.5        DT_0.34.0          
+[25] bslib_0.10.0        dplyr_1.2.0        
+
+loaded via a namespace (and not attached):
+ [1] tidyselect_1.2.1    farver_2.1.2        S7_0.2.1            fastmap_1.2.0       labelled_2.16.0     digest_0.6.39       timechange_0.4.0    mime_0.13          
+ [9] lifecycle_1.0.5     magrittr_2.0.4      compiler_4.5.3      rlang_1.1.7         sass_0.4.10         tools_4.5.3         qdapRegex_0.7.10    igraph_2.2.2       
+[17] yaml_2.3.12         askpass_1.2.1       htmlwidgets_1.6.4   curl_7.0.0          RColorBrewer_1.1-3  httpcode_0.3.0      withr_3.0.2         RcppSimdJson_0.1.15
+[25] foreign_0.8-91      grid_4.5.3          xtable_1.8-8        globals_0.19.0      scales_1.4.0        crul_1.6.0          cli_3.6.5           generics_0.1.4     
+[33] otel_0.2.0          rstudioapi_0.18.0   tzdb_0.5.0          DBI_1.3.0           cachem_1.1.0        parallel_4.5.3      cellranger_1.1.0    vctrs_0.7.1        
+[41] jsonlite_2.0.0      dm_1.1.1            hms_1.1.4           listenv_0.10.0      crosstalk_1.2.2     fontawesome_0.5.3   jquerylib_0.1.4     glue_1.8.0         
+[49] parallelly_1.46.1   codetools_0.2-20    bcrypt_1.2.1        stringi_1.8.7       gtable_0.3.6        later_1.4.8         pillar_1.11.1       htmltools_0.5.9    
+[57] openssl_2.3.5       R6_2.6.1            dbplyr_2.5.2        haven_2.5.5         backports_1.5.0     memoise_2.0.1       httpuv_1.6.16       Rcpp_1.1.1         
+[65] zip_2.3.3           fs_1.6.7            pkgconfig_2.0.3    
+2026-04-08 19:00:25 — unknown error; geterrmessage: missing value where TRUE/FALSE needed
+
+CallStack:
+[[1]]
+(function (x, ...) 
+UseMethod("print"))(x)
+
+[[2]]
+print.shiny.appobj(x)
+
+[[3]]
+runApp(x)
+
+[[4]]
+..stacktraceoff..(captureStackTraces({
+    while (!.globals$stopped) {
+        ..stacktracefloor..(serviceApp())
+    }
+}))
+
+[[5]]
+captureStackTraces({
+    while (!.globals$stopped) {
+        ..stacktracefloor..(serviceApp())
+    }
+})
+
+[[6]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[7]]
+domain$wrapSync(expr)
+
+[[8]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[9]]
+..stacktracefloor..(serviceApp())
+
+[[10]]
+serviceApp()
+
+[[11]]
+flushReact()
+
+[[12]]
+.getReactiveEnvironment()$flush()
+
+[[13]]
+ctx$executeFlushCallbacks()
+
+[[14]]
+lapply(.flushCallbacks, function(flushCallback) {
+    flushCallback()
+})
+
+[[15]]
+FUN(X[[i]], ...)
+
+[[16]]
+flushCallback()
+
+[[17]]
+hybrid_chain({
+    if (!.destroyed) {
+        shinyCallingHandlers(run())
+    }
+}, catch = function(e) {
+    if (cnd_inherits(e, "shiny.silent.error")) {
+        return()
+    }
+    printError(e)
+    if (!is.null(.domain)) {
+        .domain$unhandledError(e, close = TRUE)
+    }
+}, finally = .domain$decrementBusyCount)
+
+[[18]]
+do()
+
+[[19]]
+tryCatch({
+    captureStackTraces({
+        result <- withVisible(force(expr))
+        if (is.promising(result$value)) {
+            p <- promise_chain(valueWithVisible(result), ..., 
+                catch = catch, finally = finally)
+            runFinally <- FALSE
+            p
+        }
+        else {
+            result <- Reduce(function(v, func) {
+                if (v$visible) {
+                  withVisible(func(v$value))
+                }
+                else {
+                  withVisible(func(invisible(v$value)))
+                }
+            }, list(...), result)
+            valueWithVisible(result)
+        }
+    })
+}, error = function(e) {
+    if (!is.null(catch)) 
+        catch(e)
+    else stop(e)
+}, finally = if (runFinally && !is.null(finally)) finally())
+
+[[20]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[21]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[22]]
+doTryCatch(return(expr), name, parentenv, handler)
+
+[[23]]
+captureStackTraces({
+    result <- withVisible(force(expr))
+    if (is.promising(result$value)) {
+        p <- promise_chain(valueWithVisible(result), ..., catch = catch, 
+            finally = finally)
+        runFinally <- FALSE
+        p
+    }
+    else {
+        result <- Reduce(function(v, func) {
+            if (v$visible) {
+                withVisible(func(v$value))
+            }
+            else {
+                withVisible(func(invisible(v$value)))
+            }
+        }, list(...), result)
+        valueWithVisible(result)
+    }
+})
+
+[[24]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[25]]
+domain$wrapSync(expr)
+
+[[26]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[27]]
+withVisible(force(expr))
+
+[[28]]
+force(expr)
+
+[[29]]
+shinyCallingHandlers(run())
+
+[[30]]
+withCallingHandlers(captureStackTraces(expr), error = function(e) {
+    if (cnd_inherits(e, "shiny.silent.error")) 
+        return()
+    handle <- getOption("shiny.error")
+    if (is.function(handle)) 
+        handle()
+})
+
+[[31]]
+captureStackTraces(expr)
+
+[[32]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[33]]
+domain$wrapSync(expr)
+
+[[34]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[35]]
+run()
+
+[[36]]
+ctx$run(.func)
+
+[[37]]
+promises::with_promise_domain(reactivePromiseDomain(), {
+    withReactiveDomain(.domain, {
+        with_otel_span_context(.otel_info, domain = .domain, 
+            {
+                captureStackTraces({
+                  env <- .getReactiveEnvironment()
+                  rLog$enter(.reactId, id, .reactType, .domain)
+                  on.exit(rLog$exit(.reactId, id, .reactType, 
+                    .domain), add = TRUE)
+                  env$runWith(self, func)
+                })
+            })
+    })
+})
+
+[[38]]
+domain$wrapSync(expr)
+
+[[39]]
+withReactiveDomain(.domain, {
+    with_otel_span_context(.otel_info, domain = .domain, {
+        captureStackTraces({
+            env <- .getReactiveEnvironment()
+            rLog$enter(.reactId, id, .reactType, .domain)
+            on.exit(rLog$exit(.reactId, id, .reactType, .domain), 
+                add = TRUE)
+            env$runWith(self, func)
+        })
+    })
+})
+
+[[40]]
+promises::with_promise_domain(createVarPromiseDomain(.globals, 
+    "domain", domain), expr)
+
+[[41]]
+domain$wrapSync(expr)
+
+[[42]]
+force(expr)
+
+[[43]]
+with_otel_span_context(.otel_info, domain = .domain, {
+    captureStackTraces({
+        env <- .getReactiveEnvironment()
+        rLog$enter(.reactId, id, .reactType, .domain)
+        on.exit(rLog$exit(.reactId, id, .reactType, .domain), 
+            add = TRUE)
+        env$runWith(self, func)
+    })
+})
+
+[[44]]
+force(expr)
+
+[[45]]
+captureStackTraces({
+    env <- .getReactiveEnvironment()
+    rLog$enter(.reactId, id, .reactType, .domain)
+    on.exit(rLog$exit(.reactId, id, .reactType, .domain), add = TRUE)
+    env$runWith(self, func)
+})
+
+[[46]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[47]]
+domain$wrapSync(expr)
+
+[[48]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[49]]
+env$runWith(self, func)
+
+[[50]]
+contextFunc()
+
+[[51]]
+`<observer:output$breadcrumb_nav>`(...)
+
+[[52]]
+observe()
+
+[[53]]
+hybrid_chain(hybrid_chain({
+    private$withCurrentOutput(name, {
+        maybe_with_otel_span_reactive_update({
+            shinyCallingHandlers(func())
+        }, domain = self)
+    })
+}, catch = function(cond) {
+    if (inherits(cond, "shiny.custom.error")) {
+        if (isTRUE(getOption("show.error.messages"))) 
+            printError(cond)
+        structure(list(), class = "try-error", condition = cond)
+    }
+    else if (inherits(cond, "shiny.output.cancel")) {
+        structure(list(), class = "cancel-output")
+    }
+    else if (inherits(cond, "shiny.output.progress")) {
+        structure(list(), class = "progress-output")
+    }
+    else if (cnd_inherits(cond, "shiny.silent.error")) {
+        while (!inherits(cond, "shiny.silent.error")) {
+            cond <- cond$parent
+        }
+        structure(list(), class = "try-error", condition = cond)
+    }
+    else {
+        if (isTRUE(getOption("show.error.messages"))) 
+            printError(cond)
+        if (getOption("shiny.sanitize.errors", FALSE)) {
+            cond <- sanitized_error()
+        }
+        self$unhandledError(cond, close = FALSE)
+        invisible(structure(list(), class = "try-error", condition = cond))
+    }
+}), function(value) {
+    self$requestFlush()
+    if (inherits(value, "progress-output")) {
+        self$showProgress(name, persistent = TRUE)
+        private$invalidatedOutputErrors$remove(name)
+        private$invalidatedOutputValues$remove(name)
+        return()
+    }
+    private$sendMessage(recalculating = list(name = name, status = "recalculated"))
+    if (inherits(value, "cancel-output")) {
+        return()
+    }
+    private$invalidatedOutputErrors$remove(name)
+    private$invalidatedOutputValues$remove(name)
+    if (inherits(value, "try-error")) {
+        cond <- attr(value, "condition")
+        type <- setdiff(class(cond), c("simpleError", "error", 
+            "condition"))
+        private$invalidatedOutputErrors$set(name, list(message = cond$message, 
+            call = utils::capture.output(print(cond$call)), type = if (length(type)) type))
+    }
+    else private$invalidatedOutputValues$set(name, value)
+})
+
+[[54]]
+do()
+
+[[55]]
+tryCatch({
+    captureStackTraces({
+        result <- withVisible(force(expr))
+        if (is.promising(result$value)) {
+            p <- promise_chain(valueWithVisible(result), ..., 
+                catch = catch, finally = finally)
+            runFinally <- FALSE
+            p
+        }
+        else {
+            result <- Reduce(function(v, func) {
+                if (v$visible) {
+                  withVisible(func(v$value))
+                }
+                else {
+                  withVisible(func(invisible(v$value)))
+                }
+            }, list(...), result)
+            valueWithVisible(result)
+        }
+    })
+}, error = function(e) {
+    if (!is.null(catch)) 
+        catch(e)
+    else stop(e)
+}, finally = if (runFinally && !is.null(finally)) finally())
+
+[[56]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[57]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[58]]
+doTryCatch(return(expr), name, parentenv, handler)
+
+[[59]]
+captureStackTraces({
+    result <- withVisible(force(expr))
+    if (is.promising(result$value)) {
+        p <- promise_chain(valueWithVisible(result), ..., catch = catch, 
+            finally = finally)
+        runFinally <- FALSE
+        p
+    }
+    else {
+        result <- Reduce(function(v, func) {
+            if (v$visible) {
+                withVisible(func(v$value))
+            }
+            else {
+                withVisible(func(invisible(v$value)))
+            }
+        }, list(...), result)
+        valueWithVisible(result)
+    }
+})
+
+[[60]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[61]]
+domain$wrapSync(expr)
+
+[[62]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[63]]
+withVisible(force(expr))
+
+[[64]]
+force(expr)
+
+[[65]]
+hybrid_chain({
+    private$withCurrentOutput(name, {
+        maybe_with_otel_span_reactive_update({
+            shinyCallingHandlers(func())
+        }, domain = self)
+    })
+}, catch = function(cond) {
+    if (inherits(cond, "shiny.custom.error")) {
+        if (isTRUE(getOption("show.error.messages"))) 
+            printError(cond)
+        structure(list(), class = "try-error", condition = cond)
+    }
+    else if (inherits(cond, "shiny.output.cancel")) {
+        structure(list(), class = "cancel-output")
+    }
+    else if (inherits(cond, "shiny.output.progress")) {
+        structure(list(), class = "progress-output")
+    }
+    else if (cnd_inherits(cond, "shiny.silent.error")) {
+        while (!inherits(cond, "shiny.silent.error")) {
+            cond <- cond$parent
+        }
+        structure(list(), class = "try-error", condition = cond)
+    }
+    else {
+        if (isTRUE(getOption("show.error.messages"))) 
+            printError(cond)
+        if (getOption("shiny.sanitize.errors", FALSE)) {
+            cond <- sanitized_error()
+        }
+        self$unhandledError(cond, close = FALSE)
+        invisible(structure(list(), class = "try-error", condition = cond))
+    }
+})
+
+[[66]]
+do()
+
+[[67]]
+tryCatch({
+    captureStackTraces({
+        result <- withVisible(force(expr))
+        if (is.promising(result$value)) {
+            p <- promise_chain(valueWithVisible(result), ..., 
+                catch = catch, finally = finally)
+            runFinally <- FALSE
+            p
+        }
+        else {
+            result <- Reduce(function(v, func) {
+                if (v$visible) {
+                  withVisible(func(v$value))
+                }
+                else {
+                  withVisible(func(invisible(v$value)))
+                }
+            }, list(...), result)
+            valueWithVisible(result)
+        }
+    })
+}, error = function(e) {
+    if (!is.null(catch)) 
+        catch(e)
+    else stop(e)
+}, finally = if (runFinally && !is.null(finally)) finally())
+
+[[68]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[69]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[70]]
+doTryCatch(return(expr), name, parentenv, handler)
+
+[[71]]
+captureStackTraces({
+    result <- withVisible(force(expr))
+    if (is.promising(result$value)) {
+        p <- promise_chain(valueWithVisible(result), ..., catch = catch, 
+            finally = finally)
+        runFinally <- FALSE
+        p
+    }
+    else {
+        result <- Reduce(function(v, func) {
+            if (v$visible) {
+                withVisible(func(v$value))
+            }
+            else {
+                withVisible(func(invisible(v$value)))
+            }
+        }, list(...), result)
+        valueWithVisible(result)
+    }
+})
+
+[[72]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[73]]
+domain$wrapSync(expr)
+
+[[74]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[75]]
+withVisible(force(expr))
+
+[[76]]
+force(expr)
+
+[[77]]
+private$withCurrentOutput(name, {
+    maybe_with_otel_span_reactive_update({
+        shinyCallingHandlers(func())
+    }, domain = self)
+})
+
+[[78]]
+with_promise_domain(createVarPromiseDomain(private, "currentOutputName", 
+    name), expr)
+
+[[79]]
+domain$wrapSync(expr)
+
+[[80]]
+force(expr)
+
+[[81]]
+maybe_with_otel_span_reactive_update({
+    shinyCallingHandlers(func())
+}, domain = self)
+
+[[82]]
+hybrid_then({
+    with_otel_span_reactive_update(domain = domain, expr)
+}, on_success = function(value) {
+    domain$userData[["_otel_reactive_update_is_active"]] <- NULL
+}, on_failure = function(e) {
+    domain$userData[["_otel_reactive_update_is_active"]] <- NULL
+}, tee = TRUE)
+
+[[83]]
+withVisible(tryCatch(expr, error = function(e) {
+    if (is.null(on_failure)) {
+        stop(e)
+    }
+    result_on_error <- withVisible(on_failure(e))
+    if (tee) {
+        stop(e)
+    }
+    else {
+        result_is_sync_error <<- TRUE
+        return_with_visible(result_on_error)
+    }
+}))
+
+[[84]]
+tryCatch(expr, error = function(e) {
+    if (is.null(on_failure)) {
+        stop(e)
+    }
+    result_on_error <- withVisible(on_failure(e))
+    if (tee) {
+        stop(e)
+    }
+    else {
+        result_is_sync_error <<- TRUE
+        return_with_visible(result_on_error)
+    }
+})
+
+[[85]]
+base::tryCatch(withCallingHandlers(expr, error = function(e) {
+    promiseDomain$onError(e)
+}), ..., finally = finally)
+
+[[86]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[87]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[88]]
+doTryCatch(return(expr), name, parentenv, handler)
+
+[[89]]
+withCallingHandlers(expr, error = function(e) {
+    promiseDomain$onError(e)
+})
+
+[[90]]
+with_otel_span_reactive_update(domain = domain, expr)
+
+[[91]]
+force(expr)
+
+[[92]]
+shinyCallingHandlers(func())
+
+[[93]]
+withCallingHandlers(captureStackTraces(expr), error = function(e) {
+    if (cnd_inherits(e, "shiny.silent.error")) 
+        return()
+    handle <- getOption("shiny.error")
+    if (is.function(handle)) 
+        handle()
+})
+
+[[94]]
+captureStackTraces(expr)
+
+[[95]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[96]]
+domain$wrapSync(expr)
+
+[[97]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[98]]
+func()
+
+[[99]]
+orig(name = name, shinysession = self)
+
+[[100]]
+..stacktraceon..(`output$breadcrumb_nav`(...))
+
+[[101]]
+`output$breadcrumb_nav`(...)
+
+[[102]]
+..stacktraceoff..(if (is.null(formals(renderFunc))) renderFunc() else renderFunc(...))
+
+[[103]]
+renderFunc(...)
+
+[[104]]
+hybrid_chain(..stacktraceon..(func()), function(value) {
+    transform(value, shinysession, name, ...)
+})
+
+[[105]]
+do()
+
+[[106]]
+tryCatch({
+    captureStackTraces({
+        result <- withVisible(force(expr))
+        if (is.promising(result$value)) {
+            p <- promise_chain(valueWithVisible(result), ..., 
+                catch = catch, finally = finally)
+            runFinally <- FALSE
+            p
+        }
+        else {
+            result <- Reduce(function(v, func) {
+                if (v$visible) {
+                  withVisible(func(v$value))
+                }
+                else {
+                  withVisible(func(invisible(v$value)))
+                }
+            }, list(...), result)
+            valueWithVisible(result)
+        }
+    })
+}, error = function(e) {
+    if (!is.null(catch)) 
+        catch(e)
+    else stop(e)
+}, finally = if (runFinally && !is.null(finally)) finally())
+
+[[107]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[108]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[109]]
+value[[3L]](cond)
+
+[[110]]
+stop(e)
+
+[[111]]
+(function (e) 
+{
+    if (is.null(attr(e, "stack.trace", exact = TRUE))) {
+        calls <- sys.calls()
+        parents <- sys.parents()
+        attr(calls, "parents") <- parents
+        calls <- saveCallStackDigest(calls)
+        attr(e, "stack.trace") <- calls
+    }
+    if (deepStacksEnabled()) {
+        if (is.null(attr(e, "deep.stack.trace", exact = TRUE)) && 
+            !is.null(.globals$deepStack)) {
+            attr(e, "deep.stack.trace") <- .globals$deepStack
+        }
+    }
+    stop(e)
+})(list(message = "missing value where TRUE/FALSE needed", call = if (i <= 
+    cur_idx && !running) {
+    actionLink(paste0("crumb_", step_key), label)
+} else {
+    tags$span(style = "color:#9ca3af;", label)
+}))
+
+[[112]]
+stop(e)
+
+[[113]]
+(function (e) 
+{
+    if (cnd_inherits(e, "shiny.silent.error")) 
+        return()
+    handle <- getOption("shiny.error")
+    if (is.function(handle)) 
+        handle()
+})(list(message = "missing value where TRUE/FALSE needed", call = if (i <= 
+    cur_idx && !running) {
+    actionLink(paste0("crumb_", step_key), label)
+} else {
+    tags$span(style = "color:#9ca3af;", label)
+}))
+
+[[114]]
+handle()
+
+SessionInfo:
+R version 4.5.3 (2026-03-11 ucrt)
+Platform: x86_64-w64-mingw32/x64
+Running under: Windows 11 x64 (build 26200)
+
+Matrix products: default
+  LAPACK version 3.12.1
+
+locale:
+[1] LC_COLLATE=English_United States.utf8  LC_CTYPE=English_United States.utf8    LC_MONETARY=English_United States.utf8 LC_NUMERIC=C                          
+[5] LC_TIME=English_United States.utf8    
+
+time zone: Asia/Aden
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+ [1] textclean_0.9.7     kutils_1.73         stringdist_0.9.17   data.table_1.18.2.1 rjson_0.2.23        httr_1.4.8          robotoolbox_1.4     activityinfo_4.39  
+ [9] lubridate_1.9.5     forcats_1.0.1       stringr_1.6.0       purrr_1.2.1         readr_2.2.0         tidyr_1.3.2         tibble_3.3.1        ggplot2_4.0.2      
+[17] tidyverse_2.0.0     plyr_1.8.9          future_1.69.0       promises_1.5.0      shiny_1.13.0        openxlsx_4.2.8.1    readxl_1.4.5        DT_0.34.0          
+[25] bslib_0.10.0        dplyr_1.2.0        
+
+loaded via a namespace (and not attached):
+ [1] tidyselect_1.2.1    farver_2.1.2        S7_0.2.1            fastmap_1.2.0       labelled_2.16.0     digest_0.6.39       timechange_0.4.0    mime_0.13          
+ [9] lifecycle_1.0.5     magrittr_2.0.4      compiler_4.5.3      rlang_1.1.7         sass_0.4.10         tools_4.5.3         qdapRegex_0.7.10    igraph_2.2.2       
+[17] yaml_2.3.12         askpass_1.2.1       htmlwidgets_1.6.4   curl_7.0.0          RColorBrewer_1.1-3  httpcode_0.3.0      withr_3.0.2         RcppSimdJson_0.1.15
+[25] foreign_0.8-91      grid_4.5.3          xtable_1.8-8        globals_0.19.0      scales_1.4.0        crul_1.6.0          cli_3.6.5           generics_0.1.4     
+[33] otel_0.2.0          rstudioapi_0.18.0   tzdb_0.5.0          DBI_1.3.0           cachem_1.1.0        parallel_4.5.3      cellranger_1.1.0    vctrs_0.7.1        
+[41] jsonlite_2.0.0      dm_1.1.1            hms_1.1.4           listenv_0.10.0      crosstalk_1.2.2     fontawesome_0.5.3   jquerylib_0.1.4     glue_1.8.0         
+[49] parallelly_1.46.1   codetools_0.2-20    bcrypt_1.2.1        stringi_1.8.7       gtable_0.3.6        later_1.4.8         pillar_1.11.1       htmltools_0.5.9    
+[57] openssl_2.3.5       R6_2.6.1            dbplyr_2.5.2        haven_2.5.5         backports_1.5.0     memoise_2.0.1       httpuv_1.6.16       Rcpp_1.1.1         
+[65] zip_2.3.3           fs_1.6.7            pkgconfig_2.0.3    
+2026-04-08 20:10:19 — datatable render error: unused argument (server = server_side)
+2026-04-08 20:10:52 — datatable render error: unused argument (server = server_side)
+2026-05-06 08:32:48 — unknown error; geterrmessage: Cannot determine terminal size (system error 6, The handle is invalid.
+) @tty.c:24 (clic_tty_size)
+
+CallStack:
+[[1]]
+shiny::runApp("d:\\OneDrive\\02. Projects\\06_deduplication_app_R\\shiny\\app.R", port = 53618L, launch.browser = FALSE)
+
+[[2]]
+..stacktraceoff..(captureStackTraces({
+    while (!.globals$stopped) {
+        ..stacktracefloor..(serviceApp())
+    }
+}))
+
+[[3]]
+captureStackTraces({
+    while (!.globals$stopped) {
+        ..stacktracefloor..(serviceApp())
+    }
+})
+
+[[4]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[5]]
+domain$wrapSync(expr)
+
+[[6]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[7]]
+..stacktracefloor..(serviceApp())
+
+[[8]]
+serviceApp()
+
+[[9]]
+flushReact()
+
+[[10]]
+.getReactiveEnvironment()$flush()
+
+[[11]]
+ctx$executeFlushCallbacks()
+
+[[12]]
+lapply(.flushCallbacks, function(flushCallback) {
+    flushCallback()
+})
+
+[[13]]
+FUN(X[[i]], ...)
+
+[[14]]
+flushCallback()
+
+[[15]]
+hybrid_chain({
+    if (!.destroyed) {
+        shinyCallingHandlers(run())
+    }
+}, catch = function(e) {
+    if (cnd_inherits(e, "shiny.silent.error")) {
+        return()
+    }
+    printError(e)
+    if (!is.null(.domain)) {
+        .domain$unhandledError(e, close = TRUE)
+    }
+}, finally = .domain$decrementBusyCount)
+
+[[16]]
+do()
+
+[[17]]
+tryCatch({
+    captureStackTraces({
+        result <- withVisible(force(expr))
+        if (is.promising(result$value)) {
+            p <- promise_chain(valueWithVisible(result), ..., 
+                catch = catch, finally = finally)
+            runFinally <- FALSE
+            p
+        }
+        else {
+            result <- Reduce(function(v, func) {
+                if (v$visible) {
+                  withVisible(func(v$value))
+                }
+                else {
+                  withVisible(func(invisible(v$value)))
+                }
+            }, list(...), result)
+            valueWithVisible(result)
+        }
+    })
+}, error = function(e) {
+    if (!is.null(catch)) 
+        catch(e)
+    else stop(e)
+}, finally = if (runFinally && !is.null(finally)) finally())
+
+[[18]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[19]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[20]]
+doTryCatch(return(expr), name, parentenv, handler)
+
+[[21]]
+captureStackTraces({
+    result <- withVisible(force(expr))
+    if (is.promising(result$value)) {
+        p <- promise_chain(valueWithVisible(result), ..., catch = catch, 
+            finally = finally)
+        runFinally <- FALSE
+        p
+    }
+    else {
+        result <- Reduce(function(v, func) {
+            if (v$visible) {
+                withVisible(func(v$value))
+            }
+            else {
+                withVisible(func(invisible(v$value)))
+            }
+        }, list(...), result)
+        valueWithVisible(result)
+    }
+})
+
+[[22]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[23]]
+domain$wrapSync(expr)
+
+[[24]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[25]]
+withVisible(force(expr))
+
+[[26]]
+force(expr)
+
+[[27]]
+shinyCallingHandlers(run())
+
+[[28]]
+withCallingHandlers(captureStackTraces(expr), error = function(e) {
+    if (cnd_inherits(e, "shiny.silent.error")) 
+        return()
+    handle <- getOption("shiny.error")
+    if (is.function(handle)) 
+        handle()
+})
+
+[[29]]
+captureStackTraces(expr)
+
+[[30]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[31]]
+domain$wrapSync(expr)
+
+[[32]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[33]]
+run()
+
+[[34]]
+ctx$run(.func)
+
+[[35]]
+promises::with_promise_domain(reactivePromiseDomain(), {
+    withReactiveDomain(.domain, {
+        with_otel_span_context(.otel_info, domain = .domain, 
+            {
+                captureStackTraces({
+                  env <- .getReactiveEnvironment()
+                  rLog$enter(.reactId, id, .reactType, .domain)
+                  on.exit(rLog$exit(.reactId, id, .reactType, 
+                    .domain), add = TRUE)
+                  env$runWith(self, func)
+                })
+            })
+    })
+})
+
+[[36]]
+domain$wrapSync(expr)
+
+[[37]]
+withReactiveDomain(.domain, {
+    with_otel_span_context(.otel_info, domain = .domain, {
+        captureStackTraces({
+            env <- .getReactiveEnvironment()
+            rLog$enter(.reactId, id, .reactType, .domain)
+            on.exit(rLog$exit(.reactId, id, .reactType, .domain), 
+                add = TRUE)
+            env$runWith(self, func)
+        })
+    })
+})
+
+[[38]]
+promises::with_promise_domain(createVarPromiseDomain(.globals, 
+    "domain", domain), expr)
+
+[[39]]
+domain$wrapSync(expr)
+
+[[40]]
+force(expr)
+
+[[41]]
+with_otel_span_context(.otel_info, domain = .domain, {
+    captureStackTraces({
+        env <- .getReactiveEnvironment()
+        rLog$enter(.reactId, id, .reactType, .domain)
+        on.exit(rLog$exit(.reactId, id, .reactType, .domain), 
+            add = TRUE)
+        env$runWith(self, func)
+    })
+})
+
+[[42]]
+force(expr)
+
+[[43]]
+captureStackTraces({
+    env <- .getReactiveEnvironment()
+    rLog$enter(.reactId, id, .reactType, .domain)
+    on.exit(rLog$exit(.reactId, id, .reactType, .domain), add = TRUE)
+    env$runWith(self, func)
+})
+
+[[44]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[45]]
+domain$wrapSync(expr)
+
+[[46]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[47]]
+env$runWith(self, func)
+
+[[48]]
+contextFunc()
+
+[[49]]
+`observeEvent(input$login_submit)`(...)
+
+[[50]]
+hybrid_chain(eventFunc(), function(value) {
+    if (ignoreInit && !initialized) {
+        initialized <<- TRUE
+        return()
+    }
+    if (ignoreNULL && isNullEvent(value)) {
+        return()
+    }
+    if (once) {
+        on.exit(x$destroy())
+    }
+    req(!ignoreNULL || !isNullEvent(value))
+    isolate(valueFunc())
+})
+
+[[51]]
+do()
+
+[[52]]
+tryCatch({
+    captureStackTraces({
+        result <- withVisible(force(expr))
+        if (is.promising(result$value)) {
+            p <- promise_chain(valueWithVisible(result), ..., 
+                catch = catch, finally = finally)
+            runFinally <- FALSE
+            p
+        }
+        else {
+            result <- Reduce(function(v, func) {
+                if (v$visible) {
+                  withVisible(func(v$value))
+                }
+                else {
+                  withVisible(func(invisible(v$value)))
+                }
+            }, list(...), result)
+            valueWithVisible(result)
+        }
+    })
+}, error = function(e) {
+    if (!is.null(catch)) 
+        catch(e)
+    else stop(e)
+}, finally = if (runFinally && !is.null(finally)) finally())
+
+[[53]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[54]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[55]]
+value[[3L]](cond)
+
+[[56]]
+stop(e)
+
+[[57]]
+(function (e) 
+{
+    if (is.null(attr(e, "stack.trace", exact = TRUE))) {
+        calls <- sys.calls()
+        parents <- sys.parents()
+        attr(calls, "parents") <- parents
+        calls <- saveCallStackDigest(calls)
+        attr(e, "stack.trace") <- calls
+    }
+    if (deepStacksEnabled()) {
+        if (is.null(attr(e, "deep.stack.trace", exact = TRUE)) && 
+            !is.null(.globals$deepStack)) {
+            attr(e, "deep.stack.trace") <- .globals$deepStack
+        }
+    }
+    stop(e)
+})(list(message = "there is no package called ‘bcrypt’", 
+    call = loadNamespace(x), package = "bcrypt", lib.loc = NULL))
+
+[[58]]
+stop(e)
+
+[[59]]
+(function (e) 
+{
+    if (is.null(attr(e, "stack.trace", exact = TRUE))) {
+        calls <- sys.calls()
+        parents <- sys.parents()
+        attr(calls, "parents") <- parents
+        calls <- saveCallStackDigest(calls)
+        attr(e, "stack.trace") <- calls
+    }
+    if (deepStacksEnabled()) {
+        if (is.null(attr(e, "deep.stack.trace", exact = TRUE)) && 
+            !is.null(.globals$deepStack)) {
+            attr(e, "deep.stack.trace") <- .globals$deepStack
+        }
+    }
+    stop(e)
+})(list(message = "there is no package called ‘bcrypt’", 
+    call = loadNamespace(x), package = "bcrypt", lib.loc = NULL))
+
+[[60]]
+stop(e)
+
+[[61]]
+(function (e) 
+{
+    if (cnd_inherits(e, "shiny.silent.error")) 
+        return()
+    handle <- getOption("shiny.error")
+    if (is.function(handle)) 
+        handle()
+})(list(message = "there is no package called ‘bcrypt’", 
+    call = loadNamespace(x), package = "bcrypt", lib.loc = NULL))
+
+[[62]]
+handle()
+
+SessionInfo:
+R version 4.6.0 (2026-04-24 ucrt)
+Platform: x86_64-w64-mingw32/x64
+Running under: Windows 11 x64 (build 26200)
+
+Matrix products: default
+  LAPACK version 3.12.1
+
+locale:
+[1] LC_COLLATE=English_United States.utf8  LC_CTYPE=English_United States.utf8    LC_MONETARY=English_United States.utf8
+[4] LC_NUMERIC=C                           LC_TIME=English_United States.utf8    
+
+time zone: Asia/Aden
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+[1] future_1.70.0    promises_1.5.0   openxlsx_4.2.8.1 readxl_1.4.5     DT_0.34.0        bslib_0.10.0     dplyr_1.2.1      shiny_1.13.0    
+
+loaded via a namespace (and not attached):
+ [1] jsonlite_2.0.0    compiler_4.6.0    renv_1.2.2        tidyselect_1.2.1  Rcpp_1.1.1-1.1    zip_2.3.3         parallel_4.6.0    later_1.4.8      
+ [9] jquerylib_0.1.4   globals_0.19.1    fastmap_1.2.0     mime_0.13         R6_2.6.1          generics_0.1.4    htmlwidgets_1.6.4 tibble_3.3.1     
+[17] pillar_1.11.1     rlang_1.2.0       cachem_1.1.0      stringi_1.8.7     httpuv_1.6.17     fs_2.1.0          sass_0.4.10       otel_0.2.0       
+[25] memoise_2.0.1     cli_3.6.6         withr_3.0.2       magrittr_2.0.5    digest_0.6.39     xtable_1.8-8      lifecycle_1.0.5   vctrs_0.7.3      
+[33] glue_1.8.1        listenv_0.10.1    cellranger_1.1.0  codetools_0.2-20  parallelly_1.47.0 tools_4.6.0       pkgconfig_2.0.3   htmltools_0.5.9  
+2026-05-06 08:48:31 — unknown error; geterrmessage: all 128 connections are in use
+
+CallStack:
+[[1]]
+(function (x, ...) 
+UseMethod("print"))(x)
+
+[[2]]
+print.shiny.appobj(x)
+
+[[3]]
+runApp(x)
+
+[[4]]
+..stacktraceoff..(captureStackTraces({
+    while (!.globals$stopped) {
+        ..stacktracefloor..(serviceApp())
+    }
+}))
+
+[[5]]
+captureStackTraces({
+    while (!.globals$stopped) {
+        ..stacktracefloor..(serviceApp())
+    }
+})
+
+[[6]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[7]]
+domain$wrapSync(expr)
+
+[[8]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[9]]
+..stacktracefloor..(serviceApp())
+
+[[10]]
+serviceApp()
+
+[[11]]
+flushReact()
+
+[[12]]
+.getReactiveEnvironment()$flush()
+
+[[13]]
+ctx$executeFlushCallbacks()
+
+[[14]]
+lapply(.flushCallbacks, function(flushCallback) {
+    flushCallback()
+})
+
+[[15]]
+FUN(X[[i]], ...)
+
+[[16]]
+flushCallback()
+
+[[17]]
+hybrid_chain({
+    if (!.destroyed) {
+        shinyCallingHandlers(run())
+    }
+}, catch = function(e) {
+    if (cnd_inherits(e, "shiny.silent.error")) {
+        return()
+    }
+    printError(e)
+    if (!is.null(.domain)) {
+        .domain$unhandledError(e, close = TRUE)
+    }
+}, finally = .domain$decrementBusyCount)
+
+[[18]]
+do()
+
+[[19]]
+tryCatch({
+    captureStackTraces({
+        result <- withVisible(force(expr))
+        if (is.promising(result$value)) {
+            p <- promise_chain(valueWithVisible(result), ..., 
+                catch = catch, finally = finally)
+            runFinally <- FALSE
+            p
+        }
+        else {
+            result <- Reduce(function(v, func) {
+                if (v$visible) {
+                  withVisible(func(v$value))
+                }
+                else {
+                  withVisible(func(invisible(v$value)))
+                }
+            }, list(...), result)
+            valueWithVisible(result)
+        }
+    })
+}, error = function(e) {
+    if (!is.null(catch)) 
+        catch(e)
+    else stop(e)
+}, finally = if (runFinally && !is.null(finally)) finally())
+
+[[20]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[21]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[22]]
+doTryCatch(return(expr), name, parentenv, handler)
+
+[[23]]
+captureStackTraces({
+    result <- withVisible(force(expr))
+    if (is.promising(result$value)) {
+        p <- promise_chain(valueWithVisible(result), ..., catch = catch, 
+            finally = finally)
+        runFinally <- FALSE
+        p
+    }
+    else {
+        result <- Reduce(function(v, func) {
+            if (v$visible) {
+                withVisible(func(v$value))
+            }
+            else {
+                withVisible(func(invisible(v$value)))
+            }
+        }, list(...), result)
+        valueWithVisible(result)
+    }
+})
+
+[[24]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[25]]
+domain$wrapSync(expr)
+
+[[26]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[27]]
+withVisible(force(expr))
+
+[[28]]
+force(expr)
+
+[[29]]
+shinyCallingHandlers(run())
+
+[[30]]
+withCallingHandlers(captureStackTraces(expr), error = function(e) {
+    if (cnd_inherits(e, "shiny.silent.error")) 
+        return()
+    handle <- getOption("shiny.error")
+    if (is.function(handle)) 
+        handle()
+})
+
+[[31]]
+captureStackTraces(expr)
+
+[[32]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[33]]
+domain$wrapSync(expr)
+
+[[34]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[35]]
+run()
+
+[[36]]
+ctx$run(.func)
+
+[[37]]
+promises::with_promise_domain(reactivePromiseDomain(), {
+    withReactiveDomain(.domain, {
+        with_otel_span_context(.otel_info, domain = .domain, 
+            {
+                captureStackTraces({
+                  env <- .getReactiveEnvironment()
+                  rLog$enter(.reactId, id, .reactType, .domain)
+                  on.exit(rLog$exit(.reactId, id, .reactType, 
+                    .domain), add = TRUE)
+                  env$runWith(self, func)
+                })
+            })
+    })
+})
+
+[[38]]
+domain$wrapSync(expr)
+
+[[39]]
+withReactiveDomain(.domain, {
+    with_otel_span_context(.otel_info, domain = .domain, {
+        captureStackTraces({
+            env <- .getReactiveEnvironment()
+            rLog$enter(.reactId, id, .reactType, .domain)
+            on.exit(rLog$exit(.reactId, id, .reactType, .domain), 
+                add = TRUE)
+            env$runWith(self, func)
+        })
+    })
+})
+
+[[40]]
+promises::with_promise_domain(createVarPromiseDomain(.globals, 
+    "domain", domain), expr)
+
+[[41]]
+domain$wrapSync(expr)
+
+[[42]]
+force(expr)
+
+[[43]]
+with_otel_span_context(.otel_info, domain = .domain, {
+    captureStackTraces({
+        env <- .getReactiveEnvironment()
+        rLog$enter(.reactId, id, .reactType, .domain)
+        on.exit(rLog$exit(.reactId, id, .reactType, .domain), 
+            add = TRUE)
+        env$runWith(self, func)
+    })
+})
+
+[[44]]
+force(expr)
+
+[[45]]
+captureStackTraces({
+    env <- .getReactiveEnvironment()
+    rLog$enter(.reactId, id, .reactType, .domain)
+    on.exit(rLog$exit(.reactId, id, .reactType, .domain), add = TRUE)
+    env$runWith(self, func)
+})
+
+[[46]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[47]]
+domain$wrapSync(expr)
+
+[[48]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[49]]
+env$runWith(self, func)
+
+[[50]]
+contextFunc()
+
+[[51]]
+`observeEvent(input$login_submit)`(...)
+
+[[52]]
+hybrid_chain(eventFunc(), function(value) {
+    if (ignoreInit && !initialized) {
+        initialized <<- TRUE
+        return()
+    }
+    if (ignoreNULL && isNullEvent(value)) {
+        return()
+    }
+    if (once) {
+        on.exit(x$destroy())
+    }
+    req(!ignoreNULL || !isNullEvent(value))
+    isolate(valueFunc())
+})
+
+[[53]]
+do()
+
+[[54]]
+tryCatch({
+    captureStackTraces({
+        result <- withVisible(force(expr))
+        if (is.promising(result$value)) {
+            p <- promise_chain(valueWithVisible(result), ..., 
+                catch = catch, finally = finally)
+            runFinally <- FALSE
+            p
+        }
+        else {
+            result <- Reduce(function(v, func) {
+                if (v$visible) {
+                  withVisible(func(v$value))
+                }
+                else {
+                  withVisible(func(invisible(v$value)))
+                }
+            }, list(...), result)
+            valueWithVisible(result)
+        }
+    })
+}, error = function(e) {
+    if (!is.null(catch)) 
+        catch(e)
+    else stop(e)
+}, finally = if (runFinally && !is.null(finally)) finally())
+
+[[55]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[56]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[57]]
+value[[3L]](cond)
+
+[[58]]
+stop(e)
+
+[[59]]
+(function (e) 
+{
+    if (is.null(attr(e, "stack.trace", exact = TRUE))) {
+        calls <- sys.calls()
+        parents <- sys.parents()
+        attr(calls, "parents") <- parents
+        calls <- saveCallStackDigest(calls)
+        attr(e, "stack.trace") <- calls
+    }
+    if (deepStacksEnabled()) {
+        if (is.null(attr(e, "deep.stack.trace", exact = TRUE)) && 
+            !is.null(.globals$deepStack)) {
+            attr(e, "deep.stack.trace") <- .globals$deepStack
+        }
+    }
+    stop(e)
+})(list(message = "there is no package called ‘bcrypt’", 
+    call = loadNamespace(x), package = "bcrypt", lib.loc = NULL))
+
+[[60]]
+stop(e)
+
+[[61]]
+(function (e) 
+{
+    if (is.null(attr(e, "stack.trace", exact = TRUE))) {
+        calls <- sys.calls()
+        parents <- sys.parents()
+        attr(calls, "parents") <- parents
+        calls <- saveCallStackDigest(calls)
+        attr(e, "stack.trace") <- calls
+    }
+    if (deepStacksEnabled()) {
+        if (is.null(attr(e, "deep.stack.trace", exact = TRUE)) && 
+            !is.null(.globals$deepStack)) {
+            attr(e, "deep.stack.trace") <- .globals$deepStack
+        }
+    }
+    stop(e)
+})(list(message = "there is no package called ‘bcrypt’", 
+    call = loadNamespace(x), package = "bcrypt", lib.loc = NULL))
+
+[[62]]
+stop(e)
+
+[[63]]
+(function (e) 
+{
+    if (cnd_inherits(e, "shiny.silent.error")) 
+        return()
+    handle <- getOption("shiny.error")
+    if (is.function(handle)) 
+        handle()
+})(list(message = "there is no package called ‘bcrypt’", 
+    call = loadNamespace(x), package = "bcrypt", lib.loc = NULL))
+
+[[64]]
+handle()
+
+SessionInfo:
+R version 4.6.0 (2026-04-24 ucrt)
+Platform: x86_64-w64-mingw32/x64
+Running under: Windows 11 x64 (build 26200)
+
+Matrix products: default
+  LAPACK version 3.12.1
+
+locale:
+[1] LC_COLLATE=English_United States.utf8  LC_CTYPE=English_United States.utf8    LC_MONETARY=English_United States.utf8 LC_NUMERIC=C                          
+[5] LC_TIME=English_United States.utf8    
+
+time zone: Asia/Aden
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+[1] future_1.70.0    promises_1.5.0   shiny_1.13.0     openxlsx_4.2.8.1 readxl_1.4.5     DT_0.34.0        bslib_0.10.0     dplyr_1.2.1     
+
+loaded via a namespace (and not attached):
+ [1] xfun_0.57         htmlwidgets_1.6.4 emayili_0.9.3     tzdb_0.5.0        vctrs_0.7.3       tools_4.6.0       pak_0.9.4         generics_0.1.4    parallel_4.6.0    curl_7.1.0       
+[11] tibble_3.3.1      pkgconfig_2.0.3   lifecycle_1.0.5   compiler_4.6.0    stringr_1.6.0     sendmailR_1.4-1   codetools_0.2-20  httpuv_1.6.17     htmltools_0.5.9   sass_0.4.10      
+[21] pillar_1.11.1     later_1.4.8       jquerylib_0.1.4   tidyr_1.3.2       rsconnect_1.8.0   cachem_1.1.0      parallelly_1.47.0 mime_0.13         commonmark_2.0.0  tidyselect_1.2.1 
+[31] rvest_1.0.5       zip_2.3.3         digest_0.6.39     stringi_1.8.7     listenv_0.10.1    purrr_1.2.2       fastmap_1.2.0     blastula_0.3.6    cli_3.6.6         logger_0.4.1     
+[41] fuzzyjoin_0.1.8   magrittr_2.0.5    activityinfo_4.39 base64enc_0.1-6   triebeard_0.4.1   withr_3.0.2       readr_2.2.0       rmarkdown_2.31    httr_1.4.8        globals_0.19.1   
+[51] otel_0.2.0        cellranger_1.1.0  hms_1.1.4         memoise_2.0.1     evaluate_1.0.5    knitr_1.51        openxlsx2_1.26    rlang_1.2.0       urltools_1.7.3.1  Rcpp_1.1.1-1.1   
+[61] xtable_1.8-8      glue_1.8.1        xml2_1.5.2        rstudioapi_0.18.0 jsonlite_2.0.0    R6_2.6.1          fs_2.1.0         
+2026-05-06 09:50:16 — unknown error; geterrmessage: argument is of length zero
+
+CallStack:
+[[1]]
+(function (x, ...) 
+UseMethod("print"))(x)
+
+[[2]]
+print.shiny.appobj(x)
+
+[[3]]
+runApp(x)
+
+[[4]]
+..stacktraceoff..(captureStackTraces({
+    while (!.globals$stopped) {
+        ..stacktracefloor..(serviceApp())
+    }
+}))
+
+[[5]]
+captureStackTraces({
+    while (!.globals$stopped) {
+        ..stacktracefloor..(serviceApp())
+    }
+})
+
+[[6]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[7]]
+domain$wrapSync(expr)
+
+[[8]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[9]]
+..stacktracefloor..(serviceApp())
+
+[[10]]
+serviceApp()
+
+[[11]]
+flushReact()
+
+[[12]]
+.getReactiveEnvironment()$flush()
+
+[[13]]
+ctx$executeFlushCallbacks()
+
+[[14]]
+lapply(.flushCallbacks, function(flushCallback) {
+    flushCallback()
+})
+
+[[15]]
+FUN(X[[i]], ...)
+
+[[16]]
+flushCallback()
+
+[[17]]
+hybrid_chain({
+    if (!.destroyed) {
+        shinyCallingHandlers(run())
+    }
+}, catch = function(e) {
+    if (cnd_inherits(e, "shiny.silent.error")) {
+        return()
+    }
+    printError(e)
+    if (!is.null(.domain)) {
+        .domain$unhandledError(e, close = TRUE)
+    }
+}, finally = .domain$decrementBusyCount)
+
+[[18]]
+do()
+
+[[19]]
+tryCatch({
+    captureStackTraces({
+        result <- withVisible(force(expr))
+        if (is.promising(result$value)) {
+            p <- promise_chain(valueWithVisible(result), ..., 
+                catch = catch, finally = finally)
+            runFinally <- FALSE
+            p
+        }
+        else {
+            result <- Reduce(function(v, func) {
+                if (v$visible) {
+                  withVisible(func(v$value))
+                }
+                else {
+                  withVisible(func(invisible(v$value)))
+                }
+            }, list(...), result)
+            valueWithVisible(result)
+        }
+    })
+}, error = function(e) {
+    if (!is.null(catch)) 
+        catch(e)
+    else stop(e)
+}, finally = if (runFinally && !is.null(finally)) finally())
+
+[[20]]
+tryCatchList(expr, classes, parentenv, handlers)
+
+[[21]]
+tryCatchOne(expr, names, parentenv, handlers[[1L]])
+
+[[22]]
+doTryCatch(return(expr), name, parentenv, handler)
+
+[[23]]
+captureStackTraces({
+    result <- withVisible(force(expr))
+    if (is.promising(result$value)) {
+        p <- promise_chain(valueWithVisible(result), ..., catch = catch, 
+            finally = finally)
+        runFinally <- FALSE
+        p
+    }
+    else {
+        result <- Reduce(function(v, func) {
+            if (v$visible) {
+                withVisible(func(v$value))
+            }
+            else {
+                withVisible(func(invisible(v$value)))
+            }
+        }, list(...), result)
+        valueWithVisible(result)
+    }
+})
+
+[[24]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[25]]
+domain$wrapSync(expr)
+
+[[26]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[27]]
+withVisible(force(expr))
+
+[[28]]
+force(expr)
+
+[[29]]
+shinyCallingHandlers(run())
+
+[[30]]
+withCallingHandlers(captureStackTraces(expr), error = function(e) {
+    if (cnd_inherits(e, "shiny.silent.error")) 
+        return()
+    handle <- getOption("shiny.error")
+    if (is.function(handle)) 
+        handle()
+})
+
+[[31]]
+captureStackTraces(expr)
+
+[[32]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[33]]
+domain$wrapSync(expr)
+
+[[34]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[35]]
+run()
+
+[[36]]
+ctx$run(.func)
+
+[[37]]
+promises::with_promise_domain(reactivePromiseDomain(), {
+    withReactiveDomain(.domain, {
+        with_otel_span_context(.otel_info, domain = .domain, 
+            {
+                captureStackTraces({
+                  env <- .getReactiveEnvironment()
+                  rLog$enter(.reactId, id, .reactType, .domain)
+                  on.exit(rLog$exit(.reactId, id, .reactType, 
+                    .domain), add = TRUE)
+                  env$runWith(self, func)
+                })
+            })
+    })
+})
+
+[[38]]
+domain$wrapSync(expr)
+
+[[39]]
+withReactiveDomain(.domain, {
+    with_otel_span_context(.otel_info, domain = .domain, {
+        captureStackTraces({
+            env <- .getReactiveEnvironment()
+            rLog$enter(.reactId, id, .reactType, .domain)
+            on.exit(rLog$exit(.reactId, id, .reactType, .domain), 
+                add = TRUE)
+            env$runWith(self, func)
+        })
+    })
+})
+
+[[40]]
+promises::with_promise_domain(createVarPromiseDomain(.globals, 
+    "domain", domain), expr)
+
+[[41]]
+domain$wrapSync(expr)
+
+[[42]]
+force(expr)
+
+[[43]]
+with_otel_span_context(.otel_info, domain = .domain, {
+    captureStackTraces({
+        env <- .getReactiveEnvironment()
+        rLog$enter(.reactId, id, .reactType, .domain)
+        on.exit(rLog$exit(.reactId, id, .reactType, .domain), 
+            add = TRUE)
+        env$runWith(self, func)
+    })
+})
+
+[[44]]
+force(expr)
+
+[[45]]
+captureStackTraces({
+    env <- .getReactiveEnvironment()
+    rLog$enter(.reactId, id, .reactType, .domain)
+    on.exit(rLog$exit(.reactId, id, .reactType, .domain), add = TRUE)
+    env$runWith(self, func)
+})
+
+[[46]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[47]]
+domain$wrapSync(expr)
+
+[[48]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[49]]
+env$runWith(self, func)
+
+[[50]]
+contextFunc()
+
+[[51]]
+..stacktraceon..(`<observer>`(...))
+
+[[52]]
+`<observer>`(...)
+
+[[53]]
+observe()
+
+[[54]]
+if (!isTRUE(can_open_admin_workspace())) return()
+
+[[55]]
+can_open_admin_workspace()
+
+[[56]]
+..stacktraceoff..(self$.updateValue())
+
+[[57]]
+self$.updateValue()
+
+[[58]]
+ctx$run(function() {
+    result <- withCallingHandlers({
+        .error <<- FALSE
+        withVisible(.func())
+    }, error = function(cond) {
+        if (.isRecordingOtel) {
+            cond <- mark_otel_exception_as_seen(cond)
+        }
+        .value <<- cond
+        .error <<- TRUE
+        .visible <<- FALSE
+    })
+    .value <<- result$value
+    .visible <<- result$visible
+})
+
+[[59]]
+promises::with_promise_domain(reactivePromiseDomain(), {
+    withReactiveDomain(.domain, {
+        with_otel_span_context(.otel_info, domain = .domain, 
+            {
+                captureStackTraces({
+                  env <- .getReactiveEnvironment()
+                  rLog$enter(.reactId, id, .reactType, .domain)
+                  on.exit(rLog$exit(.reactId, id, .reactType, 
+                    .domain), add = TRUE)
+                  env$runWith(self, func)
+                })
+            })
+    })
+})
+
+[[60]]
+domain$wrapSync(expr)
+
+[[61]]
+withReactiveDomain(.domain, {
+    with_otel_span_context(.otel_info, domain = .domain, {
+        captureStackTraces({
+            env <- .getReactiveEnvironment()
+            rLog$enter(.reactId, id, .reactType, .domain)
+            on.exit(rLog$exit(.reactId, id, .reactType, .domain), 
+                add = TRUE)
+            env$runWith(self, func)
+        })
+    })
+})
+
+[[62]]
+promises::with_promise_domain(createVarPromiseDomain(.globals, 
+    "domain", domain), expr)
+
+[[63]]
+domain$wrapSync(expr)
+
+[[64]]
+force(expr)
+
+[[65]]
+with_otel_span_context(.otel_info, domain = .domain, {
+    captureStackTraces({
+        env <- .getReactiveEnvironment()
+        rLog$enter(.reactId, id, .reactType, .domain)
+        on.exit(rLog$exit(.reactId, id, .reactType, .domain), 
+            add = TRUE)
+        env$runWith(self, func)
+    })
+})
+
+[[66]]
+force(expr)
+
+[[67]]
+captureStackTraces({
+    env <- .getReactiveEnvironment()
+    rLog$enter(.reactId, id, .reactType, .domain)
+    on.exit(rLog$exit(.reactId, id, .reactType, .domain), add = TRUE)
+    env$runWith(self, func)
+})
+
+[[68]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[69]]
+domain$wrapSync(expr)
+
+[[70]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[71]]
+env$runWith(self, func)
+
+[[72]]
+contextFunc()
+
+[[73]]
+withCallingHandlers({
+    .error <<- FALSE
+    withVisible(.func())
+}, error = function(cond) {
+    if (.isRecordingOtel) {
+        cond <- mark_otel_exception_as_seen(cond)
+    }
+    .value <<- cond
+    .error <<- TRUE
+    .visible <<- FALSE
+})
+
+[[74]]
+withVisible(.func())
+
+[[75]]
+.func()
+
+[[76]]
+..stacktraceon..(`<reactive:can_open_admin_workspace>`(...))
+
+[[77]]
+`<reactive:can_open_admin_workspace>`(...)
+
+[[78]]
+isTRUE(is_ccy_master()) || isTRUE(is_partner_admin())
+
+[[79]]
+is_ccy_master()
+
+[[80]]
+..stacktraceoff..(self$.updateValue())
+
+[[81]]
+self$.updateValue()
+
+[[82]]
+ctx$run(function() {
+    result <- withCallingHandlers({
+        .error <<- FALSE
+        withVisible(.func())
+    }, error = function(cond) {
+        if (.isRecordingOtel) {
+            cond <- mark_otel_exception_as_seen(cond)
+        }
+        .value <<- cond
+        .error <<- TRUE
+        .visible <<- FALSE
+    })
+    .value <<- result$value
+    .visible <<- result$visible
+})
+
+[[83]]
+promises::with_promise_domain(reactivePromiseDomain(), {
+    withReactiveDomain(.domain, {
+        with_otel_span_context(.otel_info, domain = .domain, 
+            {
+                captureStackTraces({
+                  env <- .getReactiveEnvironment()
+                  rLog$enter(.reactId, id, .reactType, .domain)
+                  on.exit(rLog$exit(.reactId, id, .reactType, 
+                    .domain), add = TRUE)
+                  env$runWith(self, func)
+                })
+            })
+    })
+})
+
+[[84]]
+domain$wrapSync(expr)
+
+[[85]]
+withReactiveDomain(.domain, {
+    with_otel_span_context(.otel_info, domain = .domain, {
+        captureStackTraces({
+            env <- .getReactiveEnvironment()
+            rLog$enter(.reactId, id, .reactType, .domain)
+            on.exit(rLog$exit(.reactId, id, .reactType, .domain), 
+                add = TRUE)
+            env$runWith(self, func)
+        })
+    })
+})
+
+[[86]]
+promises::with_promise_domain(createVarPromiseDomain(.globals, 
+    "domain", domain), expr)
+
+[[87]]
+domain$wrapSync(expr)
+
+[[88]]
+force(expr)
+
+[[89]]
+with_otel_span_context(.otel_info, domain = .domain, {
+    captureStackTraces({
+        env <- .getReactiveEnvironment()
+        rLog$enter(.reactId, id, .reactType, .domain)
+        on.exit(rLog$exit(.reactId, id, .reactType, .domain), 
+            add = TRUE)
+        env$runWith(self, func)
+    })
+})
+
+[[90]]
+force(expr)
+
+[[91]]
+captureStackTraces({
+    env <- .getReactiveEnvironment()
+    rLog$enter(.reactId, id, .reactType, .domain)
+    on.exit(rLog$exit(.reactId, id, .reactType, .domain), add = TRUE)
+    env$runWith(self, func)
+})
+
+[[92]]
+promises::with_promise_domain(createStackTracePromiseDomain(), 
+    expr)
+
+[[93]]
+domain$wrapSync(expr)
+
+[[94]]
+withCallingHandlers(expr, error = doCaptureStack)
+
+[[95]]
+env$runWith(self, func)
+
+[[96]]
+contextFunc()
+
+[[97]]
+withCallingHandlers({
+    .error <<- FALSE
+    withVisible(.func())
+}, error = function(cond) {
+    if (.isRecordingOtel) {
+        cond <- mark_otel_exception_as_seen(cond)
+    }
+    .value <<- cond
+    .error <<- TRUE
+    .visible <<- FALSE
+})
+
+[[98]]
+withVisible(.func())
+
+[[99]]
+.func()
+
+[[100]]
+..stacktraceon..(`<reactive:is_ccy_master>`(...))
+
+[[101]]
+`<reactive:is_ccy_master>`(...)
+
+[[102]]
+identical(normalize_role(auth$role), "ccy_master")
+
+[[103]]
+normalize_role(auth$role)
+
+[[104]]
+if (!nzchar(role)) return("partner_deduplicator")
+
+[[105]]
+h(simpleError(msg, call))
+
+[[106]]
+stop(e)
+
+[[107]]
+(function (e) 
+{
+    if (is.null(attr(e, "stack.trace", exact = TRUE))) {
+        calls <- sys.calls()
+        parents <- sys.parents()
+        attr(calls, "parents") <- parents
+        calls <- saveCallStackDigest(calls)
+        attr(e, "stack.trace") <- calls
+    }
+    if (deepStacksEnabled()) {
+        if (is.null(attr(e, "deep.stack.trace", exact = TRUE)) && 
+            !is.null(.globals$deepStack)) {
+            attr(e, "deep.stack.trace") <- .globals$deepStack
+        }
+    }
+    stop(e)
+})(list(message = "argument is of length zero", call = if (!nzchar(role)) return("partner_deduplicator")))
+
+[[108]]
+stop(e)
+
+[[109]]
+(function (e) 
+{
+    if (is.null(attr(e, "stack.trace", exact = TRUE))) {
+        calls <- sys.calls()
+        parents <- sys.parents()
+        attr(calls, "parents") <- parents
+        calls <- saveCallStackDigest(calls)
+        attr(e, "stack.trace") <- calls
+    }
+    if (deepStacksEnabled()) {
+        if (is.null(attr(e, "deep.stack.trace", exact = TRUE)) && 
+            !is.null(.globals$deepStack)) {
+            attr(e, "deep.stack.trace") <- .globals$deepStack
+        }
+    }
+    stop(e)
+})(list(message = "argument is of length zero", call = if (!nzchar(role)) return("partner_deduplicator")))
+
+[[110]]
+stop(e)
+
+[[111]]
+(function (e) 
+{
+    if (is.null(attr(e, "stack.trace", exact = TRUE))) {
+        calls <- sys.calls()
+        parents <- sys.parents()
+        attr(calls, "parents") <- parents
+        calls <- saveCallStackDigest(calls)
+        attr(e, "stack.trace") <- calls
+    }
+    if (deepStacksEnabled()) {
+        if (is.null(attr(e, "deep.stack.trace", exact = TRUE)) && 
+            !is.null(.globals$deepStack)) {
+            attr(e, "deep.stack.trace") <- .globals$deepStack
+        }
+    }
+    stop(e)
+})(list(message = "argument is of length zero", call = if (!nzchar(role)) return("partner_deduplicator")))
+
+[[112]]
+stop(e)
+
+[[113]]
+(function (e) 
+{
+    if (cnd_inherits(e, "shiny.silent.error")) 
+        return()
+    handle <- getOption("shiny.error")
+    if (is.function(handle)) 
+        handle()
+})(list(message = "argument is of length zero", call = if (!nzchar(role)) return("partner_deduplicator")))
+
+[[114]]
+handle()
+
+SessionInfo:
+R version 4.6.0 (2026-04-24 ucrt)
+Platform: x86_64-w64-mingw32/x64
+Running under: Windows 11 x64 (build 26200)
+
+Matrix products: default
+  LAPACK version 3.12.1
+
+locale:
+[1] LC_COLLATE=English_United States.utf8  LC_CTYPE=English_United States.utf8    LC_MONETARY=English_United States.utf8 LC_NUMERIC=C                          
+[5] LC_TIME=English_United States.utf8    
+
+time zone: Asia/Aden
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+[1] future_1.70.0    promises_1.5.0   shiny_1.13.0     openxlsx_4.2.8.1 readxl_1.4.5     DT_0.34.0        bslib_0.10.0     dplyr_1.2.1     
+
+loaded via a namespace (and not attached):
+ [1] stringdist_0.9.17 xfun_0.57         htmlwidgets_1.6.4 emayili_0.9.3     tzdb_0.5.0        crosstalk_1.2.2   vctrs_0.7.3       tools_4.6.0       pak_0.9.4         generics_0.1.4   
+[11] bcrypt_1.2.1      parallel_4.6.0    curl_7.1.0        tibble_3.3.1      pkgconfig_2.0.3   lifecycle_1.0.5   compiler_4.6.0    stringr_1.6.0     sendmailR_1.4-1   fontawesome_0.5.3
+[21] keyring_1.4.1     codetools_0.2-20  httpuv_1.6.17     htmltools_0.5.9   sass_0.4.10       yaml_2.3.12       pillar_1.11.1     later_1.4.8       jquerylib_0.1.4   tidyr_1.3.2      
+[31] openssl_2.4.0     rsconnect_1.8.0   cachem_1.1.0      parallelly_1.47.0 mime_0.13         commonmark_2.0.0  tidyselect_1.2.1  rvest_1.0.5       zip_2.3.3         digest_0.6.39    
+[41] stringi_1.8.7     listenv_0.10.1    purrr_1.2.2       fastmap_1.2.0     blastula_0.3.6    cli_3.6.6         logger_0.4.1      fuzzyjoin_0.1.8   magrittr_2.0.5    activityinfo_4.39
+[51] base64enc_0.1-6   triebeard_0.4.1   withr_3.0.2       readr_2.2.0       rmarkdown_2.31    httr_1.4.8        globals_0.19.1    otel_0.2.0        cellranger_1.1.0  askpass_1.2.1    
+[61] hms_1.1.4         memoise_2.0.1     evaluate_1.0.5    knitr_1.51        openxlsx2_1.26    rlang_1.2.0       urltools_1.7.3.1  Rcpp_1.1.1-1.1    xtable_1.8-8      glue_1.8.1       
+[71] xml2_1.5.2        rstudioapi_0.18.0 jsonlite_2.0.0    R6_2.6.1          fs_2.1.0         
