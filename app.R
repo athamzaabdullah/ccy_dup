@@ -11,7 +11,8 @@ library(shiny)
 library(promises)
 library(future)
 
-setwd("D:/OneDrive - Danish Refugee Council/02. Projects/06_deduplication_app_R/shiny/")
+# setwd is not needed in Shiny apps and breaks cloud deployment
+# setwd("D:/OneDrive - Danish Refugee Council/02. Projects/06_deduplication_app_R/shiny/")
 
 plan(multisession)
 
