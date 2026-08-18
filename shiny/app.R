@@ -1,6 +1,6 @@
 rm(list = ls())
 
-## install.packages(c("shiny", "dplyr", "DT", "readxl", "openxlsx", "promises", "future", "blastula", "sendmailR", "oath"), dependencies = TRUE)
+## install.packages(c("shiny", "dplyr", "DT", "readxl", "openxlsx", "promises", "future", "blastula", "sendmailR", "otp"), dependencies = TRUE)
 
 library(dplyr)
 library(bslib)
@@ -11,7 +11,8 @@ library(shiny)
 library(promises)
 library(future)
 
-setwd("D:/OneDrive/02. Projects/06_deduplication_app_R/shiny/")
+# setwd is not needed in Shiny apps and breaks cloud deployment
+# setwd("D:/OneDrive - Danish Refugee Council/02. Projects/06_deduplication_app_R/shiny/")
 
 plan(multisession)
 
@@ -382,7 +383,7 @@ server <- function(input, output, session) {
     }
     email <- pending$email
     code <- isolate(input$mfa_code)
-    # First try TOTP if secret present and oath installed
+    # First try TOTP if secret present and mfa installed
     totp_ok <- FALSE
     try({ totp_ok <- verify_totp_code(email, code) }, silent = TRUE)
     email_ok <- FALSE
@@ -542,11 +543,11 @@ server <- function(input, output, session) {
         easyClose = TRUE
       ))
     } else {
-      # show enrollment flow — generate a secret instruction (TOTP requires 'oath')
-      can_oath <- requireNamespace("oath", quietly = TRUE)
+      # show enrollment flow — generate a secret instruction (TOTP requires 'otp')
+      can_otp <- requireNamespace("otp", quietly = TRUE)
       showModal(modalDialog(
-        title = "Enroll in MFA",
-        if (can_oath) {
+        title = "Enroll in Authenticator App (TOTP)",
+        if (can_otp) {
           tagList(
             p("Your account is not enrolled for TOTP. Follow these steps:"),
             tags$ol(
@@ -554,17 +555,17 @@ server <- function(input, output, session) {
               tags$li("Scan the QR code or enter the secret shown below."),
               tags$li("Enter the 6-digit code from your app to verify.")
             ),
-            # Placeholder: we do not auto-generate secret without oath helper; instruct admin
-            tags$p("TOTP enrollment requires the 'oath' package. Install it on the server to enable TOTP enrollment."),
+            # Placeholder: we do not auto-generate secret without otp helper; instruct admin
+            tags$p("TOTP enrollment requires the 'otp' package. Install it on the server to enable TOTP enrollment."),
             tags$p("You may still use email OTP fallback which sends codes to your email.")
           )
         } else {
           tagList(
-            p("TOTP enrollment is not available because the 'oath' package is not installed on the server."),
+            p("TOTP enrollment is not available because the 'otp' package is not installed on the server."),
             p("You can continue to use email one-time passwords as a second factor.")
           )
         },
-        footer = tagList(actionButton("send_mfa_enroll_email", "Enable email OTP", class = "btn-primary")),
+        footer = tagList(actionButton("send_otp_enroll_email", "Enable email OTP", class = "btn-primary")),
         easyClose = TRUE
       ))
     }
