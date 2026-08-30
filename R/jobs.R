@@ -161,7 +161,11 @@ enqueue_match_job <- function(upload_df, snapshot_path, mapping = NULL,
                                 "hoh_spouse_name",
                                 "geography"
                               ),
-                              max_candidates = config$max_candidates) {
+                              max_candidates = config$max_candidates,
+                              filter_recent_mpca = FALSE,
+                              mpca_window_months = 6,
+                              partner_org = NULL,
+                              user_role = NULL) {
   id <- init_job()
   set_job_progress(id, 5, "Starting")
 
@@ -206,10 +210,13 @@ enqueue_match_job <- function(upload_df, snapshot_path, mapping = NULL,
         upload_time = upload_time,
         fuzzy_high_threshold = fuzzy_high_threshold,
         fuzzy_medium_threshold = fuzzy_medium_threshold,
-
         weights = weights,
         match_fields = match_fields,
-        max_candidates = max_candidates
+        max_candidates = max_candidates,
+        filter_recent_mpca = filter_recent_mpca,
+        mpca_window_months = mpca_window_months,
+        partner_org = partner_org,
+        user_role = user_role
       )
 
       if (job_is_canceled(id)) return(NULL)

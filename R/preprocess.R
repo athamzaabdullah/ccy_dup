@@ -111,6 +111,46 @@ normalize_household_size <- function(x) {
   ifelse(is.na(x), NA_integer_, x)
 }
 
+parse_flexible_date <- function(x) {
+  if (is.null(x) || length(x) == 0) return(as.Date(character(0)))
+  if (inherits(x, "Date")) return(x)
+  if (inherits(x, "POSIXt")) return(as.Date(x))
+  
+  char_x <- trimws(as.character(x))
+  char_x[char_x %in% c("", "NA", "N/A", "null", "NULL", "none", "None")] <- NA_character_
+  out <- as.Date(rep(NA_character_, length(char_x)))
+  
+  # 1. Try numeric Excel serial date numbers (e.g. 44561)
+  is_num <- !is.na(suppressWarnings(as.numeric(char_x)))
+  if (any(is_num)) {
+    num_vals <- suppressWarnings(as.numeric(char_x[is_num]))
+    valid_excel <- num_vals > 20000 & num_vals < 70000
+    if (any(valid_excel)) {
+      out[is_num][valid_excel] <- as.Date(num_vals[valid_excel], origin = "1899-12-30")
+    }
+  }
+  
+  # 2. For remaining string dates, try common formats
+  rem_idx <- which(is.na(out) & !is.na(char_x))
+  if (length(rem_idx) > 0) {
+    rem_str <- char_x[rem_idx]
+    parsed <- suppressWarnings(as.Date(rem_str, format = "%Y-%m-%d"))
+    na_p <- is.na(parsed)
+    if (any(na_p)) parsed[na_p] <- suppressWarnings(as.Date(rem_str[na_p], format = "%d/%m/%Y"))
+    na_p <- is.na(parsed)
+    if (any(na_p)) parsed[na_p] <- suppressWarnings(as.Date(rem_str[na_p], format = "%m/%d/%Y"))
+    na_p <- is.na(parsed)
+    if (any(na_p)) parsed[na_p] <- suppressWarnings(as.Date(rem_str[na_p], format = "%d-%m-%Y"))
+    na_p <- is.na(parsed)
+    if (any(na_p)) parsed[na_p] <- suppressWarnings(as.Date(rem_str[na_p], format = "%Y/%m/%d"))
+    na_p <- is.na(parsed)
+    if (any(na_p)) parsed[na_p] <- suppressWarnings(as.Date(rem_str[na_p], format = "%d.%m.%Y"))
+    
+    out[rem_idx] <- parsed
+  }
+  out
+}
+
 map_activityinfo_columns <- function(df) {
   mapping <- c(
     "X.id" = "record_id",
@@ -130,6 +170,8 @@ map_activityinfo_columns <- function(df) {
     "secondary_phone_number" = "secondary_phone_number",
     "beneficiary_status" = "beneficiary_status",
     "Dist_Type" = "dist_type",
+    "Dist_Date_Calc_New" = "dist_date_calc_new",
+    "dist_date_calc_new" = "dist_date_calc_new",
     "governorate" = "governorate",
     "district" = "district",
     "sub_district" = "subdistrict",
@@ -169,6 +211,7 @@ prepare_frame <- function(df) {
     "sex",
     "beneficiary_status",
     "dist_type",
+    "dist_date_calc_new",
     "governorate",
     "district",
     "subdistrict",
@@ -199,6 +242,7 @@ prepare_frame <- function(df) {
       sex = safe_char(sex),
       beneficiary_status = safe_char(beneficiary_status),
       dist_type = safe_char(dist_type),
+      dist_date_calc_new = safe_char(dist_date_calc_new),
       governorate = safe_char(governorate),
       district = safe_char(district),
       subdistrict = safe_char(subdistrict),
@@ -216,6 +260,7 @@ prepare_frame <- function(df) {
       age_n = normalize_age(age),
       household_size_n = normalize_household_size(household_size),
       sex_n = normalize_sex(sex),
+      dist_date_calc_new_n = parse_flexible_date(dist_date_calc_new),
       governorate_n = normalize_geo(governorate),
       district_n = normalize_geo(district),
       subdistrict_n = normalize_geo(subdistrict),
