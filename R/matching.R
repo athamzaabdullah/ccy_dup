@@ -173,7 +173,7 @@ build_self_candidates <- function(dt, limit = 5000L) {
   cand
 }
 
-mask_master_columns <- function(df) {
+mask_master_columns <- function(df, partner_org = NULL, user_role = NULL) {
   if (!is.data.frame(df) || nrow(df) == 0) return(df)
   sensitive <- c("master_hoh_ID_number", "master_primary_phone_number", "master_secondary_phone_number")
   
@@ -184,10 +184,22 @@ mask_master_columns <- function(df) {
     paste0(paste0(rep("*", n - 3), collapse = ""), substr(x, n - 2, n))
   }
   
+  is_ccy_master <- !is.null(user_role) && identical(tolower(trimws(user_role)), "ccy_master")
+  
   for (col in sensitive) {
     if (col %in% names(df)) {
-      df[[paste0(col, "_masked")]] <- vapply(df[[col]], mask_val, character(1))
-      df[[col]] <- NULL
+      raw_vals <- df[[col]]
+      masked_vals <- vapply(raw_vals, mask_val, character(1))
+      df[[paste0(col, "_masked")]] <- masked_vals
+      
+      if (!is_ccy_master) {
+        if (!is.null(partner_org) && isTRUE(nzchar(partner_org)) && "master_organization" %in% names(df)) {
+          is_own_record <- tolower(trimws(df$master_organization)) == tolower(trimws(partner_org))
+          df[[col]] <- ifelse(is_own_record, raw_vals, masked_vals)
+        } else {
+          df[[col]] <- masked_vals
+        }
+      }
     }
   }
   df
@@ -199,7 +211,6 @@ run_dedup <- function(upload_df,
                       upload_time = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
                       fuzzy_high_threshold = 90,
                       fuzzy_medium_threshold = 75,
-
                       weights = config$weights,
                       match_fields = c(
                         "partner",
@@ -209,8 +220,35 @@ run_dedup <- function(upload_df,
                         "hoh_spouse_name",
                         "geography"
                       ),
-                      max_candidates = 5000L) {
+                      max_candidates = 500L,
+                      filter_recent_mpca = FALSE,
+                      mpca_window_months = 6,
+                      mpca_reference_date = Sys.Date(),
+                      partner_org = NULL,
+                      user_role = NULL) {
   
+  # MPCA Assistance Date Filtering (< 6 months window)
+  if (isTRUE(filter_recent_mpca) && !is.null(master_df) && nrow(master_df) > 0) {
+    date_col <- NULL
+    for (candidate_name in c("dist_date_calc_new", "Dist_Date_Calc_New", "DIST_DATE_CALC_NEW", "Dist_Date", "dist_date", "system_date")) {
+      if (candidate_name %in% names(master_df)) {
+        date_col <- candidate_name
+        break
+      }
+    }
+    
+    if (!is.null(date_col)) {
+      raw_dates <- master_df[[date_col]]
+      parsed_dates <- parse_flexible_date(raw_dates)
+      ref_date <- if (!is.null(mpca_reference_date)) as.Date(mpca_reference_date) else Sys.Date()
+      cutoff_date <- ref_date - round(as.numeric(mpca_window_months) * 30.4375)
+      
+      # Keep records whose last MPCA distribution date is >= cutoff_date (i.e. received assistance within the last N months)
+      is_recent <- !is.na(parsed_dates) & (parsed_dates >= cutoff_date)
+      master_df <- master_df[is_recent, , drop = FALSE]
+    }
+  }
+
   # 1. Prepare Data
   u_prep <- data.table::as.data.table(prepare_frame(upload_df))
   m_prep <- data.table::as.data.table(prepare_frame(master_df))
@@ -388,12 +426,13 @@ run_dedup <- function(upload_df,
         master_hoh_sex = sex_m,
         master_hoh_ID_number = hoh_ID_number_m,
         master_primary_phone_number = phone_number_m,
-        master_secondary_phone_number = secondary_phone_number_m
+        master_secondary_phone_number = secondary_phone_number_m,
+        master_dist_date_calc_new = dist_date_calc_new_m
       )]
       for (col in orig_cols) {
         out_lm[[paste0("upload_", col)]] <- ext_results[[paste0(col, "_u")]]
       }
-      out_lm <- mask_master_columns(as.data.frame(out_lm))
+      out_lm <- mask_master_columns(as.data.frame(out_lm), partner_org = partner_org, user_role = user_role)
     } else {
       out_lm <- data.table::data.table()
     }
@@ -403,8 +442,16 @@ run_dedup <- function(upload_df,
   
   # Final Summaries
   info <- data.frame(
-    item = c("filename", "upload_time", "upload_count", "master_count", "generated_at"),
-    value = c(upload_filename, upload_time, nrow(upload_df), nrow(master_df), format(Sys.time(), "%Y-%m-%d %H:%M:%S"))
+    item = c("filename", "upload_time", "upload_count", "master_count", "mpca_date_filter_active", "mpca_window_months", "generated_at"),
+    value = c(
+      upload_filename,
+      upload_time,
+      nrow(upload_df),
+      nrow(master_df),
+      as.character(isTRUE(filter_recent_mpca)),
+      as.character(mpca_window_months),
+      format(Sys.time(), "%Y-%m-%d %H:%M:%S")
+    )
   )
   
   subset_by_match_type <- function(df, match_type_value) {

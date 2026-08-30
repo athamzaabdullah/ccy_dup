@@ -1,0 +1,14 @@
+# Create or append ignore rules to .renvignore in the project root
+cat(
+  "backups/\n",
+  "data/\n",
+  "outputs/\n",
+  "*.xlsx\n",
+  "*.parquet\n",
+  "*.csv\n",
+  file = ".renvignore",
+  append = TRUE
+)
+
+# Re-run dependencies check cleanly
+renv::dependencies()
