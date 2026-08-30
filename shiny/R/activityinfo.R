@@ -25,6 +25,7 @@ activityinfo_required_columns <- function() {
     "secondary_phone_number",
     "beneficiary_status",
     "Dist_Type",
+    "Dist_Date_Calc_New",
     "governorate",
     "district",
     "sub_district",

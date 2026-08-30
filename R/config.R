@@ -31,6 +31,7 @@ config <- list(
     "sex",
     "beneficiary_status",
     "dist_type",
+    "dist_date_calc_new",
     "governorate",
     "district",
     "subdistrict",
@@ -49,7 +50,7 @@ config <- list(
     medium = 75
   ),
 
-  max_candidates = 5000,
+  max_candidates = 500,
   mapping_min_score = 75
 )
 
@@ -66,7 +67,8 @@ config$paths <- list(
   user_store = get_env("DEDUP_USERS_FILE", "users.json"),
   user_tokens = get_env("DEDUP_USER_TOKENS_FILE", "tmp/user_tokens.json"),
   admin_settings = get_env("DEDUP_ADMIN_SETTINGS_FILE", "tmp/admin_settings.json"),
-  user_backups = get_env("DEDUP_USER_BACKUPS_DIR", "tmp/user_backups")
+  user_backups = get_env("DEDUP_USER_BACKUPS_DIR", "tmp/user_backups"),
+  mapping_presets = get_env("DEDUP_MAPPING_PRESETS_FILE", "tmp/mapping_presets.json")
 )
 
 config$limits <- list(

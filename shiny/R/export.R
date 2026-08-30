@@ -153,8 +153,8 @@ reorder_upload_master_columns <- function(df) {
   if (length(upload_cols) == 0 || length(master_cols) == 0) return(df)
 
   fixed_first <- c(
-    "match_pair_id", "match_type", "match_score", "confidence",
-    "contributing_factors", "upload_row_id", "master_row_id"
+    "match_pair_id", "match_score", "confidence",
+    "contributing_factors", "upload_row_id", "master_row_id", "hoh_ID_number"
   )
   fixed_first <- fixed_first[fixed_first %in% cols]
 
@@ -166,8 +166,6 @@ reorder_upload_master_columns <- function(df) {
     subdistrict = "master_sub_district",
     village = "master_village",
     hoh_arabic_name = "master_hoh_arabic_name",
-    age = "master_hoh_age",
-    hoh_age = "master_hoh_age",
     sex = "master_hoh_sex",
     hoh_sex = "master_hoh_sex",
     hoh_ID_number = "master_hoh_ID_number_masked",
@@ -193,7 +191,9 @@ reorder_upload_master_columns <- function(df) {
       master_n <- normalize_name(sub("^master_", "", master_remaining))
       hit <- which(master_n == base_n)
       if (length(hit) == 0) {
-        hit <- which(grepl(base_n, master_n, fixed = TRUE) | grepl(master_n, base_n, fixed = TRUE))
+        contains_base <- grepl(base_n, master_n, fixed = TRUE)
+        contained_in_base <- vapply(master_n, function(x) grepl(x, base_n, fixed = TRUE), logical(1))
+        hit <- which(contains_base | contained_in_base)
       }
       if (length(hit) > 0 && hit[1] <= length(master_remaining)) m <- master_remaining[hit[1]]
     }
@@ -221,23 +221,45 @@ normalize_export_table <- function(df) {
 
 apply_sheet_format <- function(wb, sheet, df, highlight_score = TRUE) {
   openxlsx::freezePane(wb, sheet = sheet, firstRow = TRUE)
+  openxlsx::showGridLines(wb, sheet = sheet, showGridLines = TRUE)
+
   if (nrow(df) > 0) {
     openxlsx::addFilter(wb, sheet = sheet, rows = 1, cols = seq_len(ncol(df)))
   }
 
+  # CCY Humanitarian Header Style
   header_style <- openxlsx::createStyle(
     textDecoration = "bold",
-    fgFill = "#E2E8F0",
-    border = "Bottom",
-    borderColour = "#94A3B8"
+    fontName = "Segoe UI",
+    fontSize = 11,
+    fontColour = "#FFFFFF",
+    fgFill = "#1B5E20", # CCY Forest Green
+    halign = "center",
+    valign = "center",
+    border = "TopBottomLeftRight",
+    borderColour = "#14532D",
+    wrapText = FALSE
   )
   openxlsx::addStyle(wb, sheet = sheet, style = header_style, rows = 1, cols = seq_len(ncol(df)), gridExpand = TRUE)
+  
+  # Data cell general style
+  body_style <- openxlsx::createStyle(
+    fontName = "Segoe UI",
+    fontSize = 10,
+    border = "TopBottomLeftRight",
+    borderColour = "#E2E8F0"
+  )
+  if (nrow(df) > 0) {
+    openxlsx::addStyle(wb, sheet = sheet, style = body_style, rows = 2:(nrow(df) + 1), cols = seq_len(ncol(df)), gridExpand = TRUE)
+  }
+  
   openxlsx::setColWidths(wb, sheet = sheet, cols = seq_len(ncol(df)), widths = "auto")
 
   if (!highlight_score || nrow(df) == 0) return(invisible(NULL))
 
   score_col <- which(names(df) %in% c("match_score", "Score (0-100)"))
   conf_col <- which(names(df) %in% c("confidence", "Confidence"))
+  status_col <- which(names(df) %in% c("verification_status", "Verification Status"))
 
   if (length(score_col) == 1) {
     openxlsx::conditionalFormatting(
@@ -246,7 +268,7 @@ apply_sheet_format <- function(wb, sheet, df, highlight_score = TRUE) {
       cols = score_col,
       rows = 2:(nrow(df) + 1),
       rule = ">=90",
-      style = openxlsx::createStyle(fontColour = "#166534", fgFill = "#DCFCE7"),
+      style = openxlsx::createStyle(fontColour = "#166534", fgFill = "#DCFCE7", textDecoration = "bold"),
       type = "expression"
     )
     openxlsx::conditionalFormatting(
@@ -255,7 +277,7 @@ apply_sheet_format <- function(wb, sheet, df, highlight_score = TRUE) {
       cols = score_col,
       rows = 2:(nrow(df) + 1),
       rule = "AND($A1<>\"\",INDIRECT(ADDRESS(ROW(),COLUMN()))>=75,INDIRECT(ADDRESS(ROW(),COLUMN()))<90)",
-      style = openxlsx::createStyle(fontColour = "#92400E", fgFill = "#FEF3C7"),
+      style = openxlsx::createStyle(fontColour = "#92400E", fgFill = "#FEF3C7", textDecoration = "bold"),
       type = "expression"
     )
   }
@@ -267,15 +289,40 @@ apply_sheet_format <- function(wb, sheet, df, highlight_score = TRUE) {
       cols = conf_col,
       rows = 2:(nrow(df) + 1),
       rule = "INDIRECT(ADDRESS(ROW(),COLUMN()))=\"high\"",
-      style = openxlsx::createStyle(fontColour = "#166534", fgFill = "#DCFCE7"),
+      style = openxlsx::createStyle(fontColour = "#166534", fgFill = "#DCFCE7", textDecoration = "bold"),
+      type = "expression"
+    )
+  }
+
+  if (length(status_col) == 1) {
+    openxlsx::conditionalFormatting(
+      wb,
+      sheet = sheet,
+      cols = status_col,
+      rows = 2:(nrow(df) + 1),
+      rule = "INDIRECT(ADDRESS(ROW(),COLUMN()))=\"Confirmed Duplicate\"",
+      style = openxlsx::createStyle(fontColour = "#991B1B", fgFill = "#FEE2E2", textDecoration = "bold"),
+      type = "expression"
+    )
+    openxlsx::conditionalFormatting(
+      wb,
+      sheet = sheet,
+      cols = status_col,
+      rows = 2:(nrow(df) + 1),
+      rule = "INDIRECT(ADDRESS(ROW(),COLUMN()))=\"False Positive\"",
+      style = openxlsx::createStyle(fontColour = "#166534", fgFill = "#DCFCE7", textDecoration = "bold"),
       type = "expression"
     )
   }
 }
 
-write_formatted_sheet <- function(wb, sheet_name, data, highlight_score = TRUE) {
+write_formatted_sheet <- function(wb, sheet_name, data, highlight_score = TRUE, tab_color = NULL) {
   df <- normalize_export_table(data)
-  openxlsx::addWorksheet(wb, sheet_name)
+  if (!is.null(tab_color) && isTRUE(nzchar(tab_color))) {
+    openxlsx::addWorksheet(wb, sheet_name, tabColour = tab_color)
+  } else {
+    openxlsx::addWorksheet(wb, sheet_name)
+  }
   openxlsx::writeData(wb, sheet_name, df, colNames = TRUE)
   apply_sheet_format(wb, sheet_name, df, highlight_score = highlight_score)
 }
@@ -303,18 +350,57 @@ build_summary_sheet <- function(result) {
   summary_df
 }
 
-write_dedup_workbook <- function(result, file) {
+write_dedup_workbook <- function(result, file, triage_decisions = NULL) {
   wb <- openxlsx::createWorkbook()
 
   info_df <- normalize_export_table(result$info)
   summary_df <- build_summary_sheet(result)
 
-  write_formatted_sheet(wb, "Info", info_df, highlight_score = FALSE)
-  write_formatted_sheet(wb, "Summary", summary_df, highlight_score = FALSE)
-  write_formatted_sheet(wb, "Same List Exact Matching", result$same_list_exact, highlight_score = TRUE)
-  write_formatted_sheet(wb, "Same List Fuzzy Matching", result$same_list_fuzzy, highlight_score = TRUE)
-  write_formatted_sheet(wb, "List Vs ActivityInfo Exact", result$list_vs_master_exact, highlight_score = TRUE)
-  write_formatted_sheet(wb, "List Vs ActivityInfo Fuzzy", result$list_vs_master_fuzzy, highlight_score = TRUE)
+  write_formatted_sheet(wb, "Info", info_df, highlight_score = FALSE, tab_color = "#0F766E")
+  write_formatted_sheet(wb, "Summary", summary_df, highlight_score = FALSE, tab_color = "#0F766E")
+
+  attach_triage <- function(df) {
+    if (is.null(df) || nrow(df) == 0) return(data.frame())
+    df <- data.table::copy(df)
+    if (!is.null(triage_decisions) && is.list(triage_decisions) && length(triage_decisions) > 0 && "match_pair_id" %in% names(df)) {
+      status_vec <- character(nrow(df))
+      notes_vec <- character(nrow(df))
+      reviewer_vec <- character(nrow(df))
+      time_vec <- character(nrow(df))
+      for (i in seq_len(nrow(df))) {
+        pid <- as.character(df$match_pair_id[i])
+        dec <- triage_decisions[[pid]]
+        if (!is.null(dec) && is.list(dec)) {
+          status_vec[i] <- dec$status %||% "Unreviewed"
+          notes_vec[i] <- dec$notes %||% ""
+          reviewer_vec[i] <- dec$reviewer %||% ""
+          time_vec[i] <- if (!is.null(dec$timestamp)) as.character(dec$timestamp) else ""
+        } else {
+          status_vec[i] <- "Unreviewed"
+          notes_vec[i] <- ""
+          reviewer_vec[i] <- ""
+          time_vec[i] <- ""
+        }
+      }
+      df$verification_status <- status_vec
+      df$verification_notes <- notes_vec
+      df$verification_reviewer <- reviewer_vec
+      df$verification_timestamp <- time_vec
+    }
+    df
+  }
+
+  get_sheet <- function(keys) {
+    for (k in keys) {
+      if (!is.null(result[[k]])) return(attach_triage(result[[k]]))
+    }
+    return(data.frame())
+  }
+
+  write_formatted_sheet(wb, "Same List (High Confidence)", get_sheet(c("same_list_high", "same_list_exact")), highlight_score = TRUE, tab_color = "#1B5E20")
+  write_formatted_sheet(wb, "Same List (Medium Confidence)", get_sheet(c("same_list_medium", "same_list_fuzzy")), highlight_score = TRUE, tab_color = "#D97706")
+  write_formatted_sheet(wb, "List vs ActivityInfo (High)", get_sheet(c("list_vs_master_high", "list_vs_master_exact")), highlight_score = TRUE, tab_color = "#1B5E20")
+  write_formatted_sheet(wb, "List vs ActivityInfo (Medium)", get_sheet(c("list_vs_master_medium", "list_vs_master_fuzzy")), highlight_score = TRUE, tab_color = "#D97706")
 
   openxlsx::saveWorkbook(wb, file, overwrite = TRUE)
 }

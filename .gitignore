@@ -1,3 +1,12 @@
 shiny/tmp/user_tokens.json
 shiny/tmp/*.rds
 shiny/tmp/admin_settings.json
+shiny/tmp/jobs/
+shiny/tmp/*.log
+shiny/tmp/shiny_error.log
+tmp/
+.RData
+.Rhistory
+shiny/.RData
+shiny/.Rhistory
+.Rproj.user/

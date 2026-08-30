@@ -48,8 +48,7 @@ test_that("exact matches are detected for same-list and list-vs-master", {
     upload_df = build_upload(),
     master_df = build_master(),
     fuzzy_high_threshold = 90,
-    fuzzy_medium_threshold = 75,
-    age_delta = 2
+    fuzzy_medium_threshold = 75
   )
 
   expect_true(is.data.frame(res$same_list_exact))
@@ -68,8 +67,7 @@ test_that("fuzzy scores and confidence tiers follow thresholds", {
     upload_df = u,
     master_df = m,
     fuzzy_high_threshold = 88,
-    fuzzy_medium_threshold = 70,
-    age_delta = 2
+    fuzzy_medium_threshold = 70
   )
 
   expect_true(is.data.frame(res$list_vs_master_fuzzy))
@@ -107,4 +105,9 @@ test_that("normalization handles malformed values", {
   expect_true("hoh_arabic_name_n" %in% names(out))
   expect_true("phone_number_n" %in% names(out))
   expect_true(nrow(out) == 2)
+})
+
+test_that("config and default max_candidates are set to 500 and capped at 2000", {
+  expect_equal(config$max_candidates, 500)
+  expect_true(config$max_candidates <= 2000)
 })
