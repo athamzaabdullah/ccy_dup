@@ -9,26 +9,42 @@ activityinfo_setup <- function(cfg = config$activityinfo) {
 activityinfo_required_columns <- function() {
   c(
     "X.id",
+    "_id",
+    "record_id",
     "QA_Code_SN",
+    "Partner Prefix",
     "organization",
     "todays_date",
     "interviewer",
     "main_ref",
+    "3.1. Head of household (HoH) Name (Arabic)",
     "hoh_arabic_name",
+    "3.2. Head of HH Marital Status",
     "hoh_marital_status",
+    "3.3. Head of HH's Spouse Name",
     "hoh_spouse_name",
+    "3.4. Age of the head of the household?",
     "hoh_age",
+    "3.5. Head of HH Gender",
     "hoh_sex",
+    "3.11 What is the main form of ID that the Head of Household uses?",
     "hoh_id_type",
+    "3.12 What is the Head of Household's ID number?",
     "hoh_id_number",
+    "2.1. Primary Phone Number:",
     "primary_phone_number",
+    "2.2. Secondary Phone Number:",
     "secondary_phone_number",
     "beneficiary_status",
     "Dist_Type",
     "Dist_Date_Calc_New",
+    "Governorate Label",
     "governorate",
+    "District Label",
     "district",
+    "Subdistrict Label",
     "sub_district",
+    "1.14. Village",
     "village"
   )
 }
@@ -40,13 +56,21 @@ activityinfo_list_databases <- function(cfg = config$activityinfo) {
 
 activityinfo_fetch_form <- function(form_id, cfg = config$activityinfo) {
   activityinfo_setup(cfg)
-  columns <- activityinfo_required_columns()
-  activityinfo::queryTable(
-    form = form_id,
-    columns = setNames(paste0("[", columns, "]"), columns),
-    truncateStrings = FALSE,
-    makeNames = FALSE
-  )
+  tryCatch({
+    activityinfo::queryTable(
+      form = form_id,
+      truncateStrings = FALSE,
+      makeNames = FALSE
+    )
+  }, error = function(e) {
+    columns <- activityinfo_required_columns()
+    activityinfo::queryTable(
+      form = form_id,
+      columns = setNames(paste0("[", columns, "]"), columns),
+      truncateStrings = FALSE,
+      makeNames = FALSE
+    )
+  })
 }
 
 activityinfo_fetch_all <- function(cfg = config$activityinfo) {
@@ -92,14 +116,23 @@ activityinfo_fetch_all_progress <- function(cfg = config$activityinfo, form_ids 
     }
     repeat {
       if (!is.null(cancel_cb) && isTRUE(cancel_cb())) return(NULL)
-      columns <- activityinfo_required_columns()
-      chunk <- activityinfo::queryTable(
-        form = form_id,
-        columns = setNames(paste0("[", columns, "]"), columns),
-        window = as.integer(c(offset, batch_size)),
-        truncateStrings = FALSE,
-        makeNames = FALSE
-      )
+      chunk <- tryCatch({
+        activityinfo::queryTable(
+          form = form_id,
+          window = as.integer(c(offset, batch_size)),
+          truncateStrings = FALSE,
+          makeNames = FALSE
+        )
+      }, error = function(e) {
+        columns <- activityinfo_required_columns()
+        activityinfo::queryTable(
+          form = form_id,
+          columns = setNames(paste0("[", columns, "]"), columns),
+          window = as.integer(c(offset, batch_size)),
+          truncateStrings = FALSE,
+          makeNames = FALSE
+        )
+      })
       if (nrow(chunk) == 0) break
       chunk_index <- chunk_index + 1L
       df_list[[length(df_list) + 1]] <- chunk

@@ -152,38 +152,176 @@ parse_flexible_date <- function(x) {
 }
 
 map_activityinfo_columns <- function(df) {
-  mapping <- c(
-    "X.id" = "record_id",
-    "QA_Code_SN" = "qa_code_sn",
-    "organization" = "partner",
-    "todays_date" = "system_date",
-    "interviewer" = "interviewer",
-    "main_ref" = "main_ref",
-    "hoh_arabic_name" = "hoh_arabic_name",
-    "hoh_marital_status" = "marital_status",
-    "hoh_spouse_name" = "hoh_spouse_name",
-    "hoh_age" = "age",
-    "hoh_sex" = "sex",
-    "hoh_id_type" = "id_type",
-    "hoh_id_number" = "hoh_ID_number",
-    "primary_phone_number" = "phone_number",
-    "secondary_phone_number" = "secondary_phone_number",
-    "beneficiary_status" = "beneficiary_status",
-    "Dist_Type" = "dist_type",
-    "Dist_Date_Calc_New" = "dist_date_calc_new",
-    "dist_date_calc_new" = "dist_date_calc_new",
-    "governorate" = "governorate",
-    "district" = "district",
-    "sub_district" = "subdistrict",
-    "subdistrict" = "subdistrict",
-    "village" = "village"
+  if (!is.data.frame(df) || nrow(df) == 0 || ncol(df) == 0) return(df)
+  
+  mapping_dict <- list(
+    hoh_arabic_name = c(
+      "3.1. Head of household (HoH) Name (Arabic)",
+      "3.1. Head of household (HoH) Name (Arabic):",
+      "Head of household (HoH) Name (Arabic)",
+      "hoh_arabic_name",
+      "hoh_name",
+      "Head of Household Name"
+    ),
+    hoh_spouse_name = c(
+      "3.3. Head of HH's Spouse Name",
+      "3.3. Head of HH's Spouse Name:",
+      "Head of HH's Spouse Name",
+      "hoh_spouse_name",
+      "spouse_name"
+    ),
+    id_type = c(
+      "3.11 What is the main form of ID that the Head of Household uses?",
+      "3.11. What is the main form of ID that the Head of Household uses?",
+      "What is the main form of ID that the Head of Household uses?",
+      "hoh_id_type",
+      "id_type"
+    ),
+    hoh_ID_number = c(
+      "3.12 What is the Head of Household's ID number?",
+      "3.12. What is the Head of Household's ID number?",
+      "What is the Head of Household's ID number?",
+      "hoh_id_number",
+      "hoh_ID_number"
+    ),
+    sex = c(
+      "3.5. Head of HH Gender",
+      "3.5. Head of HH Gender:",
+      "Head of HH Gender",
+      "hoh_sex",
+      "sex",
+      "gender"
+    ),
+    age = c(
+      "3.4. Age of the head of the household?",
+      "3.4. Age of the head of the household",
+      "Age of the head of the household?",
+      "Age of the head of the household",
+      "hoh_age",
+      "age"
+    ),
+    marital_status = c(
+      "3.2. Head of HH Marital Status",
+      "3.2. Head of HH Marital Status:",
+      "Head of HH Marital Status",
+      "hoh_marital_status",
+      "marital_status"
+    ),
+    phone_number = c(
+      "2.1. Primary Phone Number:",
+      "2.1. Primary Phone Number",
+      "Primary Phone Number:",
+      "Primary Phone Number",
+      "primary_phone_number",
+      "phone_number"
+    ),
+    secondary_phone_number = c(
+      "2.2. Secondary Phone Number:",
+      "2.2. Secondary Phone Number",
+      "Secondary Phone Number:",
+      "Secondary Phone Number",
+      "secondary_phone_number"
+    ),
+    governorate = c(
+      "Governorate Label",
+      "governorate_label",
+      "Governorate",
+      "governorate"
+    ),
+    district = c(
+      "District Label",
+      "district_label",
+      "District",
+      "district"
+    ),
+    subdistrict = c(
+      "Subdistrict Label",
+      "Subdistrict Label:",
+      "subdistrict_label",
+      "sub_district_label",
+      "sub_district",
+      "subdistrict",
+      "Subdistrict"
+    ),
+    village = c(
+      "1.14. Village",
+      "1.14. Village:",
+      "Village",
+      "village"
+    ),
+    partner = c(
+      "Partner Prefix",
+      "partner_prefix",
+      "Partner",
+      "organization",
+      "partner"
+    ),
+    dist_date_calc_new = c(
+      "Dist_Date_Calc_New",
+      "dist_date_calc_new",
+      "Last MPCA Distribution Date",
+      "Distribution Date"
+    ),
+    dist_type = c(
+      "Dist_Type",
+      "dist_type",
+      "Distribution Type"
+    ),
+    beneficiary_status = c(
+      "beneficiary_status",
+      "Beneficiary Status"
+    ),
+    qa_code_sn = c(
+      "QA_Code_SN",
+      "qa_code_sn",
+      "QA Code SN"
+    ),
+    system_date = c(
+      "todays_date",
+      "Today's Date",
+      "system_date"
+    ),
+    interviewer = c(
+      "interviewer",
+      "Interviewer"
+    ),
+    main_ref = c(
+      "main_ref",
+      "Main Reference"
+    ),
+    record_id = c(
+      "X.id",
+      "_id",
+      "record_id",
+      "id"
+    )
   )
 
-  for (old_name in names(mapping)) {
-    if (old_name %in% names(df)) {
-      names(df)[names(df) == old_name] <- mapping[[old_name]]
+  curr_names <- names(df)
+  new_names <- curr_names
+  clean_str <- function(s) tolower(gsub("[^a-zA-Z0-9]", "", s))
+  
+  assigned <- logical(length(curr_names))
+  
+  for (canonical in names(mapping_dict)) {
+    aliases <- mapping_dict[[canonical]]
+    clean_aliases <- clean_str(aliases)
+    
+    # 1. Exact match
+    matched_idx <- which(!assigned & curr_names %in% aliases)
+    if (length(matched_idx) == 0) {
+      # 2. Case-insensitive / punctuation-stripped match
+      matched_idx <- which(!assigned & clean_str(curr_names) %in% clean_aliases)
+    }
+    
+    if (length(matched_idx) > 0) {
+      target_idx <- matched_idx[1]
+      new_names[target_idx] <- canonical
+      assigned[target_idx] <- TRUE
     }
   }
+  
+  names(df) <- new_names
   df
 }
 

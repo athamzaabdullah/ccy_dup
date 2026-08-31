@@ -51,3 +51,54 @@ test_that("mapping presets can be saved and loaded accurately", {
   expect_equal(length(loaded2), 2)
   expect_true(all(c("Partner_A", "Partner_B") %in% names(loaded2)))
 })
+
+test_that("map_activityinfo_columns maps exact ActivityInfo form labels and codes accurately", {
+  if (file.exists("../../R/preprocess.R")) source("../../R/preprocess.R")
+  
+  raw_ai_df <- data.frame(
+    `3.1. Head of household (HoH) Name (Arabic)` = "محمد علي أحمد",
+    `3.3. Head of HH's Spouse Name` = "فاطمة حسن",
+    `3.11 What is the main form of ID that the Head of Household uses?` = "National ID",
+    `3.12 What is the Head of Household's ID number?` = "12345678901",
+    `3.5. Head of HH Gender` = "Male",
+    `3.4. Age of the head of the household?` = "45",
+    `3.2. Head of HH Marital Status` = "Married",
+    `2.1. Primary Phone Number:` = "777123456",
+    `Governorate Label` = "Marib",
+    `District Label` = "Marib City",
+    `Subdistrict Label` = "City Center",
+    `1.14. Village` = "Al-Rawdah",
+    `Partner Prefix` = "DRC",
+    `Dist_Date_Calc_New` = "2024-05-15",
+    check.names = FALSE,
+    stringsAsFactors = FALSE
+  )
+  
+  mapped <- map_activityinfo_columns(raw_ai_df)
+  
+  expect_true("hoh_arabic_name" %in% names(mapped))
+  expect_equal(mapped$hoh_arabic_name[1], "محمد علي أحمد")
+  
+  expect_true("hoh_spouse_name" %in% names(mapped))
+  expect_equal(mapped$hoh_spouse_name[1], "فاطمة حسن")
+  
+  expect_true("phone_number" %in% names(mapped))
+  expect_equal(mapped$phone_number[1], "777123456")
+  
+  expect_true("hoh_ID_number" %in% names(mapped))
+  expect_equal(mapped$hoh_ID_number[1], "12345678901")
+  
+  expect_true("id_type" %in% names(mapped))
+  expect_true("sex" %in% names(mapped))
+  expect_true("age" %in% names(mapped))
+  expect_true("marital_status" %in% names(mapped))
+  expect_true("partner" %in% names(mapped))
+  expect_equal(mapped$partner[1], "DRC")
+  
+  expect_true("governorate" %in% names(mapped))
+  expect_true("district" %in% names(mapped))
+  expect_true("subdistrict" %in% names(mapped))
+  expect_true("village" %in% names(mapped))
+  expect_true("dist_date_calc_new" %in% names(mapped))
+})
+
