@@ -78,6 +78,12 @@ ui <- fluidPage(
         setTimeout(function() { loginBtn.click(); }, 120);
       }
     });
+    // Adjust DataTables columns when changing tabs to prevent header misalignment
+    $(document).on('shown.bs.tab', 'a[data-bs-toggle=\"tab\"]', function (e) {
+      if ($.fn.dataTable) {
+        $.fn.dataTable.tables({ visible: true, api: true }).columns.adjust();
+      }
+    });
     Shiny.addCustomMessageHandler('export_ready', function(message) {
       var btn = $('#export_results');
       if (btn.length) {

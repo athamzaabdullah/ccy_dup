@@ -190,7 +190,6 @@ mask_master_columns <- function(df, partner_org = NULL, user_role = NULL) {
     if (col %in% names(df)) {
       raw_vals <- df[[col]]
       masked_vals <- vapply(raw_vals, mask_val, character(1))
-      df[[paste0(col, "_masked")]] <- masked_vals
       
       if (!is_ccy_master) {
         if (!is.null(partner_org) && isTRUE(nzchar(partner_org)) && "master_organization" %in% names(df)) {
@@ -289,7 +288,11 @@ run_dedup <- function(upload_df,
   u_prep[, row_id := .I]
   m_prep[, row_id := .I]
   
-  orig_cols <- names(upload_df)
+  # Remove internally mapped standard column names from original columns so they don't get duplicated in export
+  std_cols <- c("partner", "hoh_ID_number", "phone_number", "secondary_phone_number", 
+                "hoh_arabic_name", "hoh_spouse_name", "governorate", "district", "subdistrict", 
+                "village", "sex", "age", "row_id")
+  orig_cols <- setdiff(names(upload_df), std_cols)
   
   # 2. Internal Matching (Same List)
   same_cand <- build_self_candidates(u_prep, limit = max_candidates)
@@ -334,8 +337,6 @@ run_dedup <- function(upload_df,
       id_score * (if (is.null(weights$hoh_ID_number)) 0 else weights$hoh_ID_number) +
       geo_score * weights$geography +
       sex_score * weights$sex, 1)]
-    
-    same_cand[is_exact == TRUE, match_score := 100]
     
     # Filter
     same_results <- same_cand[match_score >= fuzzy_medium_threshold]
@@ -402,8 +403,6 @@ run_dedup <- function(upload_df,
       id_score * (if (is.null(weights$hoh_ID_number)) 0 else weights$hoh_ID_number) +
       geo_score * weights$geography +
       sex_score * weights$sex, 1)]
-    
-    cross_cand[is_exact == TRUE, match_score := 100]
     
     ext_results <- cross_cand[match_score >= fuzzy_medium_threshold]
     
