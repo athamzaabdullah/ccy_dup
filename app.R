@@ -50,6 +50,9 @@ source("R/matching.R")
 source("R/export.R")
 source("R/jobs.R")
 source("R/ui_helpers.R")
+source("R/ttl.R")
+source("R/audit.R")
+source("R/diagnostics.R")
 
 theme <- bs_theme(
   version = 5,
@@ -115,7 +118,12 @@ server <- function(input, output, session) {
   upload_df <- reactiveVal(NULL)
   # upload_error holds validation messages related to the uploaded file
   upload_error <- reactiveVal(NULL)
+  upload_warnings <- reactiveVal(character(0))
   current_job <- reactiveVal(NULL)
+
+  # Automated TTL data retention cleanup on startup (Pillar 3.1)
+  tryCatch(cleanup_expired_payloads(max_age_days = 14), error = function(e) NULL)
+
   current_step <- reactiveVal("upload")
   master_fetch_status <- reactiveVal("Not fetched yet.")
   last_master_snapshot <- reactiveVal(NULL)
@@ -867,7 +875,8 @@ server <- function(input, output, session) {
       tags$h5(style = "font-weight: 700; color: var(--app-forest); margin-bottom: 8px;", "👥 Managed Users Directory"),
       DT::DTOutput("admin_users_table"),
       uiOutput("partner_registry_ui"),
-      uiOutput("admin_backup_ui")
+      uiOutput("admin_backup_ui"),
+      uiOutput("admin_audit_log_ui")
     )
   })
 
@@ -944,6 +953,28 @@ server <- function(input, output, session) {
       )
     )
   })
+
+  output$admin_audit_log_ui <- renderUI({
+    if (!isTRUE(can_open_admin_workspace())) return(NULL)
+    tagList(
+      tags$hr(style = "margin: 24px 0; border-color: var(--app-border);"),
+      tags$h5(style = "color: var(--app-forest); font-weight: 700; margin-bottom: 4px;", "📋 Export & PII Download Audit Trail"),
+      tags$p(style = "color: #64748B; font-size: 0.85rem; margin-bottom: 16px;", "Tamper-evident log of all dossier exports and beneficiary PII downloads."),
+      DT::DTOutput("admin_audit_log_table")
+    )
+  })
+
+  output$admin_audit_log_table <- renderDT({
+    req(can_open_admin_workspace())
+    log_df <- get_export_audit_log()
+    if (nrow(log_df) == 0) {
+      return(safe_datatable(data.frame(Status = "No export downloads logged yet."), opts = list(pageLength = 5)))
+    }
+    show_log <- log_df[, c("timestamp", "user_email", "user_role", "partner_name", "record_count", "pii_masked", "file_name"), drop = FALSE]
+    names(show_log) <- c("Timestamp", "User Email", "Role", "Partner", "Records", "PII Masked?", "Filename")
+    safe_datatable(show_log, opts = list(pageLength = 5))
+  })
+
 
   observeEvent(selected_manageable_user(), {
     row <- selected_manageable_user()
@@ -1369,10 +1400,18 @@ server <- function(input, output, session) {
       return()
     }
 
-    # Passed validation — clear any error and store dataframe
+    # Passed validation — run pre-upload data hygiene checks (Pillar 4.1)
+    diag <- check_upload_hygiene(df)
+    clean_df <- diag$clean_df
+    upload_warnings(diag$warnings)
+
     upload_error(NULL)
-    upload_df(df)
-    showNotification(paste0("Spreadsheet verified: ", format(nrows, big.mark = ","), " records loaded successfully."), type = "message", duration = 4)
+    upload_df(clean_df)
+    msg <- paste0("Spreadsheet verified: ", format(nrow(clean_df), big.mark = ","), " records loaded successfully.")
+    if (diag$issue_count > 0) {
+      msg <- paste0(msg, " (", diag$issue_count, " quality notice(s) detected).")
+    }
+    showNotification(msg, type = if (diag$issue_count > 0) "warning" else "message", duration = 5)
   })
 
   observeEvent(input$fetch_master, {
@@ -1768,6 +1807,16 @@ server <- function(input, output, session) {
       ),
 
       # Health Alert Banners
+      if (length(upload_warnings()) > 0) {
+        lapply(upload_warnings(), function(w) {
+          tags$div(
+            class = "health-alert health-alert-warning",
+            style = "border-left: 4px solid #D97706; background: #FFFBEB; margin-bottom: 8px;",
+            tags$strong("⚠️ Quality Notice:"),
+            tags$span(w)
+          )
+        })
+      },
       if (dup_ids > 0) {
         tags$div(
           class = "health-alert health-alert-warning",
@@ -3060,6 +3109,24 @@ server <- function(input, output, session) {
           write_dedup_workbook(res, file, triage_decisions = triage_list)
           incProgress(1, detail = "Done")
         })
+
+        # Log export transaction to audit trail (Pillar 3.2)
+        total_recs <- 0L
+        if (!is.null(res$summary) && !is.null(res$summary$total_pairs)) {
+          total_recs <- as.integer(res$summary$total_pairs)
+        } else if (!is.null(res$list_vs_master_exact)) {
+          total_recs <- as.integer(nrow(as.data.frame(res$list_vs_master_exact)))
+        }
+        log_export_audit(
+          user_email = auth$email %||% "local_user",
+          user_role = auth$role %||% "partner_deduplicator",
+          partner_name = auth$partner_name %||% "CCY",
+          file_name = paste0("dedup_results_", format(Sys.Date(), "%Y%m%d"), ".xlsx"),
+          record_count = total_recs,
+          pii_masked = !identical(auth$role, "ccy_master"),
+          job_id = job$id
+        )
+
         showNotification("Export ready. Download should begin shortly.", type = "message", duration = 6)
       }, error = function(e) {
         msg <- conditionMessage(e)

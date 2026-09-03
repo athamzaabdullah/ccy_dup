@@ -184,7 +184,9 @@ enqueue_match_job <- function(upload_df, snapshot_path, mapping = NULL,
       }
 
       set_job_progress(id, 10, "Loading local master snapshot")
-      master_df <- readRDS(snapshot_path)
+      lean_path <- gsub("master_snapshot_", "master_lean_", snapshot_path)
+      load_path <- if (file.exists(lean_path)) lean_path else snapshot_path
+      master_df <- readRDS(load_path)
 
       if (job_is_canceled(id)) return(NULL)
       set_job_progress(id, 30, "Loading upload data")
