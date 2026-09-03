@@ -138,11 +138,28 @@ columns_to_remove <- c(
   "upload_type_of_shock_surveys_a",
   "upload_type_of_shock_surveys_b",
   "upload_flood_any_damage_a",
-  "upload_flood_any_damage_b"
+  "upload_flood_any_damage_b",
+  "upload_Main Distribution Donor_a",
+  "upload_Main Distribution Donor_b",
+  "upload_Main Distribution Donor",
+  "upload_partner",
+  "upload_partner_a",
+  "upload_partner_b"
 )
 
 drop_export_columns <- function(df) {
-  keep <- setdiff(names(df), columns_to_remove)
+  cols <- names(df)
+  drop_exact <- c(
+    columns_to_remove,
+    "upload_Main Distribution Donor_a",
+    "upload_Main Distribution Donor_b",
+    "upload_Main Distribution Donor",
+    "upload_partner",
+    "upload_partner_a",
+    "upload_partner_b"
+  )
+  drop_pattern <- "^upload_(Main[ _]Distribution[ _]Donor(_[ab])?|partner(_[ab])?)$"
+  keep <- cols[!cols %in% drop_exact & !grepl(drop_pattern, cols, ignore.case = TRUE)]
   df[, keep, drop = FALSE]
 }
 
@@ -168,8 +185,8 @@ reorder_upload_master_columns <- function(df) {
     hoh_arabic_name = "master_hoh_arabic_name",
     sex = "master_hoh_sex",
     hoh_sex = "master_hoh_sex",
-    hoh_ID_number = "master_hoh_ID_number_masked",
-    phone_number = "master_primary_phone_number_masked"
+    hoh_ID_number = "master_hoh_ID_number",
+    phone_number = "master_primary_phone_number"
   )
 
   normalize_name <- function(x) tolower(gsub("[^a-z0-9]", "", x))
@@ -184,18 +201,12 @@ reorder_upload_master_columns <- function(df) {
     if (base %in% names(master_overrides)) {
       candidate <- unname(master_overrides[[base]])
       if (candidate %in% master_remaining) m <- candidate
-    }
-
-    if (is.na(m)) {
+    } else {
+      # Only fallback to exact string matching if there is no explicit override
       base_n <- normalize_name(base)
       master_n <- normalize_name(sub("^master_", "", master_remaining))
       hit <- which(master_n == base_n)
-      if (length(hit) == 0) {
-        contains_base <- grepl(base_n, master_n, fixed = TRUE)
-        contained_in_base <- vapply(master_n, function(x) grepl(x, base_n, fixed = TRUE), logical(1))
-        hit <- which(contains_base | contained_in_base)
-      }
-      if (length(hit) > 0 && hit[1] <= length(master_remaining)) m <- master_remaining[hit[1]]
+      if (length(hit) > 0) m <- master_remaining[hit[1]]
     }
 
     if (!is.na(m) && m %in% master_remaining) {
@@ -209,6 +220,7 @@ reorder_upload_master_columns <- function(df) {
   new_order <- unique(new_order[new_order %in% cols])
   df[, new_order, drop = FALSE]
 }
+
 
 normalize_export_table <- function(df) {
   if (is.null(df) || !is.data.frame(df) || nrow(df) == 0) {
