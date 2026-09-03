@@ -138,12 +138,114 @@ columns_to_remove <- c(
   "upload_type_of_shock_surveys_a",
   "upload_type_of_shock_surveys_b",
   "upload_flood_any_damage_a",
-  "upload_flood_any_damage_b"
+  "upload_flood_any_damage_b",
+  "upload_Main Distribution Donor_a",
+  "upload_Main Distribution Donor_b",
+  "upload_Main Distribution Donor",
+  "upload_partner",
+  "upload_partner_a",
+  "upload_partner_b"
 )
 
 drop_export_columns <- function(df) {
-  keep <- setdiff(names(df), columns_to_remove)
+  cols <- names(df)
+  drop_exact <- c(
+    columns_to_remove,
+    "upload_Main Distribution Donor_a",
+    "upload_Main Distribution Donor_b",
+    "upload_Main Distribution Donor",
+    "upload_partner",
+    "upload_partner_a",
+    "upload_partner_b"
+  )
+  drop_pattern <- "^upload_(Main[ _]Distribution[ _]Donor(_[ab])?|partner(_[ab])?)$"
+  keep <- cols[!cols %in% drop_exact & !grepl(drop_pattern, cols, ignore.case = TRUE)]
   df[, keep, drop = FALSE]
+}
+
+find_matching_master_column <- function(u_col, master_remaining) {
+  if (length(master_remaining) == 0) return(NA_character_)
+  base <- sub("^upload_", "", u_col)
+  clean_base <- trimws(sub("^[0-9\\.\\s\\:]+", "", base))
+  norm_base <- gsub("[^a-z0-9]", "", tolower(clean_base))
+  
+  # Organization / Partner
+  if (grepl("organization|partner", norm_base, ignore.case = TRUE)) {
+    if ("master_organization" %in% master_remaining) return("master_organization")
+  }
+  
+  # Arabic Name (Head of Household)
+  if (grepl("arabicname|hoharabicname|hhname|beneficiaryname", norm_base, ignore.case = TRUE) ||
+      (grepl("name", norm_base, ignore.case = TRUE) && !grepl("spouse", norm_base, ignore.case = TRUE))) {
+    if ("master_hoh_arabic_name" %in% master_remaining) return("master_hoh_arabic_name")
+  }
+  
+  # Spouse Name
+  if (grepl("spouse", norm_base, ignore.case = TRUE)) {
+    if ("master_hoh_spouse_name" %in% master_remaining) return("master_hoh_spouse_name")
+  }
+  
+  # National ID
+  if (grepl("nationalid|idnumber|hohidnumber|nid|identity", norm_base, ignore.case = TRUE) ||
+      norm_base %in% c("id", "nid", "idtype")) {
+    if ("master_hoh_ID_number" %in% master_remaining) return("master_hoh_ID_number")
+  }
+  
+  # Secondary Phone (check secondary first!)
+  if (grepl("secondaryphone|secondphone|altphone", norm_base, ignore.case = TRUE)) {
+    if ("master_secondary_phone_number" %in% master_remaining) return("master_secondary_phone_number")
+  }
+  
+  # Primary Phone
+  if (grepl("primaryphone|phone|mobile|contact|tel", norm_base, ignore.case = TRUE)) {
+    if ("master_primary_phone_number" %in% master_remaining) return("master_primary_phone_number")
+    if ("master_phone_number" %in% master_remaining) return("master_phone_number")
+  }
+  
+  # Sub-District (check subdistrict before district!)
+  if (grepl("subdistrict|subdist", norm_base, ignore.case = TRUE)) {
+    if ("master_sub_district" %in% master_remaining) return("master_sub_district")
+    if ("master_subdistrict" %in% master_remaining) return("master_subdistrict")
+  }
+  
+  # District
+  if (grepl("district", norm_base, ignore.case = TRUE)) {
+    if ("master_district" %in% master_remaining) return("master_district")
+  }
+  
+  # Governorate
+  if (grepl("governorate", norm_base, ignore.case = TRUE)) {
+    if ("master_governorate" %in% master_remaining) return("master_governorate")
+  }
+  
+  # Village
+  if (grepl("village", norm_base, ignore.case = TRUE)) {
+    if ("master_village" %in% master_remaining) return("master_village")
+  }
+  
+  # Sex / Gender
+  if (grepl("sex|gender", norm_base, ignore.case = TRUE)) {
+    if ("master_hoh_sex" %in% master_remaining) return("master_hoh_sex")
+    if ("master_sex" %in% master_remaining) return("master_sex")
+  }
+  
+  # Age (exact word match or hohage)
+  if (norm_base %in% c("age", "hohage", "headofhhage", "hhage") || grepl("(^|[^a-z])age($|[^a-z])", clean_base, ignore.case = TRUE)) {
+    if ("master_hoh_age" %in% master_remaining) return("master_hoh_age")
+    if ("master_age" %in% master_remaining) return("master_age")
+  }
+  
+  # Distribution Date / MPCA Date
+  if (grepl("distdate|distributiondate|mpcadate", norm_base, ignore.case = TRUE)) {
+    if ("master_dist_date_calc_new" %in% master_remaining) return("master_dist_date_calc_new")
+  }
+  
+  # General fuzzy matching against remaining master column names
+  norm_m <- gsub("[^a-z0-9]", "", tolower(sub("^master_", "", master_remaining)))
+  hit <- which(norm_m == norm_base)
+  if (length(hit) > 0) return(master_remaining[hit[1]])
+  
+  NA_character_
 }
 
 reorder_upload_master_columns <- function(df) {
@@ -154,44 +256,16 @@ reorder_upload_master_columns <- function(df) {
 
   fixed_first <- c(
     "match_pair_id", "match_score", "confidence",
-    "contributing_factors", "upload_row_id", "master_row_id", "hoh_ID_number"
+    "contributing_factors", "upload_row_id", "master_row_id"
   )
   fixed_first <- fixed_first[fixed_first %in% cols]
 
-  # Explicit business mappings for key fields.
-  master_overrides <- c(
-    partner = "master_organization",
-    governorate = "master_governorate",
-    district = "master_district",
-    subdistrict = "master_sub_district",
-    village = "master_village",
-    hoh_arabic_name = "master_hoh_arabic_name",
-    sex = "master_hoh_sex",
-    hoh_sex = "master_hoh_sex",
-    hoh_ID_number = "master_hoh_ID_number",
-    phone_number = "master_primary_phone_number"
-  )
-
-  normalize_name <- function(x) tolower(gsub("[^a-z0-9]", "", x))
   master_remaining <- master_cols
   interleaved <- character(0)
 
   for (u in upload_cols) {
-    base <- sub("^upload_", "", u)
     interleaved <- c(interleaved, u)
-
-    m <- NA_character_
-    if (base %in% names(master_overrides)) {
-      candidate <- unname(master_overrides[[base]])
-      if (candidate %in% master_remaining) m <- candidate
-    } else {
-      # Only fallback to exact string matching if there is no explicit override
-      base_n <- normalize_name(base)
-      master_n <- normalize_name(sub("^master_", "", master_remaining))
-      hit <- which(master_n == base_n)
-      if (length(hit) > 0) m <- master_remaining[hit[1]]
-    }
-
+    m <- find_matching_master_column(u, master_remaining)
     if (!is.na(m) && m %in% master_remaining) {
       interleaved <- c(interleaved, m)
       master_remaining <- setdiff(master_remaining, m)

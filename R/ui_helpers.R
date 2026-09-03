@@ -77,10 +77,8 @@ upload_step_ui <- function(can_fetch_master = TRUE) {
           if (isTRUE(can_fetch_master)) actionButton("fetch_master", "Fetch master database", class = "btn-ghost") else NULL,
           if (isTRUE(can_fetch_master)) uiOutput("cancel_fetch_button") else NULL
         ),
-        uiOutput("fetch_status"),
-        uiOutput("fetch_feedback_ui"),
-        uiOutput("fetch_progress_ui"),
-        uiOutput("fetch_log_ui"),
+                uiOutput("fetch_feedback_ui"),
+                uiOutput("fetch_log_ui"),
         actionButton("confirm_upload", "Confirm upload & continue", class = "btn-primary mt-3")
       )
     ),
@@ -99,7 +97,7 @@ upload_step_ui <- function(can_fetch_master = TRUE) {
 
 mapping_step_ui <- function() {
   layout_columns(
-    col_widths = c(6, 6),
+    col_widths = 12,
     card(
       class = "app-card",
       card_header(
@@ -128,22 +126,12 @@ mapping_step_ui <- function() {
           )
         ),
         div(
-          style = "display: flex; gap: 10px; margin-bottom: 16px; align-items: flex-end; flex-wrap: wrap;",
+          class = "d-flex align-items-end flex-wrap", style = "gap: 10px; margin-bottom: 16px;",
           uiOutput("load_preset_ui"),
           actionButton("save_preset", "💾 Save as Preset", class = "btn-secondary")
         ),
         uiOutput("mapping_ui"),
         actionButton("confirm_mapping", "Confirm mapping", class = "btn-primary mt-3")
-      )
-    ),
-    card(
-      class = "app-card",
-      card_header(
-        div(class = "step-title"),
-        tags$h4("Suggested Matches")
-      ),
-      card_body(
-        DT::DTOutput("mapping_table")
       )
     )
   )
