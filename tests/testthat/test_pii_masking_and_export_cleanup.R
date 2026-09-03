@@ -267,6 +267,7 @@ test_that("export sorts columns by relativity placing related upload and master 
     master_hoh_sex = "Male",
     master_hoh_ID_number = "5010454023",
     master_primary_phone_number = "771234567",
+    master_dist_date_calc_new = "2026-05-15",
     check.names = FALSE,
     stringsAsFactors = FALSE
   )
@@ -296,6 +297,11 @@ test_that("export sorts columns by relativity placing related upload and master 
   # Check that other unmapped upload fields are placed after matched core fields
   idx_u_notes <- which(cols == "upload_Survey_Notes")
   expect_true(idx_u_notes > idx_m_sex)
+
+  # Check that master_dist_date_calc_new is renamed to "Last Receipt Date"
+  expect_true("Last Receipt Date" %in% cols)
+  expect_false("master_dist_date_calc_new" %in% cols)
 })
+
 
 
