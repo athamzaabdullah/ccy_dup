@@ -153,33 +153,58 @@ columns_to_remove <- c(
   "upload_3.1. Head of household (HoH) Name (Arabic)_b",
   "upload_3.3. Head of HH's Spouse Name",
   "upload_3.3. Head of HH's Spouse Name_a",
-  "upload_3.3. Head of HH's Spouse Name_b"
+  "upload_3.3. Head of HH's Spouse Name_b",
+  "upload_2.3. Beneficiary Status",
+  "upload_2.3. Beneficiary Status_a",
+  "upload_2.3. Beneficiary Status_b",
+  "upload_3.2. Head of HH Marital Status",
+  "upload_3.2. Head of HH Marital Status_a",
+  "upload_3.2. Head of HH Marital Status_b",
+  "upload_Governorate Label",
+  "upload_Governorate Label_a",
+  "upload_Governorate Label_b",
+  "upload_District Label",
+  "upload_District Label_a",
+  "upload_District Label_b",
+  "upload_Subdistrict Label",
+  "upload_Subdistrict Label_a",
+  "upload_Subdistrict Label_b",
+  "upload_1.14. Village",
+  "upload_1.14. Village_a",
+  "upload_1.14. Village_b",
+  "upload_3.12 What is the Head of Household's ID number?",
+  "upload_3.12 What is the Head of Household's ID number?_a",
+  "upload_3.12 What is the Head of Household's ID number?_b",
+  "upload_2.1. Primary Phone Number:",
+  "upload_2.1. Primary Phone Number:_a",
+  "upload_2.1. Primary Phone Number:_b"
 )
 
 drop_export_columns <- function(df) {
   cols <- names(df)
-  drop_exact <- c(
-    columns_to_remove,
-    "upload_Main Distribution Donor_a",
-    "upload_Main Distribution Donor_b",
-    "upload_Main Distribution Donor",
-    "upload_partner",
-    "upload_partner_a",
-    "upload_partner_b",
-    "upload_Main Form Partner Batch Code",
-    "upload_Main Form Partner Batch Code_a",
-    "upload_Main Form Partner Batch Code_b",
-    "upload_3.1. Head of household (HoH) Name (Arabic)",
-    "upload_3.1. Head of household (HoH) Name (Arabic)_a",
-    "upload_3.1. Head of household (HoH) Name (Arabic)_b",
-    "upload_3.3. Head of HH's Spouse Name",
-    "upload_3.3. Head of HH's Spouse Name_a",
-    "upload_3.3. Head of HH's Spouse Name_b"
+  drop_exact <- columns_to_remove
+
+  patterns_to_drop <- c(
+    "^upload_Main[ _]Distribution[ _]Donor(_[ab])?$",
+    "^upload_partner(_[ab])?$",
+    "^upload_Main[ _]Form[ _]Partner[ _]Batch[ _]Code(_[ab])?$",
+    "^upload_3\\.1\\.[ _]Head[ _]of[ _]household.*Name.*Arabic(_[ab])?$",
+    "^upload_3\\.3\\.[ _]Head[ _]of[ _]HH'?s?[ _]Spouse[ _]Name(_[ab])?$",
+    "^upload_2\\.3\\.[ _]Beneficiary[ _]Status(_[ab])?$",
+    "^upload_3\\.2\\.[ _]Head[ _]of[ _]HH[ _]Marital[ _]Status(_[ab])?$",
+    "^upload_Governorate[ _]Label(_[ab])?$",
+    "^upload_District[ _]Label(_[ab])?$",
+    "^upload_Subdistrict[ _]Label(_[ab])?$",
+    "^upload_1\\.14\\.[ _]Village(_[ab])?$",
+    "^upload_3\\.12[ _]What[ _]is[ _]the[ _]Head[ _]of[ _]Household'?s?[ _]ID[ _]number\\??(_[ab])?$",
+    "^upload_2\\.1\\.[ _]Primary[ _]Phone[ _]Number:?(_[ab])?$"
   )
-  drop_pattern <- "^upload_(Main[ _]Distribution[ _]Donor|partner|Main[ _]Form[ _]Partner[ _]Batch[ _]Code|3\\.1\\.[ _]Head[ _]of[ _]household.*Name.*Arabic|3\\.3\\.[ _]Head[ _]of[ _]HH'?s?[ _]Spouse[ _]Name)(_[ab])?$"
-  keep <- cols[!cols %in% drop_exact & !grepl(drop_pattern, cols, ignore.case = TRUE)]
+  combined_pattern <- paste(patterns_to_drop, collapse = "|")
+
+  keep <- cols[!cols %in% drop_exact & !grepl(combined_pattern, cols, ignore.case = TRUE)]
   df[, keep, drop = FALSE]
 }
+
 
 reorder_upload_master_columns <- function(df) {
   cols <- names(df)

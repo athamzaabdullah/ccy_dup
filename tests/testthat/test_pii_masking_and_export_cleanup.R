@@ -84,7 +84,31 @@ test_that("export cleanup removes forbidden columns from excel sheets", {
     "upload_3.1. Head of household (HoH) Name (Arabic)_b",
     "upload_3.3. Head of HH's Spouse Name",
     "upload_3.3. Head of HH's Spouse Name_a",
-    "upload_3.3. Head of HH's Spouse Name_b"
+    "upload_3.3. Head of HH's Spouse Name_b",
+    "upload_2.3. Beneficiary Status",
+    "upload_2.3. Beneficiary Status_a",
+    "upload_2.3. Beneficiary Status_b",
+    "upload_3.2. Head of HH Marital Status",
+    "upload_3.2. Head of HH Marital Status_a",
+    "upload_3.2. Head of HH Marital Status_b",
+    "upload_Governorate Label",
+    "upload_Governorate Label_a",
+    "upload_Governorate Label_b",
+    "upload_District Label",
+    "upload_District Label_a",
+    "upload_District Label_b",
+    "upload_Subdistrict Label",
+    "upload_Subdistrict Label_a",
+    "upload_Subdistrict Label_b",
+    "upload_1.14. Village",
+    "upload_1.14. Village_a",
+    "upload_1.14. Village_b",
+    "upload_3.12 What is the Head of Household's ID number?",
+    "upload_3.12 What is the Head of Household's ID number?_a",
+    "upload_3.12 What is the Head of Household's ID number?_b",
+    "upload_2.1. Primary Phone Number:",
+    "upload_2.1. Primary Phone Number:_a",
+    "upload_2.1. Primary Phone Number:_b"
   )
 
   for (s in openxlsx::getSheetNames(tmp_file)) {
