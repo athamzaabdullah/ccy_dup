@@ -144,7 +144,16 @@ columns_to_remove <- c(
   "upload_Main Distribution Donor",
   "upload_partner",
   "upload_partner_a",
-  "upload_partner_b"
+  "upload_partner_b",
+  "upload_Main Form Partner Batch Code",
+  "upload_Main Form Partner Batch Code_a",
+  "upload_Main Form Partner Batch Code_b",
+  "upload_3.1. Head of household (HoH) Name (Arabic)",
+  "upload_3.1. Head of household (HoH) Name (Arabic)_a",
+  "upload_3.1. Head of household (HoH) Name (Arabic)_b",
+  "upload_3.3. Head of HH's Spouse Name",
+  "upload_3.3. Head of HH's Spouse Name_a",
+  "upload_3.3. Head of HH's Spouse Name_b"
 )
 
 drop_export_columns <- function(df) {
@@ -156,9 +165,18 @@ drop_export_columns <- function(df) {
     "upload_Main Distribution Donor",
     "upload_partner",
     "upload_partner_a",
-    "upload_partner_b"
+    "upload_partner_b",
+    "upload_Main Form Partner Batch Code",
+    "upload_Main Form Partner Batch Code_a",
+    "upload_Main Form Partner Batch Code_b",
+    "upload_3.1. Head of household (HoH) Name (Arabic)",
+    "upload_3.1. Head of household (HoH) Name (Arabic)_a",
+    "upload_3.1. Head of household (HoH) Name (Arabic)_b",
+    "upload_3.3. Head of HH's Spouse Name",
+    "upload_3.3. Head of HH's Spouse Name_a",
+    "upload_3.3. Head of HH's Spouse Name_b"
   )
-  drop_pattern <- "^upload_(Main[ _]Distribution[ _]Donor(_[ab])?|partner(_[ab])?)$"
+  drop_pattern <- "^upload_(Main[ _]Distribution[ _]Donor|partner|Main[ _]Form[ _]Partner[ _]Batch[ _]Code|3\\.1\\.[ _]Head[ _]of[ _]household.*Name.*Arabic|3\\.3\\.[ _]Head[ _]of[ _]HH'?s?[ _]Spouse[ _]Name)(_[ab])?$"
   keep <- cols[!cols %in% drop_exact & !grepl(drop_pattern, cols, ignore.case = TRUE)]
   df[, keep, drop = FALSE]
 }
@@ -171,55 +189,107 @@ reorder_upload_master_columns <- function(df) {
 
   fixed_first <- c(
     "match_pair_id", "match_score", "confidence",
-    "contributing_factors", "upload_row_id", "master_row_id", "hoh_ID_number"
+    "contributing_factors", "upload_row_id", "master_row_id"
   )
   fixed_first <- fixed_first[fixed_first %in% cols]
 
-  # Explicit business mappings for key fields.
-  master_overrides <- c(
-    partner = "master_organization",
-    governorate = "master_governorate",
-    district = "master_district",
-    subdistrict = "master_sub_district",
-    village = "master_village",
-    hoh_arabic_name = "master_hoh_arabic_name",
-    sex = "master_hoh_sex",
-    hoh_sex = "master_hoh_sex",
-    hoh_ID_number = "master_hoh_ID_number",
-    phone_number = "master_primary_phone_number"
+  # Logical comparison pair concepts in standard humanitarian workflow order
+  pair_defs <- list(
+    # 1. Organization / Partner
+    list(
+      u_fn = function(x) grepl("organization|partner|1\\.1\\.", x, ignore.case = TRUE),
+      m_fn = function(x) grepl("^master_(organization|partner)$", x, ignore.case = TRUE)
+    ),
+    # 2. Governorate
+    list(
+      u_fn = function(x) grepl("governorate|1\\.11\\.", x, ignore.case = TRUE),
+      m_fn = function(x) grepl("^master_governorate$", x, ignore.case = TRUE)
+    ),
+    # 3. District (exclude subdistrict)
+    list(
+      u_fn = function(x) grepl("district|1\\.12\\.", x, ignore.case = TRUE) & !grepl("sub[-_ ]?district|1\\.13\\.", x, ignore.case = TRUE),
+      m_fn = function(x) grepl("^master_district$", x, ignore.case = TRUE)
+    ),
+    # 4. Sub-District
+    list(
+      u_fn = function(x) grepl("sub[-_ ]?district|1\\.13\\.", x, ignore.case = TRUE),
+      m_fn = function(x) grepl("^master_sub_district$", x, ignore.case = TRUE)
+    ),
+    # 5. Village
+    list(
+      u_fn = function(x) grepl("village|1\\.14\\.", x, ignore.case = TRUE),
+      m_fn = function(x) grepl("^master_village$", x, ignore.case = TRUE)
+    ),
+    # 6. Head of HH Arabic Name
+    list(
+      u_fn = function(x) (grepl("arabic[-_ ]?name|hh[-_ ]?name|hoh[-_ ]?name|beneficiary[-_ ]?name|head[-_ ]?of.*name|3\\.1\\.", x, ignore.case = TRUE) |
+                          tolower(x) %in% c("upload_name", "upload_arabic_name", "upload_hoh_name", "upload_beneficiary_name")) & !grepl("spouse", x, ignore.case = TRUE),
+      m_fn = function(x) grepl("^master_hoh_arabic_name$", x, ignore.case = TRUE)
+    ),
+    # 7. Spouse Name
+    list(
+      u_fn = function(x) grepl("spouse", x, ignore.case = TRUE),
+      m_fn = function(x) grepl("^master_hoh_spouse_name$", x, ignore.case = TRUE)
+    ),
+    # 8. Gender / Sex (e.g. upload_3.5. Head of HH Gender close to master_hoh_sex)
+    list(
+      u_fn = function(x) grepl("gender|sex|3\\.5\\.", x, ignore.case = TRUE),
+      m_fn = function(x) grepl("^master_(hoh_)?(sex|gender)$", x, ignore.case = TRUE)
+    ),
+    # 9. Age
+    list(
+      u_fn = function(x) grepl("age|3\\.4\\.", x, ignore.case = TRUE),
+      m_fn = function(x) grepl("^master_(hoh_)?age$", x, ignore.case = TRUE)
+    ),
+    # 10. National ID / ID Number
+    list(
+      u_fn = function(x) grepl("id[-_ ]?number|national[-_ ]?id|nid|3\\.12\\.", x, ignore.case = TRUE),
+      m_fn = function(x) grepl("^master_hoh_ID_number$", x, ignore.case = TRUE)
+    ),
+    # 11. Primary Phone
+    list(
+      u_fn = function(x) grepl("phone|tel|mobile|contact|2\\.1\\.", x, ignore.case = TRUE) & !grepl("second|alt|2\\.2\\.", x, ignore.case = TRUE),
+      m_fn = function(x) grepl("^master_(primary_)?phone_number$", x, ignore.case = TRUE)
+    ),
+    # 12. Secondary Phone
+    list(
+      u_fn = function(x) grepl("second.*phone|alt.*phone|2\\.2\\.", x, ignore.case = TRUE),
+      m_fn = function(x) grepl("^master_secondary_phone_number$", x, ignore.case = TRUE)
+    ),
+    # 13. MPCA Distribution Date
+    list(
+      u_fn = function(x) grepl("dist.*date|mpca.*date", x, ignore.case = TRUE),
+      m_fn = function(x) grepl("^master_dist_date_calc_new$", x, ignore.case = TRUE)
+    )
   )
 
-  normalize_name <- function(x) tolower(gsub("[^a-z0-9]", "", x))
-  master_remaining <- master_cols
-  interleaved <- character(0)
+  remaining_u <- upload_cols
+  remaining_m <- master_cols
+  ordered_pairs <- character(0)
 
-  for (u in upload_cols) {
-    base <- sub("^upload_", "", u)
-    interleaved <- c(interleaved, u)
+  for (p in pair_defs) {
+    u_matches <- remaining_u[p$u_fn(remaining_u)]
+    m_matches <- remaining_m[p$m_fn(remaining_m)]
 
-    m <- NA_character_
-    if (base %in% names(master_overrides)) {
-      candidate <- unname(master_overrides[[base]])
-      if (candidate %in% master_remaining) m <- candidate
-    } else {
-      # Only fallback to exact string matching if there is no explicit override
-      base_n <- normalize_name(base)
-      master_n <- normalize_name(sub("^master_", "", master_remaining))
-      hit <- which(master_n == base_n)
-      if (length(hit) > 0) m <- master_remaining[hit[1]]
+    if (length(u_matches) > 0) {
+      ordered_pairs <- c(ordered_pairs, u_matches)
+      remaining_u <- setdiff(remaining_u, u_matches)
     }
-
-    if (!is.na(m) && m %in% master_remaining) {
-      interleaved <- c(interleaved, m)
-      master_remaining <- setdiff(master_remaining, m)
+    if (length(m_matches) > 0) {
+      ordered_pairs <- c(ordered_pairs, m_matches)
+      remaining_m <- setdiff(remaining_m, m_matches)
     }
   }
 
-  others <- setdiff(cols, c(fixed_first, upload_cols, master_cols))
-  new_order <- c(fixed_first, interleaved, master_remaining, others)
+  other_upload <- remaining_u
+  other_master <- remaining_m
+  other_cols <- setdiff(cols, c(fixed_first, ordered_pairs, other_upload, other_master))
+
+  new_order <- c(fixed_first, ordered_pairs, other_upload, other_master, other_cols)
   new_order <- unique(new_order[new_order %in% cols])
   df[, new_order, drop = FALSE]
 }
+
 
 
 normalize_export_table <- function(df) {
