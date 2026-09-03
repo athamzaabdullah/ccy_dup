@@ -105,11 +105,24 @@ test_that("export cleanup removes forbidden columns from excel sheets", {
     "upload_1.14. Village_b",
     "upload_3.12 What is the Head of Household's ID number?",
     "upload_3.12 What is the Head of Household's ID number?_a",
-    "upload_3.12 What is the Head of Household's ID number?_b",
     "upload_2.1. Primary Phone Number:",
     "upload_2.1. Primary Phone Number:_a",
-    "upload_2.1. Primary Phone Number:_b"
+    "upload_2.1. Primary Phone Number:_b",
+    "upload_QA_CODE_SN",
+    "upload_QA_CODE_SN_a",
+    "upload_QA_CODE_SN_b",
+    "upload_Batch_ID",
+    "upload_Batch_ID_a",
+    "upload_Batch_ID_b",
+    "upload_1.4. Today's Date",
+    "upload_1.4. Today's Date_a",
+    "upload_1.4. Today's Date_b",
+    "upload_1.8. Which region does the team work in? Name",
+    "upload_1.8. Which region does the team work in? Name_a",
+    "upload_1.8. Which region does the team work in? Name_b",
+    "master_secondary_phone_number"
   )
+
 
   for (s in openxlsx::getSheetNames(tmp_file)) {
     sheet_data <- openxlsx::read.xlsx(tmp_file, sheet = s)
@@ -242,8 +255,10 @@ test_that("export sorts columns by relativity placing related upload and master 
     "upload_3.5. Head of HH Gender" = "Male",
     "upload_hoh_ID_number" = "5010454023",
     "upload_phone_number" = "771234567",
-    "upload_Batch_ID" = "B99",
+    "upload_Survey_Notes" = "Notes 123",
     master_organization = "SCI",
+    "master_Main Form Partner Batch Code" = "SCI_BATCH_01",
+    "master_QA_CODE_SN" = "QA_999",
     master_governorate = "Sanaa",
     master_district = "Ma'ain",
     master_sub_district = "Al-Rawdah",
@@ -264,18 +279,23 @@ test_that("export sorts columns by relativity placing related upload and master 
   idx_m_sex <- which(cols == "master_hoh_sex")
   expect_equal(idx_m_sex, idx_u_gender + 1)
 
-  # Check that upload_1.1. Organization is immediately followed by master_organization
+  # Check that upload_1.1. Organization is followed by master_organization, batch code, and QA code
   idx_u_org <- which(cols == "upload_1.1. Organization")
   idx_m_org <- which(cols == "master_organization")
+  idx_m_batch <- which(cols == "master_Main Form Partner Batch Code")
+  idx_m_qa <- which(cols == "master_QA_CODE_SN")
   expect_equal(idx_m_org, idx_u_org + 1)
+  expect_equal(idx_m_batch, idx_u_org + 2)
+  expect_equal(idx_m_qa, idx_u_org + 3)
 
   # Check that upload_hoh_ID_number is immediately followed by master_hoh_ID_number
   idx_u_id <- which(cols == "upload_hoh_ID_number")
   idx_m_id <- which(cols == "master_hoh_ID_number")
   expect_equal(idx_m_id, idx_u_id + 1)
 
-  # Check that other upload fields (like upload_Batch_ID) are placed at the end
-  idx_u_batch <- which(cols == "upload_Batch_ID")
-  expect_true(idx_u_batch > idx_m_sex)
+  # Check that other unmapped upload fields are placed after matched core fields
+  idx_u_notes <- which(cols == "upload_Survey_Notes")
+  expect_true(idx_u_notes > idx_m_sex)
 })
+
 

@@ -529,10 +529,31 @@ run_dedup <- function(upload_df,
         master_secondary_phone_number = secondary_phone_number_m,
         master_dist_date_calc_new = dist_date_calc_new_m
       )]
+      # Retrieve Batch Code and QA Code from Master
+      master_matched <- master_df[ext_results$master_row_id, , drop = FALSE]
+      m_batch_col <- NULL
+      for (cand in c("Main Form Partner Batch Code", "main_form_partner_batch_code", "Batch Code", "Batch_ID", "batch_code")) {
+        if (cand %in% names(master_matched)) {
+          m_batch_col <- cand
+          break
+        }
+      }
+      out_lm[["master_Main Form Partner Batch Code"]] <- if (!is.null(m_batch_col)) safe_char(master_matched[[m_batch_col]]) else NA_character_
+
+      m_qa_col <- NULL
+      for (cand in c("QA_CODE_SN", "QA_Code_SN", "qa_code_sn", "QA_Code", "qa_code")) {
+        if (cand %in% names(master_matched)) {
+          m_qa_col <- cand
+          break
+        }
+      }
+      out_lm[["master_QA_CODE_SN"]] <- if (!is.null(m_qa_col)) safe_char(master_matched[[m_qa_col]]) else NA_character_
+
       upload_matched <- upload_df[ext_results$upload_row_id, , drop = FALSE]
       for (col in names(upload_matched)) {
         out_lm[[paste0("upload_", col)]] <- upload_matched[[col]]
       }
+
 
       u_partner_col <- NULL
       for (cand in c("partner", "1.1. Organization Prefix", "1.1. Organization_text", "1.1. Organization", "Organization", "Partner")) {

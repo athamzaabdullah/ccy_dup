@@ -177,7 +177,20 @@ columns_to_remove <- c(
   "upload_3.12 What is the Head of Household's ID number?_b",
   "upload_2.1. Primary Phone Number:",
   "upload_2.1. Primary Phone Number:_a",
-  "upload_2.1. Primary Phone Number:_b"
+  "upload_2.1. Primary Phone Number:_b",
+  "upload_QA_CODE_SN",
+  "upload_QA_CODE_SN_a",
+  "upload_QA_CODE_SN_b",
+  "upload_Batch_ID",
+  "upload_Batch_ID_a",
+  "upload_Batch_ID_b",
+  "upload_1.4. Today's Date",
+  "upload_1.4. Today's Date_a",
+  "upload_1.4. Today's Date_b",
+  "upload_1.8. Which region does the team work in? Name",
+  "upload_1.8. Which region does the team work in? Name_a",
+  "upload_1.8. Which region does the team work in? Name_b",
+  "master_secondary_phone_number"
 )
 
 drop_export_columns <- function(df) {
@@ -197,7 +210,12 @@ drop_export_columns <- function(df) {
     "^upload_Subdistrict[ _]Label(_[ab])?$",
     "^upload_1\\.14\\.[ _]Village(_[ab])?$",
     "^upload_3\\.12[ _]What[ _]is[ _]the[ _]Head[ _]of[ _]Household'?s?[ _]ID[ _]number\\??(_[ab])?$",
-    "^upload_2\\.1\\.[ _]Primary[ _]Phone[ _]Number:?(_[ab])?$"
+    "^upload_2\\.1\\.[ _]Primary[ _]Phone[ _]Number:?(_[ab])?$",
+    "^upload_QA_CODE_SN(_[ab])?$",
+    "^upload_Batch_ID(_[ab])?$",
+    "^upload_1\\.4\\.[ _]Today'?s?[ _]Date:?(_[ab])?$",
+    "^upload_1\\.8\\.[ _]Which[ _]region[ _]does[ _]the[ _]team[ _]work[ _]in\\?[ _]Name(_[ab])?$",
+    "^master_secondary_phone_number$"
   )
   combined_pattern <- paste(patterns_to_drop, collapse = "|")
 
@@ -220,10 +238,10 @@ reorder_upload_master_columns <- function(df) {
 
   # Logical comparison pair concepts in standard humanitarian workflow order
   pair_defs <- list(
-    # 1. Organization / Partner
+    # 1. Organization / Partner / Master Batch Code & Master QA Code
     list(
       u_fn = function(x) grepl("organization|partner|1\\.1\\.", x, ignore.case = TRUE),
-      m_fn = function(x) grepl("^master_(organization|partner)$", x, ignore.case = TRUE)
+      m_fn = function(x) grepl("^master_(organization|partner|Main[ _]Form[ _]Partner[ _]Batch[ _]Code|QA_CODE_SN)$", x, ignore.case = TRUE)
     ),
     # 2. Governorate
     list(
