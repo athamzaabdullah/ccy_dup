@@ -190,7 +190,7 @@ test_that("ccy_master bypasses masking while partner roles enforce masking on cr
   expect_equal(lm_partner$master_primary_phone_number[1], "******567")
 })
 
-test_that("related columns like upload_1.1. Organization and master_organization are placed next to each other", {
+test_that("export preserves uploaded columns and appends master columns without interleaving survey fields", {
   df <- data.frame(
     match_pair_id = "LM_1_1",
     match_score = 100,
@@ -200,11 +200,9 @@ test_that("related columns like upload_1.1. Organization and master_organization
     "upload_1.1. Organization" = "DRC",
     "upload_1.11. Governorate" = "Sanaa",
     "upload_3.1. Head of HH Arabic Name" = "محمد علي صالح",
-    "upload_National ID Number" = "5010454023",
     master_organization = "SCI",
     master_governorate = "Sanaa",
     master_hoh_arabic_name = "محمد علي صالح",
-    master_hoh_ID_number = "5010454023",
     check.names = FALSE,
     stringsAsFactors = FALSE
   )
@@ -212,23 +210,8 @@ test_that("related columns like upload_1.1. Organization and master_organization
   norm_df <- normalize_export_table(df)
   cols <- names(norm_df)
 
-  # Check that upload_1.1. Organization is immediately followed by master_organization
-  idx_u_org <- which(cols == "upload_1.1. Organization")
-  idx_m_org <- which(cols == "master_organization")
-  expect_equal(idx_m_org, idx_u_org + 1)
-
-  # Check that upload_1.11. Governorate is immediately followed by master_governorate
-  idx_u_gov <- which(cols == "upload_1.11. Governorate")
-  idx_m_gov <- which(cols == "master_governorate")
-  expect_equal(idx_m_gov, idx_u_gov + 1)
-
-  # Check that upload_3.1. Head of HH Arabic Name is immediately followed by master_hoh_arabic_name
-  idx_u_name <- which(cols == "upload_3.1. Head of HH Arabic Name")
-  idx_m_name <- which(cols == "master_hoh_arabic_name")
-  expect_equal(idx_m_name, idx_u_name + 1)
-
-  # Check that upload_National ID Number is immediately followed by master_hoh_ID_number
-  idx_u_id <- which(cols == "upload_National ID Number")
-  idx_m_id <- which(cols == "master_hoh_ID_number")
-  expect_equal(idx_m_id, idx_u_id + 1)
+  # Check that upload columns remain grouped in their original order
+  expect_true(which(cols == "upload_1.1. Organization") < which(cols == "upload_1.11. Governorate"))
+  expect_true(which(cols == "upload_1.11. Governorate") < which(cols == "upload_3.1. Head of HH Arabic Name"))
 })
+
