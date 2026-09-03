@@ -228,9 +228,15 @@ reorder_upload_master_columns <- function(df) {
   if ("master_dist_date_calc_new" %in% names(df)) {
     names(df)[names(df) == "master_dist_date_calc_new"] <- "Last Receipt Date"
   }
+  if ("master_dist_type" %in% names(df)) {
+    names(df)[names(df) == "master_dist_type"] <- "Assistance Type"
+  }
   cols <- names(df)
   upload_cols <- grep("^upload_", cols, value = TRUE)
-  master_cols <- unique(c(grep("^master_", cols, value = TRUE), intersect(c("Last Receipt Date", "master_Last Receipt Date"), cols)))
+  master_cols <- unique(c(
+    grep("^master_", cols, value = TRUE),
+    intersect(c("Last Receipt Date", "master_Last Receipt Date", "Assistance Type", "master_Assistance Type"), cols)
+  ))
   if (length(upload_cols) == 0 || length(master_cols) == 0) return(df)
 
   fixed_first <- c(
@@ -302,10 +308,10 @@ reorder_upload_master_columns <- function(df) {
       u_fn = function(x) grepl("second.*phone|alt.*phone|2\\.2\\.", x, ignore.case = TRUE),
       m_fn = function(x) grepl("^master_secondary_phone_number$", x, ignore.case = TRUE)
     ),
-    # 13. MPCA Distribution Date / Last Receipt Date
+    # 13. MPCA Distribution Date / Last Receipt Date & Assistance Type
     list(
       u_fn = function(x) grepl("dist.*date|mpca.*date|receipt.*date", x, ignore.case = TRUE),
-      m_fn = function(x) grepl("^(master_)?(dist_date_calc_new|Last[ _]Receipt[ _]Date)$", x, ignore.case = TRUE)
+      m_fn = function(x) grepl("^(master_)?(dist_date_calc_new|Last[ _]Receipt[ _]Date|dist_type|Assistance[ _]Type)$", x, ignore.case = TRUE)
     )
   )
 
