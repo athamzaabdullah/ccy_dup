@@ -527,7 +527,7 @@ run_dedup <- function(upload_df,
         master_hoh_ID_number = hoh_ID_number_m,
         master_primary_phone_number = phone_number_m,
         master_secondary_phone_number = secondary_phone_number_m,
-        master_dist_date_calc_new = dist_date_calc_new_m
+        `Last Receipt Date` = dist_date_calc_new_m
       )]
       # Retrieve Batch Code and QA Code from Master
       master_matched <- master_df[ext_results$master_row_id, , drop = FALSE]
