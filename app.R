@@ -115,8 +115,6 @@ server <- function(input, output, session) {
   upload_df <- reactiveVal(NULL)
   # upload_error holds validation messages related to the uploaded file
   upload_error <- reactiveVal(NULL)
-  mapping_suggestions <- reactiveVal(data.frame())
-  master_mapping_suggestions <- reactiveVal(data.frame())
   current_job <- reactiveVal(NULL)
   current_step <- reactiveVal("upload")
   master_fetch_status <- reactiveVal("Not fetched yet.")
@@ -747,7 +745,6 @@ server <- function(input, output, session) {
     }
     current_job(NULL)
     upload_df(NULL)
-    mapping_suggestions(data.frame())
     current_step("upload")
   })
 
@@ -759,7 +756,6 @@ server <- function(input, output, session) {
     }
     current_job(NULL)
     upload_df(NULL)
-    mapping_suggestions(data.frame())
     current_step("upload")
   })
 
@@ -1426,10 +1422,6 @@ server <- function(input, output, session) {
     master_job(job_id)
   })
 
-  output$fetch_status <- renderUI({
-    tags$p(style = "color:#475569; margin-top:8px;", master_fetch_status())
-  })
-
   output$fetch_feedback_ui <- renderUI({
     job <- master_job_status()
     if (is.null(job)) {
@@ -1515,26 +1507,6 @@ server <- function(input, output, session) {
     )
   })
 
-  output$fetch_progress_ui <- renderUI({
-    job <- master_job_status()
-    if (is.null(job)) return(NULL)
-    progress_value <- suppressWarnings(as.numeric(job$progress))
-    if (!is.finite(progress_value)) progress_value <- 0
-    job_message_value <- if (!is.null(job$message) && isTRUE(nzchar(job$message))) job$message else "Waiting for fetch status..."
-    updated_at <- if (!is.null(job$updated_at)) as.POSIXct(job$updated_at) else NA
-    elapsed <- if (!is.na(updated_at)) difftime(Sys.time(), updated_at, units = "secs") else NA
-    stale <- !is.na(elapsed) && elapsed > 30
-    queued_too_long <- !is.na(elapsed) && elapsed > 15 && identical(job$status, "queued")
-    tagList(
-      p(job_message_value),
-      if (isTRUE(queued_too_long)) p(style = "color:#b91c1c;", "Background worker did not start. Restart RStudio or run fetch again."),
-      if (isTRUE(stale)) p(style = "color:#b91c1c;", "No update in the last 30 seconds. The fetch may still be running."),
-      div(style = "background: #e2e8f0; height: 8px; border-radius: 6px;",
-        div(style = paste0("width:", progress_value, "%; height: 8px; background:#0b1b2b; border-radius: 6px;"))
-      )
-    )
-  })
-
   output$fetch_log_ui <- renderUI({
     job <- master_job_status()
     if (is.null(job) || is.null(job$history)) return(NULL)
@@ -1549,7 +1521,7 @@ server <- function(input, output, session) {
   output$cancel_fetch_button <- renderUI({
     job <- master_job_status()
     running <- !is.null(job) && job$status %in% c("queued", "running")
-    class <- if (running) "btn-danger ms-2" else "btn-danger ms-2 disabled"
+    class <- if (running) "btn-danger" else "btn-danger disabled"
     actionButton("cancel_fetch", "Stop fetch", class = class, disabled = !running)
   })
 
@@ -1675,8 +1647,6 @@ server <- function(input, output, session) {
     req(upload_df())
     # Suggestions used to pre-fill mapping (required fields -> upload columns)
     cols <- required_columns()
-    suggestions <- map_suggestions(names(upload_df()), cols, config$mapping_min_score)
-    mapping_suggestions(suggestions)
 
     # Suggestions table should show master <-> upload column similarity only
     snap <- last_master_snapshot()
@@ -1685,19 +1655,10 @@ server <- function(input, output, session) {
       if (!is.null(master_df)) {
         master_cols <- names(master_df)
         # map_suggestions(upload_cols, required_cols) -> required_column will be master column here
-        master_sugg <- map_suggestions(names(upload_df()), master_cols, config$mapping_min_score)
-        master_mapping_suggestions(master_sugg)
-      } else {
-        master_mapping_suggestions(data.frame())
-      }
+        } else {
+        }
     } else {
-      master_mapping_suggestions(data.frame())
     }
-  })
-
-  output$upload_preview <- renderDT({
-    req(upload_df())
-    safe_datatable(head(upload_df(), 10), opts = list(pageLength = 5))
   })
 
   output$upload_data_health_and_preview_ui <- renderUI({
@@ -1731,8 +1692,7 @@ server <- function(input, output, session) {
           tags$div(
             class = "empty-state-features",
             tags$div(class = "feature-pill", tags$strong("⚡ Instant Health Check: "), "Coverage analysis for IDs & phone numbers"),
-            tags$div(class = "feature-pill", tags$strong("🔍 Smart Auto-Map: "), "Suggested matches against master fields"),
-            tags$div(class = "feature-pill", tags$strong("🔒 Data Protection: "), "Zero external transmission; processed in-memory")
+                        tags$div(class = "feature-pill", tags$strong("🔒 Data Protection: "), "Zero external transmission; processed in-memory")
           )
         )
       )
@@ -1836,16 +1796,6 @@ server <- function(input, output, session) {
           tags$span("High field coverage detected. Dataset is healthy and ready for column mapping.")
         )
       },
-
-      tags$div(
-        class = "mt-3",
-        tags$div(
-          style = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;",
-          tags$strong(style = "font-size: 0.85rem; color: var(--app-forest);", "Spreadsheet Preview (First 10 records):"),
-          tags$span(style = "font-size: 0.75rem; color: #64748B;", paste(length(cols), "columns detected"))
-        ),
-        DT::DTOutput("upload_preview")
-      ),
 
       tags$div(
         style = "display: flex; justify-content: flex-end; margin-top: 16px;",
@@ -1954,8 +1904,7 @@ server <- function(input, output, session) {
   output$mapping_ui <- renderUI({
     req(upload_df())
     cols <- names(upload_df())
-    suggestions <- mapping_suggestions()
-    default_map <- pick_best_mapping(suggestions)
+    default_map <- list()
 
     # Smart auto-application: If logged-in partner has a preset, auto-populate from it
     partner <- auth$partner_name
@@ -2025,16 +1974,6 @@ server <- function(input, output, session) {
         )
       })
     )
-  })
-
-  output$mapping_table <- renderDT({
-    # Show master <-> upload suggestions in the suggestions table. If none available, show upload-only suggestions as fallback.
-    master_sugg <- master_mapping_suggestions()
-    if (!is.null(master_sugg) && nrow(master_sugg) > 0) {
-      return(safe_datatable(master_sugg, opts = list(pageLength = 10)))
-    }
-    req(mapping_suggestions())
-    safe_datatable(mapping_suggestions(), opts = list(pageLength = 10))
   })
 
   observeEvent(input$confirm_mapping, {
@@ -2172,6 +2111,17 @@ server <- function(input, output, session) {
       showNotification("No cached master snapshot found. Please fetch the master database first.", type = "error", duration = 8)
       return()
     }
+    detected_partner <- NULL
+    if (!is.null(mapping$partner) && mapping$partner %in% names(upload_df())) {
+      vals <- na.omit(upload_df()[[mapping$partner]])
+      if (length(vals) > 0 && nzchar(trimws(as.character(vals[1])))) detected_partner <- trimws(as.character(vals[1]))
+    }
+    if (is.null(detected_partner) && "1.1. Organization Prefix" %in% names(upload_df())) {
+      vals <- na.omit(upload_df()[["1.1. Organization Prefix"]])
+      if (length(vals) > 0 && nzchar(trimws(as.character(vals[1])))) detected_partner <- trimws(as.character(vals[1]))
+    }
+    partner_org_val <- if (!is.null(detected_partner)) detected_partner else (auth$partner_name %||% NULL)
+
     job_id <- enqueue_match_job(
       upload_df(),
       snapshot_path = snapshot_path,
@@ -2185,7 +2135,7 @@ server <- function(input, output, session) {
       max_candidates = max_candidates(),
       filter_recent_mpca = isTRUE(filter_recent_mpca()),
       mpca_window_months = mpca_window_months(),
-      partner_org = auth$partner_name,
+      partner_org = partner_org_val,
       user_role = auth$role
     )
     current_job(job_id)
@@ -2479,7 +2429,7 @@ server <- function(input, output, session) {
   output$cancel_button <- renderUI({
     job <- job_status()
     running <- !is.null(job) && job$status %in% c("queued", "running")
-    class <- if (running) "btn-danger ms-2" else "btn-danger ms-2 disabled"
+    class <- if (running) "btn-danger" else "btn-danger disabled"
     actionButton("cancel_job", "Stop & start over", class = class, disabled = !running)
   })
 
@@ -2490,7 +2440,6 @@ server <- function(input, output, session) {
     updated_at <- if (!is.null(job$updated_at)) job$updated_at else "unknown"
     history <- if (!is.null(job$history)) rev(tail(job$history, 4)) else character(0)
     tagList(
-      p(paste("Status:", job$status)),
       p(paste("Started:", started_at)),
       p(paste("Last update:", updated_at)),
       if (length(history) > 0) {
@@ -2637,15 +2586,15 @@ server <- function(input, output, session) {
       list(label = "Spouse Name (اسم الزوج / الزوجة)", u = "hoh_spouse_name", m = "hoh_spouse_name"),
       list(label = "National ID Number (رقم الهوية)", u = "hoh_ID_number", m = "hoh_ID_number"),
       list(label = "ID Type (نوع الهوية)", u = "id_type", m = "id_type"),
-      list(label = "Primary Phone (الهاتف الأساسي)", u = "phone_number", m = "phone_number"),
+      list(label = "Primary Phone (الهاتف الأساسي)", u = "phone_number", m = "primary_phone_number"),
       list(label = "Secondary Phone (الهاتف الثانوي)", u = "secondary_phone_number", m = "secondary_phone_number"),
-      list(label = "Partner (المنظمة الشريكة)", u = "partner", m = "partner"),
+      list(label = "Partner (المنظمة الشريكة)", u = "partner", m = "organization"),
       list(label = "Governorate (المحافظة)", u = "governorate", m = "governorate"),
       list(label = "District (المديرية)", u = "district", m = "district"),
-      list(label = "Subdistrict (العزلة / الحي)", u = "subdistrict", m = "subdistrict"),
+      list(label = "Subdistrict (العزلة / الحي)", u = "subdistrict", m = "sub_district"),
       list(label = "Village (القرية)", u = "village", m = "village"),
-      list(label = "Sex / Gender (النوع)", u = "sex", m = "sex"),
-      list(label = "Age (العمر)", u = "age", m = "age"),
+      list(label = "Sex / Gender (النوع)", u = "sex", m = "hoh_sex"),
+      list(label = "Age (العمر)", u = "age", m = "hoh_age"),
       list(label = "Household Size (حجم الأسرة)", u = "household_size", m = "household_size"),
       list(label = "Last MPCA Distribution Date (تاريخ آخر توزيع)", u = "dist_date_calc_new", m = "dist_date_calc_new")
     )
@@ -2656,7 +2605,12 @@ server <- function(input, output, session) {
         val_b <- if (paste0("upload_", f$m, "_b") %in% names(row_data)) as.character(row_data[[paste0("upload_", f$m, "_b")]][1]) else ""
       } else {
         val_a <- if (paste0("upload_", f$u) %in% names(row_data)) as.character(row_data[[paste0("upload_", f$u)]][1]) else ""
-        val_b <- if (paste0("master_", f$m) %in% names(row_data)) as.character(row_data[[paste0("master_", f$m)]][1]) else ""
+        m_col <- paste0("master_", f$m)
+        val_b <- if (m_col %in% names(row_data)) {
+          as.character(row_data[[m_col]][1])
+        } else if (paste0("master_", f$u) %in% names(row_data)) {
+          as.character(row_data[[paste0("master_", f$u)]][1])
+        } else ""
       }
       if (is.na(val_a)) val_a <- ""
       if (is.na(val_b)) val_b <- ""
@@ -2696,7 +2650,11 @@ server <- function(input, output, session) {
       " | Verified by: ", if (nzchar(cur_triage$reviewer)) cur_triage$reviewer else "MEAL Reviewer"
     )
 
-    partner_u <- if (is_internal) as.character(row_data$upload_partner_a[1] %||% "") else as.character(row_data$upload_partner[1] %||% auth$partner_name %||% "")
+    partner_u <- if (is_internal) {
+      as.character(row_data$upload_partner_a[1] %||% "")
+    } else {
+      as.character(row_data$upload_partner[1] %||% row_data[["upload_1.1. Organization Prefix"]][1] %||% auth$partner_name %||% "")
+    }
     partner_m <- if (is_internal) as.character(row_data$upload_partner_b[1] %||% "") else as.character(row_data$master_organization[1] %||% "")
     
     is_cross_agency <- !is_internal && nzchar(partner_m) && nzchar(partner_u) && tolower(trimws(partner_m)) != tolower(trimws(partner_u))
@@ -3118,8 +3076,6 @@ server <- function(input, output, session) {
   observeEvent(input$restart_dedup_btn, {
     upload_df(NULL)
     upload_error(NULL)
-    mapping_suggestions(data.frame())
-    master_mapping_suggestions(data.frame())
     current_job(NULL)
     filter_recent_mpca(FALSE)
     mpca_window_months(6)

@@ -107,75 +107,147 @@ confidence_from_score <- function(score, high_threshold = 90, medium_threshold =
 # Blocking Logic
 build_block_keys <- function(df) {
   dt <- data.table::as.data.table(df)
-  
-  # Create individual block components
   res <- list()
   
-  # gfn: gov + first name char
-  idx <- nzchar(dt$governorate_n) & nzchar(dt$hoh_arabic_name_n)
-  if (any(idx)) {
+  # Priority 1: Exact National ID (Highest precision blocking)
+  idx_id <- nzchar(dt$hoh_ID_number_n) & !is_generic_or_invalid_id(dt$hoh_ID_number_n)
+  if (any(idx_id)) {
     res[[length(res)+1]] <- data.table::data.table(
-      row_id = dt$row_id[idx],
-      block_key = paste0("gfn|", dt$governorate_n[idx], "|", substr(dt$hoh_arabic_name_n[idx], 1, 1))
+      row_id = dt$row_id[idx_id],
+      block_key = paste0("id|", dt$hoh_ID_number_n[idx_id]),
+      priority = 1L
     )
   }
   
-  # gn3: gov + name first 3
-  if (any(idx)) {
-    res[[length(res)+1]] <- data.table::data.table(
-      row_id = dt$row_id[idx],
-      block_key = paste0("gn3|", dt$governorate_n[idx], "|", substr(dt$hoh_arabic_name_n[idx], 1, 3))
-    )
-  }
-  
-  # dn3: dist + name first 3
-  idx_d <- nzchar(dt$district_n) & nzchar(dt$hoh_arabic_name_n)
-  if (any(idx_d)) {
-    res[[length(res)+1]] <- data.table::data.table(
-      row_id = dt$row_id[idx_d],
-      block_key = paste0("dn3|", dt$district_n[idx_d], "|", substr(dt$hoh_arabic_name_n[idx_d], 1, 3))
-    )
-  }
-  
-  # ps4: phone last 4
-  idx_p <- nzchar(dt$phone_number_n)
+  # Priority 2: Exact Phone Number
+  idx_p <- nzchar(dt$phone_number_n) & !is_generic_or_invalid_phone(dt$phone_number_n)
   if (any(idx_p)) {
     res[[length(res)+1]] <- data.table::data.table(
       row_id = dt$row_id[idx_p],
-      block_key = paste0("ps4|", substr(dt$phone_number_n[idx_p], pmax(1, nchar(dt$phone_number_n[idx_p]) - 3), nchar(dt$phone_number_n[idx_p])))
+      block_key = paste0("ph|", dt$phone_number_n[idx_p]),
+      priority = 2L
+    )
+    # Priority 3: Phone last 7 digits
+    p7_idx <- idx_p & nchar(dt$phone_number_n) >= 7
+    if (any(p7_idx)) {
+      res[[length(res)+1]] <- data.table::data.table(
+        row_id = dt$row_id[p7_idx],
+        block_key = paste0("p7|", substr(dt$phone_number_n[p7_idx], nchar(dt$phone_number_n[p7_idx]) - 6, nchar(dt$phone_number_n[p7_idx]))),
+        priority = 3L
+      )
+    }
+  }
+
+  # Secondary Phone Number (if present)
+  if ("secondary_phone_number_n" %in% names(dt)) {
+    idx_sp <- nzchar(dt$secondary_phone_number_n) & !is_generic_or_invalid_phone(dt$secondary_phone_number_n)
+    if (any(idx_sp)) {
+      res[[length(res)+1]] <- data.table::data.table(
+        row_id = dt$row_id[idx_sp],
+        block_key = paste0("ph|", dt$secondary_phone_number_n[idx_sp]),
+        priority = 2L
+      )
+    }
+  }
+  
+  # Priority 4: District + Name first 3
+  idx_d <- nzchar(dt$district_n) & nzchar(dt$hoh_arabic_name_n) & nchar(dt$hoh_arabic_name_n) >= 3
+  if (any(idx_d)) {
+    res[[length(res)+1]] <- data.table::data.table(
+      row_id = dt$row_id[idx_d],
+      block_key = paste0("dn3|", dt$district_n[idx_d], "|", substr(dt$hoh_arabic_name_n[idx_d], 1, 3)),
+      priority = 4L
     )
   }
   
-  if (length(res) == 0) return(data.table::data.table(row_id = integer(0), block_key = character(0)))
+  # Priority 5: Governorate + Name first 4
+  idx_gn <- nzchar(dt$governorate_n) & nzchar(dt$hoh_arabic_name_n) & nchar(dt$hoh_arabic_name_n) >= 4
+  if (any(idx_gn)) {
+    res[[length(res)+1]] <- data.table::data.table(
+      row_id = dt$row_id[idx_gn],
+      block_key = paste0("gn4|", dt$governorate_n[idx_gn], "|", substr(dt$hoh_arabic_name_n[idx_gn], 1, 4)),
+      priority = 5L
+    )
+  }
+  
+  # Priority 6: Subdistrict + Name first 3 (if subdistrict available)
+  idx_sd <- nzchar(dt$subdistrict_n) & nzchar(dt$hoh_arabic_name_n) & nchar(dt$hoh_arabic_name_n) >= 3
+  if (any(idx_sd)) {
+    res[[length(res)+1]] <- data.table::data.table(
+      row_id = dt$row_id[idx_sd],
+      block_key = paste0("sdn|", dt$subdistrict_n[idx_sd], "|", substr(dt$hoh_arabic_name_n[idx_sd], 1, 3)),
+      priority = 4L
+    )
+  }
+  
+  if (length(res) == 0) return(data.table::data.table(row_id = integer(0), block_key = character(0), priority = integer(0)))
   
   data.table::rbindlist(res)[!is.na(block_key) & nzchar(block_key)]
 }
 
-build_cross_candidates <- function(u_dt, m_dt, limit = 5000L) {
+build_cross_candidates <- function(u_dt, m_dt, limit = 500L, max_per_record = NULL) {
   u_keys <- build_block_keys(u_dt)
   m_keys <- build_block_keys(m_dt)
   if (nrow(u_keys) == 0 || nrow(m_keys) == 0) return(data.table::data.table())
   
   cand <- merge(u_keys, m_keys, by = "block_key", allow.cartesian = TRUE)
-  cand <- unique(cand[, .(upload_row_id = row_id.x, master_row_id = row_id.y)])
-  if (nrow(cand) > limit) cand <- cand[1:limit]
+  if (nrow(cand) == 0) return(data.table::data.table())
+
+  if ("priority.x" %in% names(cand) && "priority.y" %in% names(cand)) {
+    cand <- cand[, .(priority = min(priority.x, priority.y)), by = .(upload_row_id = row_id.x, master_row_id = row_id.y)]
+    data.table::setorder(cand, upload_row_id, priority)
+  } else {
+    cand <- unique(cand[, .(upload_row_id = row_id.x, master_row_id = row_id.y)])
+  }
+
+  # Cap candidates PER upload record so every uploaded row gets fairly evaluated
+  per_rec_cap <- if (!is.null(max_per_record) && max_per_record > 0) {
+    as.integer(max_per_record)
+  } else {
+    max(25L, min(100L, as.integer(limit / 10L)))
+  }
+
+  cand[, cand_rank := 1:.N, by = upload_row_id]
+  cand <- cand[cand_rank <= per_rec_cap, .(upload_row_id, master_row_id)]
+
+  # Global safety limit to prevent memory exhaustion (up to 500k candidate pairs)
+  global_limit <- 500000L
+  if (nrow(cand) > global_limit) cand <- cand[1:global_limit]
   cand
 }
 
-build_self_candidates <- function(dt, limit = 5000L) {
+build_self_candidates <- function(dt, limit = 500L, max_per_record = NULL) {
   keys <- build_block_keys(dt)
   if (nrow(keys) == 0) return(data.table::data.table())
   
   cand <- merge(keys, keys, by = "block_key", allow.cartesian = TRUE)
   cand <- cand[row_id.x < row_id.y]
-  cand <- unique(cand[, .(row_a = row_id.x, row_b = row_id.y)])
-  if (nrow(cand) > limit) cand <- cand[1:limit]
+  if (nrow(cand) == 0) return(data.table::data.table())
+
+  if ("priority.x" %in% names(cand) && "priority.y" %in% names(cand)) {
+    cand <- cand[, .(priority = min(priority.x, priority.y)), by = .(row_a = row_id.x, row_b = row_id.y)]
+    data.table::setorder(cand, row_a, priority)
+  } else {
+    cand <- unique(cand[, .(row_a = row_id.x, row_b = row_id.y)])
+  }
+
+  per_rec_cap <- if (!is.null(max_per_record) && max_per_record > 0) {
+    as.integer(max_per_record)
+  } else {
+    max(25L, min(100L, as.integer(limit / 10L)))
+  }
+
+  cand[, cand_rank := 1:.N, by = row_a]
+  cand <- cand[cand_rank <= per_rec_cap, .(row_a, row_b)]
+
+  global_limit <- 200000L
+  if (nrow(cand) > global_limit) cand <- cand[1:global_limit]
   cand
 }
 
-mask_master_columns <- function(df, partner_org = NULL, user_role = NULL) {
+mask_master_columns <- function(df, upload_partner = NULL, partner_org = NULL, user_role = NULL) {
   if (!is.data.frame(df) || nrow(df) == 0) return(df)
-  sensitive <- c("master_hoh_ID_number", "master_primary_phone_number", "master_secondary_phone_number")
+  sensitive <- c("master_hoh_ID_number", "master_primary_phone_number", "master_secondary_phone_number", "master_phone_number")
   
   mask_val <- function(x) {
     if (is.na(x) || !nzchar(x)) return("")
@@ -186,19 +258,39 @@ mask_master_columns <- function(df, partner_org = NULL, user_role = NULL) {
   
   is_ccy_master <- !is.null(user_role) && identical(tolower(trimws(user_role)), "ccy_master")
   
+  n_rows <- nrow(df)
+  u_partners <- if (!is.null(upload_partner) && length(upload_partner) == n_rows) {
+    as.character(upload_partner)
+  } else if ("upload_partner" %in% names(df)) {
+    as.character(df$upload_partner)
+  } else {
+    rep(if (!is.null(partner_org)) as.character(partner_org) else "", n_rows)
+  }
+  
+  m_orgs <- if ("master_organization" %in% names(df)) as.character(df$master_organization) else rep("", n_rows)
+  
+  clean_u <- tolower(trimws(u_partners))
+  clean_m <- tolower(trimws(m_orgs))
+  
+  # When partners match: both non-empty and identical
+  is_same_partner <- nzchar(clean_u) & nzchar(clean_m) & (clean_u == clean_m)
+  
+  # Fallback to partner_org if u_partner is empty
+  if (!is.null(partner_org) && isTRUE(nzchar(partner_org))) {
+    fallback_clean <- tolower(trimws(partner_org))
+    fallback_match <- !nzchar(clean_u) & nzchar(clean_m) & (clean_m == fallback_clean)
+    is_same_partner <- is_same_partner | fallback_match
+  }
+  
+  # When logged in as Consortium Lead (ccy_master), bypass PII masking across all records.
+  # Otherwise: if partners differ (!is_same_partner), mask PII.
+  should_mask <- if (is_ccy_master) rep(FALSE, n_rows) else !is_same_partner
+  
   for (col in sensitive) {
     if (col %in% names(df)) {
-      raw_vals <- df[[col]]
+      raw_vals <- as.character(df[[col]])
       masked_vals <- vapply(raw_vals, mask_val, character(1))
-      
-      if (!is_ccy_master) {
-        if (!is.null(partner_org) && isTRUE(nzchar(partner_org)) && "master_organization" %in% names(df)) {
-          is_own_record <- tolower(trimws(df$master_organization)) == tolower(trimws(partner_org))
-          df[[col]] <- ifelse(is_own_record, raw_vals, masked_vals)
-        } else {
-          df[[col]] <- masked_vals
-        }
-      }
+      df[[col]] <- ifelse(should_mask, masked_vals, raw_vals)
     }
   }
   df
@@ -224,7 +316,8 @@ run_dedup <- function(upload_df,
                       mpca_window_months = 6,
                       mpca_reference_date = Sys.Date(),
                       partner_org = NULL,
-                      user_role = NULL) {
+                      user_role = NULL,
+                      ...) {
   
   # MPCA Assistance Date Filtering (< 6 months window)
   if (isTRUE(filter_recent_mpca) && !is.null(master_df) && nrow(master_df) > 0) {
@@ -292,7 +385,7 @@ run_dedup <- function(upload_df,
   std_cols <- c("partner", "hoh_ID_number", "phone_number", "secondary_phone_number", 
                 "hoh_arabic_name", "hoh_spouse_name", "governorate", "district", "subdistrict", 
                 "village", "sex", "age", "row_id")
-  orig_cols <- setdiff(names(upload_df), std_cols)
+  orig_cols <- names(upload_df)
   
   # 2. Internal Matching (Same List)
   same_cand <- build_self_candidates(u_prep, limit = max_candidates)
@@ -304,8 +397,8 @@ run_dedup <- function(upload_df,
     same_cand <- merge(same_cand, u_prep, by.x = "row_b", by.y = "row_id", suffixes = c("_a", "_b"))
     
     # Exact Checks
-    same_cand[, exact_id := use_id & nzchar(hoh_ID_number_n_a) & hoh_ID_number_n_a == hoh_ID_number_n_b]
-    same_cand[, exact_phone := use_phone & nzchar(phone_number_n_a) & phone_number_n_a == phone_number_n_b]
+    same_cand[, exact_id := use_id & nzchar(hoh_ID_number_n_a) & !is_generic_or_invalid_id(hoh_ID_number_n_a) & hoh_ID_number_n_a == hoh_ID_number_n_b]
+    same_cand[, exact_phone := use_phone & nzchar(phone_number_n_a) & !is_generic_or_invalid_phone(phone_number_n_a) & phone_number_n_a == phone_number_n_b]
     same_cand[, exact_name_gov := use_name & use_geo & nzchar(hoh_arabic_name_n_a) & hoh_arabic_name_n_a == hoh_arabic_name_n_b &
                                   nzchar(governorate_n_a) & governorate_n_a == governorate_n_b]
     
@@ -314,10 +407,13 @@ run_dedup <- function(upload_df,
     # Fuzzy Scoring for non-exact or all
     same_cand[, name_score := if (use_name) v_name_similarity(hoh_arabic_name_n_a, hoh_arabic_name_n_b) else 0]
     same_cand[, spouse_score := if (use_spouse) v_name_similarity(hoh_spouse_name_n_a, hoh_spouse_name_n_b) else 0]
-    same_cand[, phone_score := if (use_phone) v_phone_similarity(phone_number_n_a, phone_number_n_b) else 0]
+    same_cand[, phone_score := if (use_phone) {
+      sc <- v_phone_similarity(phone_number_n_a, phone_number_n_b)
+      ifelse(is_generic_or_invalid_phone(phone_number_n_a) | is_generic_or_invalid_phone(phone_number_n_b), 0, sc)
+    } else 0]
     # Household ID score (binary exact match only)
     same_cand[, id_score := if (use_id) {
-      ifelse(nzchar(hoh_ID_number_n_a) & hoh_ID_number_n_a == hoh_ID_number_n_b, 100, 0)
+      ifelse(nzchar(hoh_ID_number_n_a) & !is_generic_or_invalid_id(hoh_ID_number_n_a) & hoh_ID_number_n_a == hoh_ID_number_n_b, 100, 0)
     } else 0]
     # Age-based scoring removed per configuration — no contribution from age
     same_cand[, geo_score := 0]
@@ -337,6 +433,7 @@ run_dedup <- function(upload_df,
       id_score * (if (is.null(weights$hoh_ID_number)) 0 else weights$hoh_ID_number) +
       geo_score * weights$geography +
       sex_score * weights$sex, 1)]
+    same_cand[exact_id == TRUE | exact_name_gov == TRUE, match_score := 100]
     
     # Filter
     same_results <- same_cand[match_score >= fuzzy_medium_threshold]
@@ -374,16 +471,19 @@ run_dedup <- function(upload_df,
     cross_cand <- merge(cross_cand, u_prep, by.x = "upload_row_id", by.y = "row_id")
     cross_cand <- merge(cross_cand, m_prep, by.x = "master_row_id", by.y = "row_id", suffixes = c("_u", "_m"))
     
-    cross_cand[, exact_id := use_id & nzchar(hoh_ID_number_n_u) & hoh_ID_number_n_u == hoh_ID_number_n_m]
-    cross_cand[, exact_phone := use_phone & nzchar(phone_number_n_u) & phone_number_n_u == phone_number_n_m]
+    cross_cand[, exact_id := use_id & nzchar(hoh_ID_number_n_u) & !is_generic_or_invalid_id(hoh_ID_number_n_u) & hoh_ID_number_n_u == hoh_ID_number_n_m]
+    cross_cand[, exact_phone := use_phone & nzchar(phone_number_n_u) & !is_generic_or_invalid_phone(phone_number_n_u) & phone_number_n_u == phone_number_n_m]
     cross_cand[, is_exact := exact_id | exact_phone]
     
     cross_cand[, name_score := if (use_name) v_name_similarity(hoh_arabic_name_n_u, hoh_arabic_name_n_m) else 0]
     cross_cand[, spouse_score := if (use_spouse) v_name_similarity(hoh_spouse_name_n_u, hoh_spouse_name_n_m) else 0]
-    cross_cand[, phone_score := if (use_phone) v_phone_similarity(phone_number_n_u, phone_number_n_m) else 0]
+    cross_cand[, phone_score := if (use_phone) {
+      sc <- v_phone_similarity(phone_number_n_u, phone_number_n_m)
+      ifelse(is_generic_or_invalid_phone(phone_number_n_u) | is_generic_or_invalid_phone(phone_number_n_m), 0, sc)
+    } else 0]
     # Household ID score (binary exact match only)
     cross_cand[, id_score := if (use_id) {
-      ifelse(nzchar(hoh_ID_number_n_u) & hoh_ID_number_n_u == hoh_ID_number_n_m, 100, 0)
+      ifelse(nzchar(hoh_ID_number_n_u) & !is_generic_or_invalid_id(hoh_ID_number_n_u) & hoh_ID_number_n_u == hoh_ID_number_n_m, 100, 0)
     } else 0]
     # Age-based scoring removed per configuration — do not compute age_score
     cross_cand[, geo_score := 0]
@@ -403,6 +503,7 @@ run_dedup <- function(upload_df,
       id_score * (if (is.null(weights$hoh_ID_number)) 0 else weights$hoh_ID_number) +
       geo_score * weights$geography +
       sex_score * weights$sex, 1)]
+    cross_cand[exact_id == TRUE, match_score := 100]
     
     ext_results <- cross_cand[match_score >= fuzzy_medium_threshold]
     
@@ -428,10 +529,28 @@ run_dedup <- function(upload_df,
         master_secondary_phone_number = secondary_phone_number_m,
         master_dist_date_calc_new = dist_date_calc_new_m
       )]
-      for (col in orig_cols) {
-        out_lm[[paste0("upload_", col)]] <- ext_results[[paste0(col, "_u")]]
+      upload_matched <- upload_df[ext_results$upload_row_id, , drop = FALSE]
+      for (col in names(upload_matched)) {
+        out_lm[[paste0("upload_", col)]] <- upload_matched[[col]]
       }
-      out_lm <- mask_master_columns(as.data.frame(out_lm), partner_org = partner_org, user_role = user_role)
+
+      u_partner_col <- NULL
+      for (cand in c("partner", "1.1. Organization Prefix", "1.1. Organization_text", "1.1. Organization", "Organization", "Partner")) {
+        if (cand %in% names(upload_matched)) {
+          u_partner_col <- as.character(upload_matched[[cand]])
+          break
+        }
+      }
+      if (is.null(u_partner_col) && "partner_u" %in% names(ext_results)) {
+        u_partner_col <- as.character(ext_results$partner_u)
+      }
+
+      out_lm <- mask_master_columns(
+        as.data.frame(out_lm),
+        upload_partner = u_partner_col,
+        partner_org = partner_org,
+        user_role = user_role
+      )
     } else {
       out_lm <- data.table::data.table()
     }

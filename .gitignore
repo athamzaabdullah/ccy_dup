@@ -10,3 +10,4 @@ tmp/
 shiny/.RData
 shiny/.Rhistory
 .Rproj.user/
+node_modules/
