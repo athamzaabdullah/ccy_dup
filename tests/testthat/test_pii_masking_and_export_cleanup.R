@@ -60,6 +60,9 @@ test_that("export cleanup removes forbidden columns from excel sheets", {
     phone_number = c("771112233", "771112233"),
     hoh_arabic_name = c("محمد علي صالح", "محمد علي صالح"),
     "Main Distribution Donor" = c("ECHO", "ECHO"),
+    "Main Form Partner Batch Code" = c("B01", "B01"),
+    "3.1. Head of household (HoH) Name (Arabic)" = c("محمد علي صالح", "محمد علي صالح"),
+    "3.3. Head of HH's Spouse Name" = c("فاطمة أحمد", "فاطمة أحمد"),
     check.names = FALSE,
     stringsAsFactors = FALSE
   )
@@ -72,8 +75,54 @@ test_that("export cleanup removes forbidden columns from excel sheets", {
     "upload_Main Distribution Donor_a",
     "upload_Main Distribution Donor_b",
     "upload_Main Distribution Donor",
-    "upload_partner"
+    "upload_partner",
+    "upload_Main Form Partner Batch Code",
+    "upload_Main Form Partner Batch Code_a",
+    "upload_Main Form Partner Batch Code_b",
+    "upload_3.1. Head of household (HoH) Name (Arabic)",
+    "upload_3.1. Head of household (HoH) Name (Arabic)_a",
+    "upload_3.1. Head of household (HoH) Name (Arabic)_b",
+    "upload_3.3. Head of HH's Spouse Name",
+    "upload_3.3. Head of HH's Spouse Name_a",
+    "upload_3.3. Head of HH's Spouse Name_b",
+    "upload_2.3. Beneficiary Status",
+    "upload_2.3. Beneficiary Status_a",
+    "upload_2.3. Beneficiary Status_b",
+    "upload_3.2. Head of HH Marital Status",
+    "upload_3.2. Head of HH Marital Status_a",
+    "upload_3.2. Head of HH Marital Status_b",
+    "upload_Governorate Label",
+    "upload_Governorate Label_a",
+    "upload_Governorate Label_b",
+    "upload_District Label",
+    "upload_District Label_a",
+    "upload_District Label_b",
+    "upload_Subdistrict Label",
+    "upload_Subdistrict Label_a",
+    "upload_Subdistrict Label_b",
+    "upload_1.14. Village",
+    "upload_1.14. Village_a",
+    "upload_1.14. Village_b",
+    "upload_3.12 What is the Head of Household's ID number?",
+    "upload_3.12 What is the Head of Household's ID number?_a",
+    "upload_2.1. Primary Phone Number:",
+    "upload_2.1. Primary Phone Number:_a",
+    "upload_2.1. Primary Phone Number:_b",
+    "upload_QA_CODE_SN",
+    "upload_QA_CODE_SN_a",
+    "upload_QA_CODE_SN_b",
+    "upload_Batch_ID",
+    "upload_Batch_ID_a",
+    "upload_Batch_ID_b",
+    "upload_1.4. Today's Date",
+    "upload_1.4. Today's Date_a",
+    "upload_1.4. Today's Date_b",
+    "upload_1.8. Which region does the team work in? Name",
+    "upload_1.8. Which region does the team work in? Name_a",
+    "upload_1.8. Which region does the team work in? Name_b",
+    "master_secondary_phone_number"
   )
+
 
   for (s in openxlsx::getSheetNames(tmp_file)) {
     sheet_data <- openxlsx::read.xlsx(tmp_file, sheet = s)
@@ -190,7 +239,7 @@ test_that("ccy_master bypasses masking while partner roles enforce masking on cr
   expect_equal(lm_partner$master_primary_phone_number[1], "******567")
 })
 
-test_that("export preserves uploaded columns and appends master columns without interleaving survey fields", {
+test_that("export sorts columns by relativity placing related upload and master columns side by side", {
   df <- data.frame(
     match_pair_id = "LM_1_1",
     match_score = 100,
@@ -199,10 +248,26 @@ test_that("export preserves uploaded columns and appends master columns without 
     master_row_id = 1,
     "upload_1.1. Organization" = "DRC",
     "upload_1.11. Governorate" = "Sanaa",
-    "upload_3.1. Head of HH Arabic Name" = "محمد علي صالح",
+    "upload_1.12. District" = "Ma'ain",
+    "upload_1.13. Sub-District" = "Al-Rawdah",
+    "upload_1.14. Village" = "Village A",
+    "upload_hoh_arabic_name" = "محمد علي صالح",
+    "upload_3.5. Head of HH Gender" = "Male",
+    "upload_hoh_ID_number" = "5010454023",
+    "upload_phone_number" = "771234567",
+    "upload_Survey_Notes" = "Notes 123",
     master_organization = "SCI",
+    "master_Main Form Partner Batch Code" = "SCI_BATCH_01",
+    "master_QA_CODE_SN" = "QA_999",
     master_governorate = "Sanaa",
+    master_district = "Ma'ain",
+    master_sub_district = "Al-Rawdah",
+    master_village = "Village A",
     master_hoh_arabic_name = "محمد علي صالح",
+    master_hoh_sex = "Male",
+    master_hoh_ID_number = "5010454023",
+    master_primary_phone_number = "771234567",
+    master_dist_date_calc_new = "2026-05-15",
     check.names = FALSE,
     stringsAsFactors = FALSE
   )
@@ -210,8 +275,33 @@ test_that("export preserves uploaded columns and appends master columns without 
   norm_df <- normalize_export_table(df)
   cols <- names(norm_df)
 
-  # Check that upload columns remain grouped in their original order
-  expect_true(which(cols == "upload_1.1. Organization") < which(cols == "upload_1.11. Governorate"))
-  expect_true(which(cols == "upload_1.11. Governorate") < which(cols == "upload_3.1. Head of HH Arabic Name"))
+  # Check that upload_3.5. Head of HH Gender is immediately followed by master_hoh_sex
+  idx_u_gender <- which(cols == "upload_3.5. Head of HH Gender")
+  idx_m_sex <- which(cols == "master_hoh_sex")
+  expect_equal(idx_m_sex, idx_u_gender + 1)
+
+  # Check that upload_1.1. Organization is followed by master_organization, batch code, and QA code
+  idx_u_org <- which(cols == "upload_1.1. Organization")
+  idx_m_org <- which(cols == "master_organization")
+  idx_m_batch <- which(cols == "master_Main Form Partner Batch Code")
+  idx_m_qa <- which(cols == "master_QA_CODE_SN")
+  expect_equal(idx_m_org, idx_u_org + 1)
+  expect_equal(idx_m_batch, idx_u_org + 2)
+  expect_equal(idx_m_qa, idx_u_org + 3)
+
+  # Check that upload_hoh_ID_number is immediately followed by master_hoh_ID_number
+  idx_u_id <- which(cols == "upload_hoh_ID_number")
+  idx_m_id <- which(cols == "master_hoh_ID_number")
+  expect_equal(idx_m_id, idx_u_id + 1)
+
+  # Check that other unmapped upload fields are placed after matched core fields
+  idx_u_notes <- which(cols == "upload_Survey_Notes")
+  expect_true(idx_u_notes > idx_m_sex)
+
+  # Check that master_dist_date_calc_new is renamed to "Last Receipt Date"
+  expect_true("Last Receipt Date" %in% cols)
+  expect_false("master_dist_date_calc_new" %in% cols)
 })
+
+
 

@@ -167,6 +167,31 @@ activityinfo_fetch_all_progress <- function(cfg = config$activityinfo, form_ids 
   dplyr::bind_rows(records)
 }
 
+extract_lean_master <- function(df) {
+  if (is.null(df) || !is.data.frame(df) || nrow(df) == 0) return(df)
+  essential_patterns <- c(
+    "^(@|_)?id$", "^record_id$", "^status$",
+    "QA_CODE_SN", "QA_Code", "qa_code",
+    "organization", "partner", "1\\.1\\.",
+    "Main Form Partner Batch Code", "batch",
+    "hoh_arabic_name", "3\\.1\\.", "name",
+    "hoh_spouse_name", "3\\.3\\.", "spouse",
+    "hoh_sex", "gender", "sex", "3\\.5\\.",
+    "hoh_age", "age", "3\\.4\\.",
+    "hoh_ID_number", "id_number", "3\\.12\\.", "id_type", "3\\.11\\.",
+    "primary_phone", "secondary_phone", "phone", "2\\.1\\.", "2\\.2\\.",
+    "governorate", "1\\.11\\.", "district", "1\\.12\\.", "sub[-_ ]?district", "1\\.13\\.", "village", "1\\.14\\.",
+    "dist_date", "Dist_Date", "system_date", "1\\.4\\.", "Dist_Type", "dist_type"
+  )
+  combined <- paste(essential_patterns, collapse = "|")
+  keep_cols <- grep(combined, names(df), ignore.case = TRUE, value = TRUE)
+  if (length(keep_cols) > 0) {
+    df[, unique(keep_cols), drop = FALSE]
+  } else {
+    df
+  }
+}
+
 save_master_snapshot <- function(df, snap_dir = config$paths$master_snap_dir) {
   is_abs <- grepl("^[A-Za-z]:[/\\\\]|^[/\\\\]{2}|^/", snap_dir)
   if (!is_abs) {
@@ -175,7 +200,19 @@ save_master_snapshot <- function(df, snap_dir = config$paths$master_snap_dir) {
     snap_dir <- normalizePath(snap_dir, winslash = "/", mustWork = FALSE)
   }
   if (!dir.exists(snap_dir)) dir.create(snap_dir, recursive = TRUE)
-  path <- file.path(snap_dir, paste0("master_snapshot_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".rds"))
+  ts <- format(Sys.time(), "%Y%m%d_%H%M%S")
+  path <- file.path(snap_dir, paste0("master_snapshot_", ts, ".rds"))
   saveRDS(df, path)
+
+  # Companion Lean Master Index for fast low-memory matching
+  tryCatch({
+    lean_df <- extract_lean_master(df)
+    lean_path <- file.path(snap_dir, paste0("master_lean_", ts, ".rds"))
+    saveRDS(lean_df, lean_path)
+  }, error = function(e) {
+    warning("Could not write lean master snapshot: ", conditionMessage(e))
+  })
+
   normalizePath(path, winslash = "/", mustWork = FALSE)
 }
+

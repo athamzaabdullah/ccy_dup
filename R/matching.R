@@ -179,9 +179,29 @@ build_block_keys <- function(df) {
       priority = 4L
     )
   }
-  
+
+  # Inversion Blocking: District + Spouse first 3 & Governorate + Spouse first 4
+  if ("hoh_spouse_name_n" %in% names(dt)) {
+    idx_sp_d <- nzchar(dt$district_n) & nzchar(dt$hoh_spouse_name_n) & nchar(dt$hoh_spouse_name_n) >= 3
+    if (any(idx_sp_d)) {
+      res[[length(res)+1]] <- data.table::data.table(
+        row_id = dt$row_id[idx_sp_d],
+        block_key = paste0("dn3|", dt$district_n[idx_sp_d], "|", substr(dt$hoh_spouse_name_n[idx_sp_d], 1, 3)),
+        priority = 6L
+      )
+    }
+    idx_sp_g <- nzchar(dt$governorate_n) & nzchar(dt$hoh_spouse_name_n) & nchar(dt$hoh_spouse_name_n) >= 4
+    if (any(idx_sp_g)) {
+      res[[length(res)+1]] <- data.table::data.table(
+        row_id = dt$row_id[idx_sp_g],
+        block_key = paste0("gn4|", dt$governorate_n[idx_sp_g], "|", substr(dt$hoh_spouse_name_n[idx_sp_g], 1, 4)),
+        priority = 6L
+      )
+    }
+  }
+
   if (length(res) == 0) return(data.table::data.table(row_id = integer(0), block_key = character(0), priority = integer(0)))
-  
+
   data.table::rbindlist(res)[!is.na(block_key) & nzchar(block_key)]
 }
 
@@ -407,6 +427,22 @@ run_dedup <- function(upload_df,
     # Fuzzy Scoring for non-exact or all
     same_cand[, name_score := if (use_name) v_name_similarity(hoh_arabic_name_n_a, hoh_arabic_name_n_b) else 0]
     same_cand[, spouse_score := if (use_spouse) v_name_similarity(hoh_spouse_name_n_a, hoh_spouse_name_n_b) else 0]
+
+    # Inversion detection: HoH_A == Spouse_B and Spouse_A == HoH_B
+    if (use_name && use_spouse) {
+      same_cand[, inv_name_1 := v_name_similarity(hoh_arabic_name_n_a, hoh_spouse_name_n_b)]
+      same_cand[, inv_name_2 := v_name_similarity(hoh_spouse_name_n_a, hoh_arabic_name_n_b)]
+      same_cand[, is_inverted := (inv_name_1 >= 75 & inv_name_2 >= 75) |
+                                 (inv_name_1 >= 85 & !nzchar(hoh_spouse_name_n_a) & nzchar(hoh_spouse_name_n_b)) |
+                                 (inv_name_2 >= 85 & nzchar(hoh_spouse_name_n_a) & !nzchar(hoh_spouse_name_n_b))]
+      same_cand[is_inverted == TRUE, `:=`(
+        name_score = pmax(name_score, (inv_name_1 + inv_name_2) / 2),
+        spouse_score = pmax(spouse_score, pmin(inv_name_1, inv_name_2))
+      )]
+    } else {
+      same_cand[, is_inverted := FALSE]
+    }
+
     same_cand[, phone_score := if (use_phone) {
       sc <- v_phone_similarity(phone_number_n_a, phone_number_n_b)
       ifelse(is_generic_or_invalid_phone(phone_number_n_a) | is_generic_or_invalid_phone(phone_number_n_b), 0, sc)
@@ -423,9 +459,15 @@ run_dedup <- function(upload_df,
       same_cand[subdistrict_n_a == subdistrict_n_b & nzchar(subdistrict_n_a), geo_score := geo_score + 20]
       same_cand[village_n_a == village_n_b & nzchar(village_n_a), geo_score := geo_score + 15]
     }
-    
+
+    # Displacement (IDP) check: matching primary identifiers across locations
+    same_cand[, is_displaced := (exact_id | (exact_phone & name_score >= 70) | (name_score >= 85 & phone_score >= 85)) &
+                                ((governorate_n_a != governorate_n_b & nzchar(governorate_n_a) & nzchar(governorate_n_b)) |
+                                 (district_n_a != district_n_b & nzchar(district_n_a) & nzchar(district_n_b)))]
+    same_cand[is_displaced == TRUE & geo_score < 40, geo_score := geo_score + 40]
+
     same_cand[, sex_score := ifelse(sex_n_a == sex_n_b & nzchar(sex_n_a), 100, 0)]
-    
+
     same_cand[, match_score := round(
       name_score * weights$hoh_arabic_name +
       spouse_score * weights$hoh_spouse_name +
@@ -434,20 +476,27 @@ run_dedup <- function(upload_df,
       geo_score * weights$geography +
       sex_score * weights$sex, 1)]
     same_cand[exact_id == TRUE | exact_name_gov == TRUE, match_score := 100]
-    
+
     # Filter
     same_results <- same_cand[match_score >= fuzzy_medium_threshold]
-    
+
     # Format results
     if (nrow(same_results) > 0) {
       same_results[, confidence := ifelse(match_score >= fuzzy_high_threshold, "high", "medium")]
-      # match_type consolidated into confidence only; exact/fuzzy removed
       same_results[, match_pair_id := exact_pair_id("SL", row_a, row_b), by = 1:nrow(same_results)]
-      
+
+      factors <- paste0("name=", same_results$name_score, " | phone=", same_results$phone_score, " | id=", same_results$id_score, " | geo=", same_results$geo_score)
+      if (any(same_results$is_inverted)) {
+        factors <- paste0(factors, ifelse(same_results$is_inverted, " | [HoH/Spouse Inverted]", ""))
+      }
+      if (any(same_results$is_displaced)) {
+        factors <- paste0(factors, ifelse(same_results$is_displaced, " | [Possible Displaced (IDP)]", ""))
+      }
+
       # Select and rename for output
       out_sl <- same_results[, .(
         match_pair_id, match_score, confidence,
-        contributing_factors = paste0("name=", name_score, " | phone=", phone_score, " | id=", id_score, " | geo=", geo_score),
+        contributing_factors = factors,
         upload_row_id_a = row_a,
         upload_row_id_b = row_b
       )]
@@ -477,6 +526,22 @@ run_dedup <- function(upload_df,
     
     cross_cand[, name_score := if (use_name) v_name_similarity(hoh_arabic_name_n_u, hoh_arabic_name_n_m) else 0]
     cross_cand[, spouse_score := if (use_spouse) v_name_similarity(hoh_spouse_name_n_u, hoh_spouse_name_n_m) else 0]
+
+    # Inversion detection: HoH_U == Spouse_M and Spouse_U == HoH_M
+    if (use_name && use_spouse) {
+      cross_cand[, inv_name_1 := v_name_similarity(hoh_arabic_name_n_u, hoh_spouse_name_n_m)]
+      cross_cand[, inv_name_2 := v_name_similarity(hoh_spouse_name_n_u, hoh_arabic_name_n_m)]
+      cross_cand[, is_inverted := (inv_name_1 >= 75 & inv_name_2 >= 75) |
+                                  (inv_name_1 >= 85 & !nzchar(hoh_spouse_name_n_u) & nzchar(hoh_spouse_name_n_m)) |
+                                  (inv_name_2 >= 85 & nzchar(hoh_spouse_name_n_u) & !nzchar(hoh_spouse_name_n_m))]
+      cross_cand[is_inverted == TRUE, `:=`(
+        name_score = pmax(name_score, (inv_name_1 + inv_name_2) / 2),
+        spouse_score = pmax(spouse_score, pmin(inv_name_1, inv_name_2))
+      )]
+    } else {
+      cross_cand[, is_inverted := FALSE]
+    }
+
     cross_cand[, phone_score := if (use_phone) {
       sc <- v_phone_similarity(phone_number_n_u, phone_number_n_m)
       ifelse(is_generic_or_invalid_phone(phone_number_n_u) | is_generic_or_invalid_phone(phone_number_n_m), 0, sc)
@@ -493,9 +558,15 @@ run_dedup <- function(upload_df,
       cross_cand[subdistrict_n_u == subdistrict_n_m & nzchar(subdistrict_n_u), geo_score := geo_score + 20]
       cross_cand[village_n_u == village_n_m & nzchar(village_n_u), geo_score := geo_score + 15]
     }
-    
+
+    # Displacement (IDP) check: matching primary identifiers across locations
+    cross_cand[, is_displaced := (exact_id | (exact_phone & name_score >= 70) | (name_score >= 85 & phone_score >= 85)) &
+                                 ((governorate_n_u != governorate_n_m & nzchar(governorate_n_u) & nzchar(governorate_n_m)) |
+                                  (district_n_u != district_n_m & nzchar(district_n_u) & nzchar(district_n_m)))]
+    cross_cand[is_displaced == TRUE & geo_score < 40, geo_score := geo_score + 40]
+
     cross_cand[, sex_score := ifelse(sex_n_u == sex_n_m & nzchar(sex_n_u), 100, 0)]
-    
+
     cross_cand[, match_score := round(
       name_score * weights$hoh_arabic_name +
       spouse_score * weights$hoh_spouse_name +
@@ -504,17 +575,24 @@ run_dedup <- function(upload_df,
       geo_score * weights$geography +
       sex_score * weights$sex, 1)]
     cross_cand[exact_id == TRUE, match_score := 100]
-    
+
     ext_results <- cross_cand[match_score >= fuzzy_medium_threshold]
-    
+
     if (nrow(ext_results) > 0) {
       ext_results[, confidence := ifelse(match_score >= fuzzy_high_threshold, "high", "medium")]
-      # match_type consolidated into confidence only; exact/fuzzy removed
       ext_results[, match_pair_id := exact_pair_id("LM", upload_row_id, master_row_id), by = 1:nrow(ext_results)]
-      
+
+      factors <- paste0("name=", ext_results$name_score, " | phone=", ext_results$phone_score, " | id=", ext_results$id_score, " | geo=", ext_results$geo_score)
+      if (any(ext_results$is_inverted)) {
+        factors <- paste0(factors, ifelse(ext_results$is_inverted, " | [HoH/Spouse Inverted]", ""))
+      }
+      if (any(ext_results$is_displaced)) {
+        factors <- paste0(factors, ifelse(ext_results$is_displaced, " | [Possible Displaced (IDP)]", ""))
+      }
+
       out_lm <- ext_results[, .(
         match_pair_id, match_score, confidence,
-        contributing_factors = paste0("name=", name_score, " | phone=", phone_score, " | id=", id_score, " | geo=", geo_score),
+        contributing_factors = factors,
         upload_row_id, master_row_id,
         master_organization = partner_m,
         master_governorate = governorate_m,
@@ -527,12 +605,42 @@ run_dedup <- function(upload_df,
         master_hoh_ID_number = hoh_ID_number_m,
         master_primary_phone_number = phone_number_m,
         master_secondary_phone_number = secondary_phone_number_m,
-        master_dist_date_calc_new = dist_date_calc_new_m
+        `Last Receipt Date` = dist_date_calc_new_m
       )]
+      # Retrieve Batch Code, QA Code, and Assistance Type from Master
+      master_matched <- master_df[ext_results$master_row_id, , drop = FALSE]
+      m_batch_col <- NULL
+      for (cand in c("Main Form Partner Batch Code", "main_form_partner_batch_code", "Batch Code", "Batch_ID", "batch_code")) {
+        if (cand %in% names(master_matched)) {
+          m_batch_col <- cand
+          break
+        }
+      }
+      out_lm[["master_Main Form Partner Batch Code"]] <- if (!is.null(m_batch_col)) safe_char(master_matched[[m_batch_col]]) else NA_character_
+
+      m_qa_col <- NULL
+      for (cand in c("QA_CODE_SN", "QA_Code_SN", "qa_code_sn", "QA_Code", "qa_code")) {
+        if (cand %in% names(master_matched)) {
+          m_qa_col <- cand
+          break
+        }
+      }
+      out_lm[["master_QA_CODE_SN"]] <- if (!is.null(m_qa_col)) safe_char(master_matched[[m_qa_col]]) else NA_character_
+
+      m_dist_type_col <- NULL
+      for (cand in c("Dist_Type", "dist_type", "Distribution Type", "Distribution_Type")) {
+        if (cand %in% names(master_matched)) {
+          m_dist_type_col <- cand
+          break
+        }
+      }
+      out_lm[["master_dist_type"]] <- if (!is.null(m_dist_type_col)) safe_char(master_matched[[m_dist_type_col]]) else NA_character_
+
       upload_matched <- upload_df[ext_results$upload_row_id, , drop = FALSE]
       for (col in names(upload_matched)) {
         out_lm[[paste0("upload_", col)]] <- upload_matched[[col]]
       }
+
 
       u_partner_col <- NULL
       for (cand in c("partner", "1.1. Organization Prefix", "1.1. Organization_text", "1.1. Organization", "Organization", "Partner")) {
