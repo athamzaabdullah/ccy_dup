@@ -50,40 +50,40 @@ main_ui <- function(app_name, show_admin = FALSE, admin_label = "Admin", show_se
   )
 }
 
-upload_step_ui <- function(can_fetch_master = TRUE, lang = "en") {
+upload_step_ui <- function(can_fetch_master = TRUE) {
   layout_columns(
     col_widths = c(5, 7),
     card(
       class = "app-card",
       card_header(
         div(class = "step-title"),
-        tags$h4(tr("card_upload_title", lang = lang))
+        tags$h4("Upload & Fetch Data")
       ),
       card_body(
         div(
           style = "display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;",
-          tags$label(tr("label_upload_file", lang = lang), style = "font-weight: 500;"),
-          downloadLink("download_template", tr("link_download_template", lang = lang), style = "font-size: 0.85em; text-decoration: none; color: var(--app-sea);")
+          tags$label("Upload spreadsheet", style = "font-weight: 500;"),
+          downloadLink("download_template", "Download template", style = "font-size: 0.85em; text-decoration: none; color: var(--app-sea);")
         ),
         fileInput("upload_file", NULL, accept = c('.xlsx', '.xls', '.csv', 'text/csv', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel')),
-        tags$div(style = "font-size:0.85em; color:#6b7280; margin-top:-6px; margin-bottom:12px;", tr("hint_accepted_files", lang = lang)),
+        tags$div(style = "font-size:0.85em; color:#6b7280; margin-top:-6px; margin-bottom:12px;", "Accepted file types: .xlsx, .xls, .csv — Max size: 10 MB."),
         uiOutput("upload_validation"),
 
         div(
           class = "mt-3",
-          if (isTRUE(can_fetch_master)) actionButton("fetch_master", tr("btn_fetch_master", lang = lang), class = "btn-ghost") else NULL,
+          if (isTRUE(can_fetch_master)) actionButton("fetch_master", "Fetch master database", class = "btn-ghost") else NULL,
           if (isTRUE(can_fetch_master)) uiOutput("cancel_fetch_button") else NULL
         ),
                 uiOutput("fetch_feedback_ui"),
                 uiOutput("fetch_log_ui"),
-        actionButton("confirm_upload", tr("btn_confirm_upload", lang = lang), class = "btn-primary mt-3")
+        actionButton("confirm_upload", "Confirm upload & continue", class = "btn-primary mt-3")
       )
     ),
     card(
       class = "app-card",
       card_header(
         div(class = "step-title"),
-        tags$h4(tr("card_health_title", lang = lang))
+        tags$h4("Data Health & Verification")
       ),
       card_body(
         uiOutput("upload_data_health_and_preview_ui")
@@ -92,76 +92,72 @@ upload_step_ui <- function(can_fetch_master = TRUE, lang = "en") {
   )
 }
 
-mapping_step_ui <- function(lang = "en", selected_fields = NULL) {
-  field_labels <- c(
-    "partner" = tr("field_partner", lang = lang),
-    "hoh_ID_number" = tr("field_id", lang = lang),
-    "phone_number" = tr("field_phone", lang = lang),
-    "hoh_arabic_name" = tr("field_hoh_name", lang = lang),
-    "hoh_spouse_name" = tr("field_spouse_name", lang = lang),
-    "geography" = tr("field_geography", lang = lang)
-  )
-  choices <- setNames(names(field_labels), field_labels)
-  selected <- if (!is.null(selected_fields)) selected_fields else c(
-    "partner",
-    "hoh_ID_number",
-    "phone_number",
-    "hoh_arabic_name",
-    "hoh_spouse_name",
-    "geography"
-  )
-
+mapping_step_ui <- function() {
   layout_columns(
     col_widths = 12,
     card(
       class = "app-card",
       card_header(
         div(class = "step-title"),
-        tags$h4(tr("card_mapping_title", lang = lang))
+        tags$h4("Confirm Fields Mapping")
       ),
       card_body(
         checkboxGroupInput(
           "match_fields",
-          tr("label_match_fields", lang = lang),
-          choices = choices,
-          selected = selected
+          "Fields to use for matching:",
+          choices = c(
+            "Partner" = "partner",
+            "ID number" = "hoh_ID_number",
+            "Phone number" = "phone_number",
+            "Head of household name" = "hoh_arabic_name",
+            "Spouse name" = "hoh_spouse_name",
+            "Geography (governorate/district/subdistrict/village)" = "geography"
+          ),
+          selected = c(
+            "partner",
+            "hoh_ID_number",
+            "phone_number",
+            "hoh_arabic_name",
+            "hoh_spouse_name",
+            "geography"
+          )
         ),
         div(
           class = "d-flex align-items-end flex-wrap", style = "gap: 10px; margin-bottom: 16px;",
           uiOutput("load_preset_ui"),
-          actionButton("save_preset", tr("btn_save_preset", lang = lang), class = "btn-secondary")
+          actionButton("save_preset", "💾 Save as Preset", class = "btn-secondary")
         ),
         uiOutput("mapping_ui"),
-        actionButton("confirm_mapping", tr("btn_confirm_mapping", lang = lang), class = "btn-primary mt-3")
+        actionButton("confirm_mapping", "Confirm mapping", class = "btn-primary mt-3")
       )
     )
   )
 }
 
-strategy_step_ui <- function(lang = "en", high_val = 90, med_val = 75, max_cand_val = 500, filter_mpca_val = FALSE, mpca_months_val = 6) {
+strategy_step_ui <- function() {
   layout_columns(
     col_widths = c(7, 5),
     card(
       class = "app-card",
       card_header(
         div(class = "step-title"),
-        tags$h4(tr("card_strategy_title", lang = lang))
+        tags$h4("Configure Matching Parameters")
       ),
       card_body(
         tags$div(
           class = "slider-group",
-          sliderInput("threshold_high", tr("slider_threshold_high", lang = lang), min = 50, max = 100, value = high_val, step = 1, post = "%", width = "100%"),
-          tags$div(class = "slider-helper-text", tr("helper_threshold_high", lang = lang))
+          sliderInput("threshold_high", "High confidence threshold:", min = 50, max = 100, value = 90, step = 1, post = "%", width = "100%"),
+          tags$div(class = "slider-helper-text", "Pairs scoring at or above this threshold are classified as high-confidence matches.")
         ),
         tags$div(
           class = "slider-group",
-          sliderInput("threshold_medium", tr("slider_threshold_medium", lang = lang), min = 30, max = 99, value = med_val, step = 1, post = "%", width = "100%"),
-          tags$div(class = "slider-helper-text", tr("helper_threshold_medium", lang = lang))
+          sliderInput("threshold_medium", "Medium confidence threshold:", min = 30, max = 99, value = 75, step = 1, post = "%", width = "100%"),
+          tags$div(class = "slider-helper-text", "Pairs scoring between medium and high thresholds are flagged for manual review.")
         ),
         tags$div(
           class = "slider-group",
-          sliderInput("max_candidates", tr("slider_max_candidates", lang = lang), min = 50, max = 2000, value = max_cand_val, step = 50, width = "100%"),
-          tags$div(class = "slider-helper-text", tr("helper_max_candidates", lang = lang))
+          sliderInput("max_candidates", "Max candidate pairs:", min = 50, max = 2000, value = 500, step = 50, width = "100%"),
+          tags$div(class = "slider-helper-text", "Caps the number of candidate comparisons evaluated per block (maximum 2,000 pairs).")
         ),
 
         tags$div(
@@ -169,21 +165,21 @@ strategy_step_ui <- function(lang = "en", high_val = 90, med_val = 75, max_cand_
           style = "background: #F8FAFC; border: 1px solid var(--app-border); border-radius: 6px; padding: 14px; margin-top: 16px; margin-bottom: 16px;",
           tags$div(
             style = "display: flex; justify-content: space-between; align-items: center;",
-            tags$strong(style = "color: var(--app-forest); font-size: 0.85rem;", tr("mpca_filter_title", lang = lang)),
+            tags$strong(style = "color: var(--app-forest); font-size: 0.85rem;", "📅 MPCA Last Distribution Date Filter (تصفية تاريخ آخر توزيع)"),
             tags$span(class = "category-badge-chip", style = "background: #E0E7FF; color: #3730A3;", "Dist_Date_Calc_New")
           ),
           tags$div(
             style = "margin-top: 8px;",
             checkboxInput(
               "filter_recent_mpca",
-              tags$span(style = "font-weight: 600; font-size: 0.85rem; color: var(--app-text);", tr("mpca_filter_checkbox", lang = lang)),
-              value = isTRUE(filter_mpca_val)
+              tags$span(style = "font-weight: 600; font-size: 0.85rem; color: var(--app-text);", "Deduplicate only against beneficiaries with MPCA distribution in < 6 months"),
+              value = FALSE
             )
           ),
           tags$p(
             class = "slider-helper-text",
             style = "margin: 4px 0 0 0; font-size: 0.78rem; color: #64748B;",
-            tr("mpca_filter_desc", lang = lang)
+            "When checked, the engine filters the central master database to only match against beneficiaries whose last MPCA distribution date (Dist_Date_Calc_New) was received within the last 6 months (180 days). Beneficiaries assisted earlier are excluded from the check."
           ),
           conditionalPanel(
             condition = "input.filter_recent_mpca == true",
@@ -191,61 +187,62 @@ strategy_step_ui <- function(lang = "en", high_val = 90, med_val = 75, max_cand_
               style = "margin-top: 12px; padding-top: 8px; border-top: 1px dashed var(--app-border);",
               sliderInput(
                 "mpca_window_months",
-                tr("slider_mpca_window", lang = lang),
+                "Assistance Recency Window (Months / نافذة الأشهر):",
                 min = 1,
                 max = 12,
-                value = mpca_months_val,
+                value = 6,
                 step = 1,
-                post = if (identical(lang, "ar")) " أشهر" else " months",
+                post = " months",
                 width = "100%"
               )
             )
           )
         ),
 
-        actionButton("confirm_strategy", tr("btn_confirm_strategy", lang = lang), class = "btn-primary mt-2")
+        actionButton("confirm_strategy", "Continue to matching", class = "btn-primary mt-2")
       )
     ),
     card(
       class = "app-card",
       card_header(
         div(class = "step-title"),
-        tags$h4(tr("card_guide_title", lang = lang))
+        tags$h4("Strategy & Deduplication Guide")
       ),
       card_body(
         tags$div(
           class = "health-alert health-alert-info mb-3",
-          tags$strong(tr("guide_sops_title", lang = lang)),
-          tags$p(style = "margin: 4px 0 0 0; font-size: 0.8rem;", tr("guide_sops_desc", lang = lang))
+          tags$strong("CCY Consortium Matching SOPs:"),
+          tags$p(style = "margin: 4px 0 0 0; font-size: 0.8rem;", "Standard deduplication combines exact national ID/phone checks with weighted 4-part Arabic name decomposition (Jaro-Winkler + Levenshtein).")
         ),
         tags$ul(
           style = "font-size: 0.825rem; color: #475569; padding-left: 18px;",
-          tags$li(tags$strong(tr("guide_high_label", lang = lang)), tr("guide_high_desc", lang = lang)),
-          tags$li(tags$strong(tr("guide_medium_label", lang = lang)), tr("guide_medium_desc", lang = lang)),
-          tags$li(tags$strong(tr("guide_mpca_label", lang = lang)), tr("guide_mpca_desc", lang = lang))
+          tags$li(tags$strong("High Confidence (≥90%): "), "Confirmed duplicates requiring immediate action or partner reconciliation."),
+          tags$li(tags$strong("Medium Review (75%–89%): "), "Probable matches queued for field verification."),
+          tags$li(tags$strong("MPCA Date Filter: "), "Allows targeting beneficiaries with recent assistance (<6 months) to avoid re-assisting within the active MPCA cycle while enabling re-eligibility after 6 months.")
         )
       )
     )
   )
 }
 
-matching_step_ui <- function(lang = "en") {
+matching_step_ui <- function() {
   card(
     class = "app-card",
     card_header(
       div(class = "step-title"),
-      tags$h4(tr("card_matching_title", lang = lang))
+      tags$h4("Run Matching")
     ),
     card_body(
+      # Describe what happens when matching is initiated
       tags$div(
         class = "matching-description",
-        tags$strong(tr("matching_when_run", lang = lang)),
+        tags$strong("When you run matching:"),
         tags$ul(
-          tags$li(tr("matching_bullet_1", lang = lang)),
-          tags$li(tr("matching_bullet_2", lang = lang)),
-          tags$li(tr("matching_bullet_3", lang = lang)),
-          tags$li(tr("matching_bullet_4", lang = lang)),
-          tags$li(tr("matching_bullet_5", lang = lang))
+          tags$li("The app will load the latest master snapshot and preprocess the uploaded file."),
+          tags$li("Candidate pairs will be generated using the selected match fields (capped at the configured max candidates)."),
+          tags$li("Each candidate pair is scored and classified into High / Medium confidence."),
+          tags$li("A running job can be stopped using \"Stop & start over\"; stopping will cancel the job and clear uploaded data."),
+          tags$li("Results are saved and an export button will be enabled when matching completes.")
         )
       ),
       tags$div(
@@ -261,14 +258,14 @@ matching_step_ui <- function(lang = "en") {
   )
 }
 
-results_step_ui <- function(lang = "en") {
+results_step_ui <- function() {
   layout_columns(
     col_widths = c(8, 4),
     card(
       class = "app-card",
       card_header(
         div(class = "step-title"),
-        tags$h4(tr("card_results_dossier", lang = lang))
+        tags$h4("Deduplication Results Dossier")
       ),
       card_body(
         uiOutput("results_dossier_ui")
@@ -278,14 +275,14 @@ results_step_ui <- function(lang = "en") {
       class = "app-card",
       card_header(
         div(class = "step-title"),
-        tags$h4(tr("card_export_actions", lang = lang))
+        tags$h4("Export & Actions")
       ),
       card_body(
         uiOutput("results_export_summary_ui"),
         div(
           style = "margin-top: 16px; display: flex; flex-direction: column; gap: 8px;",
           uiOutput("export_button"),
-          actionButton("restart_dedup_btn", tr("btn_restart_dedup", lang = lang), class = "btn-secondary")
+          actionButton("restart_dedup_btn", "🔄 Start New Deduplication Run", class = "btn-secondary")
         ),
         uiOutput("export_status_ui"),
         tags$hr(style = "margin: 20px 0; border-color: var(--app-border);"),
@@ -295,39 +292,39 @@ results_step_ui <- function(lang = "en") {
   )
 }
 
-settings_step_ui <- function(can_edit_token = FALSE, can_edit_form_id = FALSE, lang = "en") {
+settings_step_ui <- function(can_edit_token = FALSE, can_edit_form_id = FALSE) {
   div(
     class = "settings-wrap",
     card(
       class = "app-card",
-      card_header(tags$h4(tr("settings_header", lang = lang))),
+      card_header(tags$h4("Settings")),
       card_body(
-        textInput("settings_username", tr("label_signed_in_email", lang = lang)),
-        if (isTRUE(can_edit_token)) passwordInput("settings_token", tr("label_ai_token", lang = lang)) else p(style = "color:#6b7280;", if (identical(lang, "ar")) "تعديل الرمز محظور على هذا الدور." else "Token changes are restricted for your role."),
-        if (isTRUE(can_edit_form_id)) textInput("settings_form_id", tr("label_ai_form_id", lang = lang)) else NULL,
+        textInput("settings_username", "Signed-in email"),
+        if (isTRUE(can_edit_token)) passwordInput("settings_token", "ActivityInfo token") else p(style = "color:#6b7280;", "Token changes are restricted for your role."),
+        if (isTRUE(can_edit_form_id)) textInput("settings_form_id", "ActivityInfo table (form) ID") else NULL,
         div(style = "display:flex; gap:12px; margin-top:24px; flex-wrap:wrap;",
-          actionButton("save_settings", tr("btn_save_settings", lang = lang), class = "btn-primary"),
-          actionButton("manage_mfa", tr("btn_manage_mfa", lang = lang), class = "btn-ghost"),
-          actionButton("close_settings_body", tr("btn_back_to_workflow", lang = lang), class = "btn-secondary")
+          actionButton("save_settings", "Save settings", class = "btn-primary"),
+          actionButton("manage_mfa", "Manage MFA", class = "btn-ghost"),
+          actionButton("close_settings_body", "Back to workflow", class = "btn-secondary")
         )
       )
     )
   )
 }
 
-admin_step_ui <- function(lang = "en") {
+admin_step_ui <- function() {
   div(
     class = "admin-wrap",
     div(
       class = "admin-header-bar",
       div(
         class = "admin-header-title",
-        tags$h3(tags$span(style = "color: var(--app-forest);", "⚙️"), tr("admin_header_title", lang = lang)),
-        tags$p(tr("admin_header_desc", lang = lang))
+        tags$h3(tags$span(style = "color: var(--app-forest);", "⚙️"), "System Administration & Control Center"),
+        tags$p("Manage authorized user accounts, partner directories, compliance audit trails, and system backups.")
       ),
       div(
         class = "d-flex gap-2 align-items-center",
-        actionButton("admin_back", if (identical(lang, "ar")) "← العودة إلى مسار العمل" else "← Back to Deduplication Workflow", class = "btn-secondary")
+        actionButton("admin_back", "← Back to Deduplication Workflow", class = "btn-secondary")
       )
     ),
     uiOutput("admin_access_summary"),
