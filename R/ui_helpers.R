@@ -93,42 +93,157 @@ upload_step_ui <- function(can_fetch_master = TRUE) {
 }
 
 mapping_step_ui <- function() {
-  layout_columns(
-    col_widths = 12,
+  div(
+    class = "mapping-step-wrapper",
+    # Section 1: Match Engine Scope & Blocking Criteria
     card(
-      class = "app-card",
+      class = "app-card mapping-scope-card mb-4",
       card_header(
-        div(class = "step-title"),
-        tags$h4("Confirm Fields Mapping")
+        div(
+          class = "d-flex justify-content-between align-items-center flex-wrap gap-2",
+          div(
+            tags$h4(class = "mb-0", tags$span(style = "color: var(--app-forest); margin-right: 6px;", "🎯"), "1. Match Engine Scope & Criteria Configuration"),
+            tags$p(class = "text-muted mb-0", style = "font-size: 0.825rem;", "Select the criteria to evaluate. Only selected criteria will require column mapping below.")
+          ),
+          div(
+            class = "d-flex align-items-center gap-2",
+            actionButton("select_all_fields_btn", "Select All", class = "btn-ghost btn-sm", style = "font-size: 0.8rem; padding: 4px 10px;"),
+            actionButton("reset_std_fields_btn", "Reset Standard", class = "btn-ghost btn-sm", style = "font-size: 0.8rem; padding: 4px 10px;")
+          )
+        )
       ),
       card_body(
-        checkboxGroupInput(
-          "match_fields",
-          "Fields to use for matching:",
-          choices = c(
-            "Partner" = "partner",
-            "ID number" = "hoh_ID_number",
-            "Phone number" = "phone_number",
-            "Head of household name" = "hoh_arabic_name",
-            "Spouse name" = "hoh_spouse_name",
-            "Geography (governorate/district/subdistrict/village)" = "geography"
+        div(
+          class = "match-criteria-container",
+          checkboxGroupInput(
+            "match_fields",
+            label = tags$span(class = "visually-hidden", "Match engine criteria selection"),
+            choiceNames = list(
+              div(
+                class = "match-field-item",
+                div(class = "d-flex align-items-center justify-content-between",
+                  div(class = "d-flex align-items-center gap-2",
+                    tags$span(class = "match-field-icon", "🔑"),
+                    tags$strong(class = "match-field-title", "National ID Number")
+                  ),
+                  tags$span(class = "badge-role-primary", "Primary Blocking")
+                ),
+                div(class = "match-field-desc", "Exact national ID matching (رقم الهوية الوطنية / البطاقة)")
+              ),
+              div(
+                class = "match-field-item",
+                div(class = "d-flex align-items-center justify-content-between",
+                  div(class = "d-flex align-items-center gap-2",
+                    tags$span(class = "match-field-icon", "📱"),
+                    tags$strong(class = "match-field-title", "Phone Number")
+                  ),
+                  tags$span(class = "badge-role-primary", "Primary Blocking")
+                ),
+                div(class = "match-field-desc", "Normalized 9-digit mobile phone matching (رقم الهاتف الأساسي)")
+              ),
+              div(
+                class = "match-field-item",
+                div(class = "d-flex align-items-center justify-content-between",
+                  div(class = "d-flex align-items-center gap-2",
+                    tags$span(class = "match-field-icon", "👤"),
+                    tags$strong(class = "match-field-title", "Head of Household Name")
+                  ),
+                  tags$span(class = "badge-role-fuzzy", "Fuzzy / Token Anchor")
+                ),
+                div(class = "match-field-desc", "Normalized 4-part Arabic name decomposition (اسم رب الأسرة)")
+              ),
+              div(
+                class = "match-field-item",
+                div(class = "d-flex align-items-center justify-content-between",
+                  div(class = "d-flex align-items-center gap-2",
+                    tags$span(class = "match-field-icon", "👥"),
+                    tags$strong(class = "match-field-title", "Spouse Name")
+                  ),
+                  tags$span(class = "badge-role-secondary", "Secondary Verification")
+                ),
+                div(class = "match-field-desc", "Cross-spouse verification to resolve candidate ambiguity (اسم الزوج / الزوجة)")
+              ),
+              div(
+                class = "match-field-item",
+                div(class = "d-flex align-items-center justify-content-between",
+                  div(class = "d-flex align-items-center gap-2",
+                    tags$span(class = "match-field-icon", "📍"),
+                    tags$strong(class = "match-field-title", "Geographic Hierarchy")
+                  ),
+                  tags$span(class = "badge-role-geo", "Spatial Blocking")
+                ),
+                div(class = "match-field-desc", "Admin Levels 1–4: Governorate, District, Subdistrict, Village (الموقع الجغرافي)")
+              ),
+              div(
+                class = "match-field-item",
+                div(class = "d-flex align-items-center justify-content-between",
+                  div(class = "d-flex align-items-center gap-2",
+                    tags$span(class = "match-field-icon", "🏛️"),
+                    tags$strong(class = "match-field-title", "Partner Organization")
+                  ),
+                  tags$span(class = "badge-role-meta", "Metadata Scope")
+                ),
+                div(class = "match-field-desc", "Deduplicate within or across consortium partner organizations (المنظمة الشريكة)")
+              )
+            ),
+            choiceValues = list(
+              "hoh_ID_number",
+              "phone_number",
+              "hoh_arabic_name",
+              "hoh_spouse_name",
+              "geography",
+              "partner"
+            ),
+            selected = c(
+              "hoh_ID_number",
+              "phone_number",
+              "hoh_arabic_name",
+              "hoh_spouse_name",
+              "geography",
+              "partner"
+            )
+          )
+        )
+      )
+    ),
+
+    # Section 2: Field Alignment & Mapping Workbench
+    card(
+      class = "app-card mapping-workbench-card",
+      card_header(
+        div(
+          class = "d-flex justify-content-between align-items-center flex-wrap gap-2",
+          div(
+            tags$h4(class = "mb-0", tags$span(style = "color: var(--app-forest); margin-right: 6px;", "📋"), "2. Column Alignment Workbench"),
+            tags$p(class = "text-muted mb-0", style = "font-size: 0.825rem;", "Align your uploaded spreadsheet headers with CCY master canonical fields.")
           ),
-          selected = c(
-            "partner",
-            "hoh_ID_number",
-            "phone_number",
-            "hoh_arabic_name",
-            "hoh_spouse_name",
-            "geography"
+          uiOutput("mapping_progress_pill")
+        )
+      ),
+      card_body(
+        div(
+          class = "mapping-toolbar-bar d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 pb-3 border-bottom",
+          div(
+            class = "d-flex align-items-center gap-2 flex-wrap",
+            uiOutput("load_preset_ui"),
+            actionButton("save_preset", "💾 Save Preset", class = "btn-secondary btn-sm", style = "padding: 6px 12px; font-size: 0.825rem;")
+          ),
+          div(
+            class = "d-flex align-items-center gap-2 flex-wrap",
+            actionButton("auto_map_btn", "⚡ Auto-Detect Best Matches", class = "btn-secondary btn-sm", style = "padding: 6px 12px; font-size: 0.825rem; font-weight: 600; color: var(--app-forest); border-color: rgba(46, 125, 50, 0.3);"),
+            actionButton("clear_mapping_btn", "↺ Clear All", class = "btn-ghost btn-sm", style = "padding: 6px 10px; font-size: 0.8rem;")
           )
         ),
-        div(
-          class = "d-flex align-items-end flex-wrap", style = "gap: 10px; margin-bottom: 16px;",
-          uiOutput("load_preset_ui"),
-          actionButton("save_preset", "💾 Save as Preset", class = "btn-secondary")
-        ),
         uiOutput("mapping_ui"),
-        actionButton("confirm_mapping", "Confirm mapping", class = "btn-primary mt-3")
+        div(
+          class = "mapping-footer-bar mt-4 pt-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-3",
+          actionButton("back_to_upload_btn", "← Back to Upload", class = "btn-secondary"),
+          div(
+            class = "d-flex align-items-center gap-3 flex-wrap",
+            uiOutput("mapping_validation_hint"),
+            actionButton("confirm_mapping", "Confirm Mapping & Continue ➔", class = "btn-primary")
+          )
+        )
       )
     )
   )
