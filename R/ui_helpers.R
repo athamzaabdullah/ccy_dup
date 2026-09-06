@@ -97,18 +97,26 @@ mapping_step_ui <- function() {
     class = "mapping-step-wrapper",
     # Section 1: Match Engine Scope & Blocking Criteria
     card(
-      class = "app-card mapping-scope-card mb-4",
+      class = "app-card mapping-scope-card",
       card_header(
         div(
-          class = "d-flex justify-content-between align-items-center flex-wrap gap-2",
+          class = "section-header-bar",
           div(
-            tags$h4(class = "mb-0", tags$span(style = "color: var(--app-forest); margin-right: 6px;", "🎯"), "1. Match Engine Scope & Criteria Configuration"),
-            tags$p(class = "text-muted mb-0", style = "font-size: 0.825rem;", "Select the criteria to evaluate. Only selected criteria will require column mapping below.")
+            class = "section-header-content",
+            tags$h4(
+              class = "section-header-title",
+              tags$span(class = "section-header-icon", "🎯"),
+              "1. Match Engine Scope & Criteria Configuration"
+            ),
+            tags$p(
+              class = "section-header-desc",
+              "Select the criteria to evaluate. Only selected criteria will require column mapping below."
+            )
           ),
           div(
-            class = "d-flex align-items-center gap-2",
-            actionButton("select_all_fields_btn", "Select All", class = "btn-ghost btn-sm", style = "font-size: 0.8rem; padding: 4px 10px;"),
-            actionButton("reset_std_fields_btn", "Reset Standard", class = "btn-ghost btn-sm", style = "font-size: 0.8rem; padding: 4px 10px;")
+            class = "section-header-actions",
+            actionButton("select_all_fields_btn", "Select All", class = "btn-ghost btn-sm", style = "font-size: 0.8rem; padding: 5px 12px;"),
+            actionButton("reset_std_fields_btn", "Reset Standard", class = "btn-ghost btn-sm", style = "font-size: 0.8rem; padding: 5px 12px;")
           )
         )
       ),
@@ -121,8 +129,10 @@ mapping_step_ui <- function() {
             choiceNames = list(
               div(
                 class = "match-field-item",
-                div(class = "d-flex align-items-center justify-content-between",
-                  div(class = "d-flex align-items-center gap-2",
+                div(
+                  class = "match-field-header",
+                  div(
+                    class = "match-field-title-group",
                     tags$span(class = "match-field-icon", "🔑"),
                     tags$strong(class = "match-field-title", "National ID Number")
                   ),
@@ -132,8 +142,10 @@ mapping_step_ui <- function() {
               ),
               div(
                 class = "match-field-item",
-                div(class = "d-flex align-items-center justify-content-between",
-                  div(class = "d-flex align-items-center gap-2",
+                div(
+                  class = "match-field-header",
+                  div(
+                    class = "match-field-title-group",
                     tags$span(class = "match-field-icon", "📱"),
                     tags$strong(class = "match-field-title", "Phone Number")
                   ),
@@ -143,8 +155,10 @@ mapping_step_ui <- function() {
               ),
               div(
                 class = "match-field-item",
-                div(class = "d-flex align-items-center justify-content-between",
-                  div(class = "d-flex align-items-center gap-2",
+                div(
+                  class = "match-field-header",
+                  div(
+                    class = "match-field-title-group",
                     tags$span(class = "match-field-icon", "👤"),
                     tags$strong(class = "match-field-title", "Head of Household Name")
                   ),
@@ -154,8 +168,10 @@ mapping_step_ui <- function() {
               ),
               div(
                 class = "match-field-item",
-                div(class = "d-flex align-items-center justify-content-between",
-                  div(class = "d-flex align-items-center gap-2",
+                div(
+                  class = "match-field-header",
+                  div(
+                    class = "match-field-title-group",
                     tags$span(class = "match-field-icon", "👥"),
                     tags$strong(class = "match-field-title", "Spouse Name")
                   ),
@@ -165,8 +181,10 @@ mapping_step_ui <- function() {
               ),
               div(
                 class = "match-field-item",
-                div(class = "d-flex align-items-center justify-content-between",
-                  div(class = "d-flex align-items-center gap-2",
+                div(
+                  class = "match-field-header",
+                  div(
+                    class = "match-field-title-group",
                     tags$span(class = "match-field-icon", "📍"),
                     tags$strong(class = "match-field-title", "Geographic Hierarchy")
                   ),
@@ -176,8 +194,10 @@ mapping_step_ui <- function() {
               ),
               div(
                 class = "match-field-item",
-                div(class = "d-flex align-items-center justify-content-between",
-                  div(class = "d-flex align-items-center gap-2",
+                div(
+                  class = "match-field-header",
+                  div(
+                    class = "match-field-title-group",
                     tags$span(class = "match-field-icon", "🏛️"),
                     tags$strong(class = "match-field-title", "Partner Organization")
                   ),
@@ -212,10 +232,18 @@ mapping_step_ui <- function() {
       class = "app-card mapping-workbench-card",
       card_header(
         div(
-          class = "d-flex justify-content-between align-items-center flex-wrap gap-2",
+          class = "section-header-bar",
           div(
-            tags$h4(class = "mb-0", tags$span(style = "color: var(--app-forest); margin-right: 6px;", "📋"), "2. Column Alignment Workbench"),
-            tags$p(class = "text-muted mb-0", style = "font-size: 0.825rem;", "Align your uploaded spreadsheet headers with CCY master canonical fields.")
+            class = "section-header-content",
+            tags$h4(
+              class = "section-header-title",
+              tags$span(class = "section-header-icon", "📋"),
+              "2. Column Alignment Workbench"
+            ),
+            tags$p(
+              class = "section-header-desc",
+              "Align your uploaded spreadsheet headers with CCY master canonical fields."
+            )
           ),
           uiOutput("mapping_progress_pill")
         )
