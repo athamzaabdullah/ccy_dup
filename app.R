@@ -2178,30 +2178,233 @@ server <- function(input, output, session) {
     }
   })
 
+  # ----------------------------------------------------------------------------
+  # Confirm Fields Mapping: Redesigned Workbench, Auto-Map & Live Previews
+  # ----------------------------------------------------------------------------
+
+  # Quick selection buttons for match criteria scope
+  observeEvent(input$select_all_fields_btn, {
+    updateCheckboxGroupInput(
+      session,
+      "match_fields",
+      selected = c("hoh_ID_number", "phone_number", "hoh_arabic_name", "hoh_spouse_name", "geography", "partner")
+    )
+  })
+
+  observeEvent(input$reset_std_fields_btn, {
+    updateCheckboxGroupInput(
+      session,
+      "match_fields",
+      selected = c("hoh_ID_number", "phone_number", "hoh_arabic_name", "hoh_spouse_name", "geography", "partner")
+    )
+  })
+
+  # Return to upload step
+  observeEvent(input$back_to_upload_btn, {
+    current_step("upload")
+  })
+
+  # Auto-detect best column matches from CCY standard dictionary & aliases
+  observeEvent(input$auto_map_btn, {
+    req(upload_df())
+    cols <- names(upload_df())
+    req_cols <- required_columns()
+    matched_count <- 0
+
+    for (rc in req_cols) {
+      best <- detect_best_column_match(rc, cols)
+      if (!is.null(best) && nzchar(best)) {
+        updateSelectInput(session, paste0("map_", rc), selected = best)
+        matched_count <- matched_count + 1
+      }
+    }
+
+    if (matched_count > 0) {
+      showNotification(
+        paste0("⚡ Auto-detected and aligned ", matched_count, " of ", length(req_cols), " fields based on CCY standard headers."),
+        type = "message"
+      )
+    } else {
+      showNotification(
+        "No automatic matches detected. Please map columns manually or load a saved preset.",
+        type = "warning"
+      )
+    }
+  })
+
+  # Clear all current mappings
+  observeEvent(input$clear_mapping_btn, {
+    req_cols <- required_columns()
+    for (rc in req_cols) {
+      updateSelectInput(session, paste0("map_", rc), selected = "")
+    }
+    showNotification("All field mappings cleared.", type = "message")
+  })
+
+  # Real-time mapping progress indicator pill
+  output$mapping_progress_pill <- renderUI({
+    req_cols <- required_columns()
+    df <- upload_df()
+    if (is.null(req_cols) || length(req_cols) == 0 || is.null(df)) return(NULL)
+
+    total <- length(req_cols)
+    mapped_count <- sum(vapply(req_cols, function(rc) {
+      val <- input[[paste0("map_", rc)]]
+      !is.null(val) && nzchar(trimws(val)) && val %in% names(df)
+    }, logical(1)))
+
+    if (mapped_count == total) {
+      tags$div(
+        class = "mapping-progress-pill pill-complete",
+        tags$span(class = "status-dot dot-success"),
+        tags$strong(paste0("All ", total, " of ", total, " Fields Mapped")),
+        tags$span(class = "pill-tag", "100% Ready")
+      )
+    } else if (mapped_count > 0) {
+      tags$div(
+        class = "mapping-progress-pill pill-partial",
+        tags$span(class = "status-dot dot-warning"),
+        tags$strong(paste0(mapped_count, " of ", total, " Fields Mapped")),
+        tags$span(class = "pill-tag", paste(total - mapped_count, "Remaining"))
+      )
+    } else {
+      tags$div(
+        class = "mapping-progress-pill pill-empty",
+        tags$span(class = "status-dot dot-danger"),
+        tags$strong(paste0("0 of ", total, " Fields Mapped")),
+        tags$span(class = "pill-tag", "Action Required")
+      )
+    }
+  })
+
+  # Bottom validation status text
+  output$mapping_validation_hint <- renderUI({
+    req_cols <- required_columns()
+    df <- upload_df()
+    if (is.null(req_cols) || length(req_cols) == 0 || is.null(df)) return(NULL)
+
+    unmapped <- req_cols[!vapply(req_cols, function(rc) {
+      val <- input[[paste0("map_", rc)]]
+      !is.null(val) && nzchar(trimws(val)) && val %in% names(df)
+    }, logical(1))]
+
+    if (length(unmapped) == 0) {
+      tags$div(
+        class = "mapping-hint-text text-success d-flex align-items-center gap-1",
+        tags$span(style = "font-size: 1rem;", "✓"),
+        tags$span("All required fields are mapped. Ready to proceed to matching parameters.")
+      )
+    } else {
+      tags$div(
+        class = "mapping-hint-text text-muted d-flex align-items-center gap-1",
+        tags$span(style = "font-size: 1rem; color: #D97706;", "⚠️"),
+        tags$span(paste(length(unmapped), "required fields unmapped. Select source columns to continue."))
+      )
+    }
+  })
+
+  # Dynamic sample value preview chips (reactively linked to dropdown changes)
+  observe({
+    req_cols <- required_columns()
+    df <- upload_df()
+    req(df)
+
+    for (rc in req_cols) {
+      local({
+        col_id <- rc
+        output[[paste0("sample_preview_", col_id)]] <- renderUI({
+          sel <- input[[paste0("map_", col_id)]]
+          if (is.null(sel) || !nzchar(trimws(sel)) || !sel %in% names(df)) {
+            tags$div(
+              class = "mapping-preview-wrap status-unmapped",
+              tags$span(class = "badge-status-unmapped", "⚠️ Unmapped"),
+              tags$span(class = "preview-note text-muted", "Select a column")
+            )
+          } else {
+            sample_val <- get_sample_preview_value(df, sel)
+            tags$div(
+              class = "mapping-preview-wrap status-mapped",
+              tags$span(class = "badge-status-mapped", "✓ Mapped"),
+              tags$div(
+                class = "mapping-sample-chip",
+                tags$span(class = "chip-prefix", "Sample:"),
+                tags$span(class = "chip-value", title = sample_val, sample_val)
+              )
+            )
+          }
+        })
+      })
+    }
+  })
+
+  # Main Mapping Workbench UI
   output$mapping_ui <- renderUI({
     req(upload_df())
     cols <- names(upload_df())
     default_map <- list()
 
-    # Smart auto-application: If logged-in partner has a preset, auto-populate from it
+    # Smart auto-application: If logged-in partner has a preset, load default mapping
     partner <- auth$partner_name
     presets <- all_presets()
     if (!is.null(partner) && isTRUE(nzchar(partner)) && partner %in% names(presets)) {
       default_map <- presets[[partner]]
     }
 
-    render_field_select <- function(req_col) {
-      sel_val <- ""
-      if (!is.null(default_map) && length(default_map) > 0 && req_col %in% names(default_map)) {
+    render_mapping_row <- function(req_col) {
+      meta <- get_field_meta(req_col)
+
+      # Preserve existing user selection or fall back to preset or auto-detect
+      current_val <- isolate(input[[paste0("map_", req_col)]])
+      if (!is.null(current_val) && nzchar(current_val) && current_val %in% cols) {
+        sel_val <- current_val
+      } else if (!is.null(default_map) && length(default_map) > 0 && req_col %in% names(default_map) && default_map[[req_col]] %in% cols) {
         sel_val <- default_map[[req_col]]
-        if (is.null(sel_val)) sel_val <- ""
+      } else {
+        auto_match <- detect_best_column_match(req_col, cols)
+        sel_val <- if (!is.null(auto_match)) auto_match else ""
       }
-      selectInput(
-        paste0("map_", req_col),
-        get_field_bilingual_label(req_col),
-        choices = c("", cols),
-        selected = sel_val,
-        width = "100%"
+
+      bilingual_label <- get_field_bilingual_label(req_col)
+
+      tags$div(
+        class = "mapping-matrix-row",
+        # 1. Target Master Canonical Field
+        tags$div(
+          class = "mapping-col-target",
+          tags$div(
+            class = "d-flex align-items-center gap-2 mb-1 flex-wrap",
+            tags$code(class = "canonical-code-pill", req_col),
+            tags$span(class = paste0("badge-role-", meta$role_type), meta$role)
+          ),
+          tags$div(class = "canonical-title", bilingual_label),
+          tags$div(class = "canonical-desc text-muted", meta$description)
+        ),
+        # 2. Flow Directional Arrow
+        tags$div(
+          class = "mapping-col-flow",
+          tags$span(class = "flow-arrow", "⟵", title = "Maps uploaded column to CCY master field", `aria-hidden` = "true")
+        ),
+        # 3. Source Upload Column Select Dropdown
+        tags$div(
+          class = "mapping-col-source",
+          tags$label(
+            `for` = paste0("map_", req_col),
+            class = "visually-hidden",
+            paste("Select uploaded column for", req_col)
+          ),
+          selectInput(
+            paste0("map_", req_col),
+            label = NULL,
+            choices = c("— Select Source Column —" = "", cols),
+            selected = sel_val,
+            width = "100%"
+          )
+        ),
+        # 4. Status Badge & Live Sample Value Chip
+        tags$div(
+          class = "mapping-col-preview",
+          uiOutput(paste0("sample_preview_", req_col))
+        )
       )
     }
 
@@ -2232,21 +2435,33 @@ server <- function(input, output, session) {
       )
     )
 
-    tagList(
+    tags$div(
+      class = "mapping-matrix-container",
+      # Accessible Table Header
+      tags$div(
+        class = "mapping-matrix-header d-none d-md-grid",
+        tags$div(class = "header-target", tags$strong("Target CCY Master Field (الحقل المعياري)")),
+        tags$div(class = "header-flow text-center", tags$strong("")),
+        tags$div(class = "header-source", tags$strong("Source Uploaded Column (العمود المرفوع)")),
+        tags$div(class = "header-preview", tags$strong("Alignment Status & Live Sample (المعاينة الحية)"))
+      ),
       lapply(groups, function(grp) {
         req_subset <- grp$cols[grp$cols %in% required_columns()]
         if (length(req_subset) == 0) return(NULL)
-        
+
         tags$div(
-          class = "mapping-category-card",
+          class = "mapping-category-group mb-3",
           tags$div(
             class = "mapping-category-header",
-            tags$span(paste0(grp$title, " (", grp$title_ar, ")")),
-            tags$span(class = "category-badge-chip", paste(length(req_subset), "fields"))
+            tags$div(
+              class = "d-flex align-items-center gap-2",
+              tags$span(paste0(grp$title, " (", grp$title_ar, ")"))
+            ),
+            tags$span(class = "category-badge-chip", paste(length(req_subset), "active criteria"))
           ),
           tags$div(
             class = "mapping-category-body",
-            lapply(req_subset, render_field_select)
+            lapply(req_subset, render_mapping_row)
           )
         )
       })
