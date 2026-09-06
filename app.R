@@ -41,7 +41,6 @@ options(shiny.error = function(e = NULL, ...) {
 })
 
 source("R/config.R")
-source("R/i18n.R")
 source("R/auth.R")
 source("R/mfa.R")
 source("R/activityinfo.R")
@@ -71,16 +70,6 @@ ui <- fluidPage(
     includeCSS("www/custom.css")
   ),
   tags$script(HTML("
-    // Set document direction and RTL body class dynamically
-    Shiny.addCustomMessageHandler('set_lang_dir', function(msg) {
-      document.documentElement.setAttribute('dir', msg.dir);
-      document.documentElement.setAttribute('lang', msg.lang);
-      if (msg.dir === 'rtl') {
-        $('body').addClass('rtl');
-      } else {
-        $('body').removeClass('rtl');
-      }
-    });
     // Allow Enter to submit the login modal but ensure inputs are committed to Shiny first.
     $(document).on('keydown', function(e) {
       if (e.key !== 'Enter') return;
@@ -164,7 +153,6 @@ server <- function(input, output, session) {
     "geography"
   ))
   last_job_notify <- reactiveVal(NULL)
-  current_lang <- reactiveVal("en")
   presets_trigger <- reactiveVal(0)
   triage_records <- reactiveValues()
   triage_update_trigger <- reactiveVal(0)
@@ -273,74 +261,50 @@ server <- function(input, output, session) {
   })
 
   output$app_title <- renderUI({
-    lang <- current_lang()
     name <- settings_username()
-    base_title <- tr("app_name", lang = lang)
-    if (is.null(name) || !isTRUE(nzchar(name))) return(tags$span(base_title))
-    tags$span(paste0(base_title, " - ", name))
+    if (is.null(name) || !isTRUE(nzchar(name))) return(tags$span(config$app_name))
+    tags$span(paste0(config$app_name, " - ", name))
   })
 
   output$master_freshness_pill <- renderUI({
-    lang <- current_lang()
     snap <- last_master_snapshot()
     if (!is.null(snap) && file.exists(snap)) {
       fi <- file.info(snap)
-      time_txt <- format_relative_time_i18n(fi$mtime, lang = lang)
+      diff_hrs <- round(as.numeric(difftime(Sys.time(), fi$mtime, units = "hours")), 1)
+      time_txt <- if (diff_hrs < 0.1) "Just now" else if (diff_hrs < 1) paste(round(diff_hrs * 60), "m ago") else if (diff_hrs < 24) paste(diff_hrs, "h ago") else paste(round(diff_hrs / 24, 1), "d ago")
       tags$div(
         class = "status-pill status-pill-ready",
         title = paste("Master snapshot cached on disk:", format(fi$mtime, "%Y-%m-%d %H:%M:%S")),
-        tags$span(tr("db_synced", lang = lang, time_txt))
+        tags$span(paste0("🟢 Master DB Synced: ", time_txt, " (Offline Ready)"))
       )
     } else {
       tags$div(
         class = "status-pill status-pill-warn",
         title = "No master database snapshot is cached on this server.",
-        tags$span(tr("db_needed", lang = lang))
+        tags$span("🟡 Master DB: Snapshot Needed")
       )
     }
   })
 
   output$topbar_actions <- renderUI({
-    lang <- current_lang()
     step <- current_step()
     is_settings_or_admin <- step %in% c("settings", "admin")
     show_settings <- !identical(normalize_role(auth$role), "partner_deduplicator")
     show_admin <- isTRUE(can_open_admin_workspace())
-    admin_lbl <- if (isTRUE(is_partner_admin())) tr("btn_users", lang = lang) else tr("btn_admin", lang = lang)
-
+    
     tagList(
-      actionLink("toggle_lang", uiOutput("lang_toggle_btn_ui"), class = "lang-toggle-btn me-2"),
       if (is_settings_or_admin) {
-        actionButton("topbar_back_workflow", tr("btn_back_to_workflow", lang = lang), class = "btn-ghost")
+        actionButton("topbar_back_workflow", "Back to workflow", class = "btn-ghost")
       } else {
         tagList(
-          if (show_settings) actionButton("open_settings", tr("btn_settings", lang = lang), class = "btn-ghost") else NULL,
-          if (show_admin) actionButton("admin_open", admin_lbl, class = "btn-ghost") else NULL
+          if (show_settings) actionButton("open_settings", "Settings", class = "btn-ghost") else NULL,
+          if (show_admin) actionButton("admin_open", admin_button_label(), class = "btn-ghost") else NULL
         )
       },
-      actionButton("logout", tr("btn_logout", lang = lang), class = "btn-danger")
+      actionButton("logout", "Log out", class = "btn-danger")
     )
   })
 
-  output$lang_toggle_btn_ui <- renderUI({
-    if (identical(current_lang(), "en")) "عربي (AR)" else "English (EN)"
-  })
-
-  observe({
-    lang <- current_lang()
-    session$sendCustomMessage("set_lang_dir", list(dir = if (identical(lang, "ar")) "rtl" else "ltr", lang = lang))
-  })
-
-  observeEvent(input$toggle_lang, {
-    new_lang <- if (identical(current_lang(), "en")) "ar" else "en"
-    current_lang(new_lang)
-    session$sendCustomMessage("set_lang_dir", list(dir = if (identical(new_lang, "ar")) "rtl" else "ltr", lang = new_lang))
-    showNotification(
-      if (identical(new_lang, "ar")) "تم تفعيل اللغة العربية والمصطلحات المزدوجة" else "English language mode active",
-      type = "message"
-    )
-  })
-  
   observeEvent(input$topbar_back_workflow, {
     current_step("upload") # Or whatever the logic is to go back to workflow. Wait, we should restore previous step if possible.
   })
@@ -856,9 +820,8 @@ server <- function(input, output, session) {
   })
 
   output$admin_workspace_ui <- renderUI({
-    lang <- current_lang()
     if (!isTRUE(can_open_admin_workspace())) {
-      return(tags$p(style = "color:#b91c1c;", if (identical(lang, "ar")) "إدارة المستخدمين غير متاحة لدورك الحالي." else "User administration is not available for your role."))
+      return(tags$p(style = "color:#b91c1c;", "User administration is not available for your role."))
     }
 
     is_master <- isTRUE(is_ccy_master())
@@ -868,7 +831,7 @@ server <- function(input, output, session) {
     n_active <- sum(users$active, na.rm = TRUE)
 
     user_tab <- nav_panel(
-      title = tags$span(tr("admin_tab_users", lang = lang), tags$span(class = "badge bg-light text-dark ms-1", n_users)),
+      title = tags$span("👥 User Management", tags$span(class = "badge bg-light text-dark ms-1", n_users)),
       div(
         class = "pt-3",
         div(
@@ -879,41 +842,41 @@ server <- function(input, output, session) {
             style = "padding: 18px; border: 1px solid var(--app-border); border-radius: var(--app-radius-md); background: #FFFFFF; height: fit-content;",
             tags$div(
               style = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #F1F5F9;",
-              tags$strong(style = "color: var(--app-forest); font-size: 0.95rem;", if (identical(lang, "ar")) "👤 محرر بيانات الحساب" else "👤 Account Editor"),
-              tags$span(class = "badge bg-light text-muted", if (identical(lang, "ar")) "إنشاء / تحديث" else "Create / Update")
+              tags$strong(style = "color: var(--app-forest); font-size: 0.95rem;", "👤 Account Editor"),
+              tags$span(class = "badge bg-light text-muted", "Create / Update")
             ),
             selectInput(
               "admin_selected_user",
-              if (identical(lang, "ar")) "اختر مستخدماً لتعديل بياناته" else "Select Existing User to Edit",
+              "Select Existing User to Edit",
               choices = c("➕ Create New User" = "", manageable_user_choices()),
               selected = "",
               selectize = FALSE
             ),
-            textInput("admin_user_email", if (identical(lang, "ar")) "البريد الإلكتروني" else "Email Address", placeholder = "officer@partner.ngo"),
-            passwordInput("admin_user_password", if (identical(lang, "ar")) "كلمة المرور" else "Password", placeholder = if (identical(lang, "ar")) "اتركه فارغاً للإبقاء على كلمة المرور الحالية" else "Leave blank to keep existing"),
+            textInput("admin_user_email", "Email Address", placeholder = "officer@partner.ngo"),
+            passwordInput("admin_user_password", "Password", placeholder = "Leave blank to keep existing"),
             if (is_master) {
-              selectInput("admin_user_role", if (identical(lang, "ar")) "الدور الممنوح في النظام" else "Assigned System Role", choices = role_choices, selected = "partner_deduplicator")
+              selectInput("admin_user_role", "Assigned System Role", choices = role_choices, selected = "partner_deduplicator")
             } else {
-              selectInput("admin_user_role", if (identical(lang, "ar")) "الدور الممنوح في النظام" else "Assigned System Role", choices = setNames("partner_deduplicator", "Partner Deduplicator"), selected = "partner_deduplicator")
+              selectInput("admin_user_role", "Assigned System Role", choices = setNames("partner_deduplicator", "Partner Deduplicator"), selected = "partner_deduplicator")
             },
             if (is_master) {
-              selectInput("admin_user_partner", if (identical(lang, "ar")) "المنظمة الشريكة" else "Partner Organization", choices = partner_names(), selected = if (length(partner_names()) >= 1) partner_names()[1] else character(0), selectize = FALSE)
+              selectInput("admin_user_partner", "Partner Organization", choices = partner_names(), selected = if (length(partner_names()) >= 1) partner_names()[1] else character(0), selectize = FALSE)
             } else {
               tagList(
-                tags$label(class = "control-label", if (identical(lang, "ar")) "المنظمة الشريكة" else "Partner Organization"),
+                tags$label(class = "control-label", "Partner Organization"),
                 tags$p(style = "margin-bottom:12px; color:#475569; font-weight:600;", paste0("🏢 ", auth$partner_name))
               )
             },
             tags$div(
               style = "margin-top: 8px; margin-bottom: 14px; padding: 8px 12px; background: #F8FAFC; border-radius: 6px; border: 1px solid #E2E8F0;",
-              checkboxInput("admin_user_active", if (identical(lang, "ar")) "الحساب نشط ومصرح له بالدخول" else "Account Active & Permitted to Login", value = TRUE)
+              checkboxInput("admin_user_active", "Account Active & Permitted to Login", value = TRUE)
             ),
-            actionButton("admin_save_user", if (identical(lang, "ar")) "💾 حفظ حساب المستخدم" else "💾 Save User Account", class = "btn-primary w-100 mb-2"),
+            actionButton("admin_save_user", "💾 Save User Account", class = "btn-primary w-100 mb-2"),
             tags$div(
               style = "display: flex; gap: 6px;",
-              actionButton("admin_clear_user_form", if (identical(lang, "ar")) "🔄 إعادة ضبط" else "🔄 Reset", class = "btn-secondary flex-grow-1", style = "font-size: 0.8rem; padding: 6px 10px;"),
-              actionButton("admin_toggle_user", if (identical(lang, "ar")) "⚡ تبديل الحالة" else "⚡ Toggle", class = "btn-ghost flex-grow-1", style = "font-size: 0.8rem; padding: 6px 10px;"),
-              actionButton("admin_delete_user", if (identical(lang, "ar")) "🗑️ حذف" else "🗑️ Delete", class = "btn-danger flex-grow-1", style = "font-size: 0.8rem; padding: 6px 10px;")
+              actionButton("admin_clear_user_form", "🔄 Reset", class = "btn-secondary flex-grow-1", style = "font-size: 0.8rem; padding: 6px 10px;"),
+              actionButton("admin_toggle_user", "⚡ Toggle", class = "btn-ghost flex-grow-1", style = "font-size: 0.8rem; padding: 6px 10px;"),
+              actionButton("admin_delete_user", "🗑️ Delete", class = "btn-danger flex-grow-1", style = "font-size: 0.8rem; padding: 6px 10px;")
             )
           ),
           # Right: Users Directory Table
@@ -922,10 +885,10 @@ server <- function(input, output, session) {
             style = "padding: 18px; border: 1px solid var(--app-border); border-radius: var(--app-radius-md); background: #FFFFFF;",
             tags$div(
               style = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;",
-              tags$strong(style = "color: var(--app-forest); font-size: 0.95rem;", if (identical(lang, "ar")) "👥 دليل المستخدمين المصرح لهم" else "👥 Authorized Users Directory"),
-              tags$span(style = "font-size: 0.8rem; color: #166534; font-weight: 600;", if (identical(lang, "ar")) paste0("✓ ", n_active, " من أصل ", n_users, " حسابات نشطة") else paste0("✓ ", n_active, " of ", n_users, " accounts active"))
+              tags$strong(style = "color: var(--app-forest); font-size: 0.95rem;", "👥 Authorized Users Directory"),
+              tags$span(style = "font-size: 0.8rem; color: #166534; font-weight: 600;", paste0("✓ ", n_active, " of ", n_users, " accounts active"))
             ),
-            tags$p(style = "color: #64748B; font-size: 0.82rem; margin-bottom: 14px;", if (identical(lang, "ar")) "انقر على أي صف مستخدم في الجدول أدناه لتحميل تفاصيل حسابه إلى المحرر على الجانب." else "Click any user row in the table below to load their account details into the editor on the left."),
+            tags$p(style = "color: #64748B; font-size: 0.82rem; margin-bottom: 14px;", "Click any user row in the table below to load their account details into the editor on the left."),
             DT::DTOutput("admin_users_table")
           )
         )
@@ -933,7 +896,7 @@ server <- function(input, output, session) {
     )
 
     audit_tab <- nav_panel(
-      title = tags$span(tr("admin_tab_audit", lang = lang)),
+      title = tags$span("📋 Download & PII Audit Trail"),
       div(
         class = "pt-3",
         uiOutput("admin_audit_log_ui")
@@ -944,14 +907,14 @@ server <- function(input, output, session) {
 
     if (is_master) {
       partner_tab <- nav_panel(
-        title = tags$span(tr("admin_tab_partners", lang = lang), tags$span(class = "badge bg-light text-dark ms-1", length(partner_names()))),
+        title = tags$span("🏢 Partner Registry", tags$span(class = "badge bg-light text-dark ms-1", length(partner_names()))),
         div(
           class = "pt-3",
           uiOutput("partner_registry_ui")
         )
       )
       backup_tab <- nav_panel(
-        title = tags$span(tr("admin_tab_backups", lang = lang)),
+        title = tags$span("💾 Backup & Recovery"),
         div(
           class = "pt-3",
           uiOutput("admin_backup_ui")
@@ -1871,7 +1834,6 @@ server <- function(input, output, session) {
   })
 
   output$upload_data_health_and_preview_ui <- renderUI({
-    lang <- current_lang()
     err <- upload_error()
     if (!is.null(err) && isTRUE(nzchar(err))) {
       return(
@@ -1879,13 +1841,13 @@ server <- function(input, output, session) {
           class = "empty-state-card",
           style = "border: 2px dashed #EF4444; background: #FEF2F2; padding: 28px 20px;",
           tags$div(class = "empty-state-icon", tags$span(style = "font-size: 2.6rem; color: #DC2626;", "⚠️")),
-          tags$h5(style = "color: #991B1B; font-weight: 700; margin-top: 6px;", if (identical(lang, "ar")) "تنبيه في التحقق من ملف البيانات" else "Spreadsheet Verification Issue"),
+          tags$h5(style = "color: #991B1B; font-weight: 700; margin-top: 6px;", "Spreadsheet Verification Issue"),
           tags$p(style = "color: #7F1D1D; font-size: 0.88rem; max-width: 55ch; margin-bottom: 16px; font-weight: 500;", err),
           tags$div(
             class = "empty-state-features",
-            tags$div(class = "feature-pill", style = "background:#FFF; color:#991B1B; border-color:#FCA5A5;", if (identical(lang, "ar")) "💡 تنبيه: تأكد من احتواء الملف على ترويسات أعمدة واضحة (مثل: الاسم، الهاتف، رقم الهوية، المديرية)" else "💡 Tip: Ensure file has clear header columns (e.g., Name, Phone, ID, District)"),
-            tags$div(class = "feature-pill", style = "background:#FFF; color:#991B1B; border-color:#FCA5A5;", if (identical(lang, "ar")) "💡 تنبيه: الصيغ المدعومة هي .xlsx و .xls و .csv" else "💡 Tip: Supported file extensions are .xlsx, .xls, and .csv"),
-            tags$div(class = "feature-pill", style = "background:#FFF; color:#991B1B; border-color:#FCA5A5;", if (identical(lang, "ar")) "💡 تنبيه: يمكنك تحميل القالب القياسي والمقارنة معه" else "💡 Tip: Download and compare against the CCY standard template on the left")
+            tags$div(class = "feature-pill", style = "background:#FFF; color:#991B1B; border-color:#FCA5A5;", "💡 Tip: Ensure file has clear header columns (e.g., Name, Phone, ID, District)"),
+            tags$div(class = "feature-pill", style = "background:#FFF; color:#991B1B; border-color:#FCA5A5;", "💡 Tip: Supported file extensions are .xlsx, .xls, and .csv"),
+            tags$div(class = "feature-pill", style = "background:#FFF; color:#991B1B; border-color:#FCA5A5;", "💡 Tip: Download and compare against the CCY standard template on the left")
           )
         )
       )
@@ -1897,13 +1859,13 @@ server <- function(input, output, session) {
         tags$div(
           class = "empty-state-card",
           tags$div(class = "empty-state-icon", tags$span(style = "font-size: 2.2rem; color: var(--app-sea);", "📁")),
-          tags$h5(tr("no_file_uploaded_title", lang = lang)),
-          tags$p(tr("no_file_uploaded_desc", lang = lang)),
+          tags$h5("No spreadsheet uploaded yet"),
+          tags$p("Upload an Excel (.xlsx/.xls) or CSV partner list on the left to verify record health, run automated hygiene audits, and preview rows."),
           tags$div(
             class = "empty-state-features",
-            tags$div(class = "feature-pill", tags$strong(if (identical(lang, "ar")) "⚡ فحص فوري: " else "⚡ Instant Health Check: "), tr("feature_instant_health", lang = lang)),
-            tags$div(class = "feature-pill", tags$strong(if (identical(lang, "ar")) "🛡️ تدقيق جودة البيانات: " else "🛡️ Data Hygiene Audits: "), tr("feature_data_hygiene", lang = lang)),
-            tags$div(class = "feature-pill", tags$strong(if (identical(lang, "ar")) "🔒 حماية وخصوصية البيانات: " else "🔒 Data Protection: "), tr("feature_data_protection", lang = lang))
+            tags$div(class = "feature-pill", tags$strong("⚡ Instant Health Check: "), "Coverage analysis for IDs & phone numbers"),
+            tags$div(class = "feature-pill", tags$strong("🛡️ Data Hygiene Audits: "), "Automatic scans for scientific notation (e.g. 7.71E+08), empty rows, duplicate headers, and placeholder sequences"),
+            tags$div(class = "feature-pill", tags$strong("🔒 Data Protection: "), "Zero external transmission; processed in-memory")
           )
         )
       )
@@ -1958,32 +1920,32 @@ server <- function(input, output, session) {
         style = "display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: var(--app-radius-xs); margin-bottom: 12px;",
         tags$div(
           tags$strong(style = "color: #166534; font-size: 0.88rem;", paste0("📄 ", fname)),
-          tags$span(style = "color: #15803D; font-size: 0.78rem; margin-left: 8px;", paste("(", format(n_records, big.mark = ","), if (identical(lang, "ar")) " سجل × " else " rows × ", length(cols), if (identical(lang, "ar")) " عمود)" else " columns)"))
+          tags$span(style = "color: #15803D; font-size: 0.78rem; margin-left: 8px;", paste("(", format(n_records, big.mark = ","), " rows × ", length(cols), " columns)"))
         ),
-        tags$span(class = "status-pill status-pill-ready", tr("file_verified", lang = lang))
+        tags$span(class = "status-pill status-pill-ready", "✓ File Verified")
       ),
 
       tags$div(
         class = "health-kpi-grid",
         tags$div(
           class = "health-kpi-chip kpi-good",
-          tags$span(class = "kpi-label", tr("kpi_total_records", lang = lang)),
+          tags$span(class = "kpi-label", "Total Records"),
           tags$span(class = "kpi-value", format(n_records, big.mark = ","))
         ),
         tags$div(
           class = paste("health-kpi-chip", if (id_pct >= 85) "kpi-good" else "kpi-warn"),
-          tags$span(class = "kpi-label", tr("kpi_id_coverage", lang = lang)),
-          tags$span(class = "kpi-value", if (!is.null(id_col)) paste0(id_pct, "%") else tr("unmapped", lang = lang))
+          tags$span(class = "kpi-label", "National ID Coverage"),
+          tags$span(class = "kpi-value", if (!is.null(id_col)) paste0(id_pct, "%") else "Unmapped")
         ),
         tags$div(
           class = paste("health-kpi-chip", if (phone_pct >= 80) "kpi-good" else "kpi-warn"),
-          tags$span(class = "kpi-label", tr("kpi_phone_coverage", lang = lang)),
-          tags$span(class = "kpi-value", if (!is.null(phone_col)) paste0(phone_pct, "%") else tr("unmapped", lang = lang))
+          tags$span(class = "kpi-label", "Phone Coverage"),
+          tags$span(class = "kpi-value", if (!is.null(phone_col)) paste0(phone_pct, "%") else "Unmapped")
         ),
         tags$div(
           class = paste("health-kpi-chip", if (dup_ids == 0) "kpi-good" else "kpi-warn"),
-          tags$span(class = "kpi-label", tr("kpi_dup_ids", lang = lang)),
-          tags$span(class = "kpi-value", if (dup_ids == 0) tr("clean_zero", lang = lang) else tr("found_count", lang = lang, dup_ids))
+          tags$span(class = "kpi-label", "Raw Duplicate IDs"),
+          tags$span(class = "kpi-value", if (dup_ids == 0) "0 (Clean)" else paste(dup_ids, "Found"))
         )
       ),
 
@@ -1995,12 +1957,12 @@ server <- function(input, output, session) {
           tags$div(
             class = "hygiene-title",
             tags$span(style = "font-size: 1.15rem;", "🛡️"),
-            tags$span(tr("hygiene_box_title", lang = lang))
+            tags$span("Pre-Upload Data Hygiene & Quality Audits")
           ),
           tags$span(
             class = paste0("badge ", if (length(warn_list) == 0) "bg-success" else "bg-warning text-dark"),
             style = "font-size: 0.74rem; padding: 4px 10px; border-radius: 12px; font-weight: 600;",
-            if (length(warn_list) == 0) tr("hygiene_all_passed", lang = lang) else tr("hygiene_warnings_count", lang = lang, length(warn_list))
+            if (length(warn_list) == 0) "✓ All 4 Hygiene Audits Passed" else paste0("⚠️ ", length(warn_list), " Quality Notice(s)")
           )
         ),
         tags$div(
@@ -2013,12 +1975,12 @@ server <- function(input, output, session) {
               class = "hygiene-card",
               tags$div(
                 class = "hygiene-card-header",
-                tags$div(class = "hygiene-card-name", tags$span("🔬"), tr("audit_sci_title", lang = lang)),
+                tags$div(class = "hygiene-card-name", tags$span("🔬"), "Scientific Format"),
                 tags$span(class = paste("hygiene-badge", if (is_pass) "hygiene-badge-pass" else "hygiene-badge-warn"),
-                          if (is_pass) tr("audit_sci_clean", lang = lang) else if (!is.null(c_sci)) c_sci$badge else "Corrupted")
+                          if (is_pass) "✓ Clean" else if (!is.null(c_sci)) c_sci$badge else "Corrupted")
               ),
-              tags$div(class = "hygiene-card-label", if (identical(lang, "ar")) tr("audit_sci_label", lang = lang) else if (!is.null(c_sci)) c_sci$label else "No exponential numbers"),
-              tags$div(class = "hygiene-card-detail", if (identical(lang, "ar")) tr("audit_sci_detail", lang = lang) else if (!is.null(c_sci)) c_sci$detail else "Guarantees 9-digit phones and 11-digit IDs are intact.")
+              tags$div(class = "hygiene-card-label", if (!is.null(c_sci)) c_sci$label else "No exponential numbers"),
+              tags$div(class = "hygiene-card-detail", if (!is.null(c_sci)) c_sci$detail else "Guarantees 9-digit phones and 11-digit IDs are intact.")
             )
           },
           # 2. Empty Row Removal
@@ -2029,12 +1991,12 @@ server <- function(input, output, session) {
               class = "hygiene-card",
               tags$div(
                 class = "hygiene-card-header",
-                tags$div(class = "hygiene-card-name", tags$span("🧹"), tr("audit_empty_title", lang = lang)),
+                tags$div(class = "hygiene-card-name", tags$span("🧹"), "Empty Row Audit"),
                 tags$span(class = paste("hygiene-badge", if (is_pass) "hygiene-badge-pass" else "hygiene-badge-info"),
-                          if (is_pass) tr("audit_empty_clean", lang = lang) else if (!is.null(c_emp)) c_emp$badge else "Cleaned")
+                          if (is_pass) "✓ 0 Blank" else if (!is.null(c_emp)) c_emp$badge else "Cleaned")
               ),
-              tags$div(class = "hygiene-card-label", if (identical(lang, "ar")) tr("audit_empty_label", lang = lang) else if (!is.null(c_emp)) c_emp$label else "Blank rows auto-pruned"),
-              tags$div(class = "hygiene-card-detail", if (identical(lang, "ar")) tr("audit_empty_detail", lang = lang) else if (!is.null(c_emp)) c_emp$detail else "Empty rows pruned to prevent indexing offset.")
+              tags$div(class = "hygiene-card-label", if (!is.null(c_emp)) c_emp$label else "Blank rows auto-pruned"),
+              tags$div(class = "hygiene-card-detail", if (!is.null(c_emp)) c_emp$detail else "Empty rows pruned to prevent indexing offset.")
             )
           },
           # 3. Header Integrity
@@ -2045,12 +2007,12 @@ server <- function(input, output, session) {
               class = "hygiene-card",
               tags$div(
                 class = "hygiene-card-header",
-                tags$div(class = "hygiene-card-name", tags$span("📑"), tr("audit_header_title", lang = lang)),
+                tags$div(class = "hygiene-card-name", tags$span("📑"), "Header Integrity"),
                 tags$span(class = paste("hygiene-badge", if (is_pass) "hygiene-badge-pass" else "hygiene-badge-warn"),
-                          if (is_pass) tr("audit_header_clean", lang = lang) else if (!is.null(c_hdr)) c_hdr$badge else "Duplicates")
+                          if (is_pass) "✓ All Unique" else if (!is.null(c_hdr)) c_hdr$badge else "Duplicates")
               ),
-              tags$div(class = "hygiene-card-label", if (identical(lang, "ar")) tr("audit_header_label", lang = lang) else if (!is.null(c_hdr)) c_hdr$label else "Unique column headers"),
-              tags$div(class = "hygiene-card-detail", if (identical(lang, "ar")) tr("audit_header_detail", lang = lang) else if (!is.null(c_hdr)) c_hdr$detail else "Prevents column collisions during mapping.")
+              tags$div(class = "hygiene-card-label", if (!is.null(c_hdr)) c_hdr$label else "Unique column headers"),
+              tags$div(class = "hygiene-card-detail", if (!is.null(c_hdr)) c_hdr$detail else "Prevents column collisions during mapping.")
             )
           },
           # 4. Dummy & Placeholder Filter
@@ -2061,12 +2023,12 @@ server <- function(input, output, session) {
               class = "hygiene-card",
               tags$div(
                 class = "hygiene-card-header",
-                tags$div(class = "hygiene-card-name", tags$span("🛡️"), tr("audit_dummy_title", lang = lang)),
+                tags$div(class = "hygiene-card-name", tags$span("🛡️"), "Placeholder Scan"),
                 tags$span(class = paste("hygiene-badge", if (is_pass) "hygiene-badge-pass" else "hygiene-badge-warn"),
-                          if (is_pass) tr("audit_dummy_clean", lang = lang) else if (!is.null(c_plc)) c_plc$badge else "Flagged")
+                          if (is_pass) "✓ Clean" else if (!is.null(c_plc)) c_plc$badge else "Flagged")
               ),
-              tags$div(class = "hygiene-card-label", if (identical(lang, "ar")) tr("audit_dummy_label", lang = lang) else if (!is.null(c_plc)) c_plc$label else "Dummy placeholder filter"),
-              tags$div(class = "hygiene-card-detail", if (identical(lang, "ar")) tr("audit_dummy_detail", lang = lang) else if (!is.null(c_plc)) c_plc$detail else "Excludes generic values (e.g. 0000) from exact matching.")
+              tags$div(class = "hygiene-card-label", if (!is.null(c_plc)) c_plc$label else "Dummy placeholder filter"),
+              tags$div(class = "hygiene-card-detail", if (!is.null(c_plc)) c_plc$detail else "Excludes generic values (e.g. 0000) from exact matching.")
             )
           }
         )
@@ -2078,7 +2040,7 @@ server <- function(input, output, session) {
           tags$div(
             class = "health-alert health-alert-warning",
             style = "border-left: 4px solid #D97706; background: #FFFBEB; margin-bottom: 8px;",
-            tags$strong(if (identical(lang, "ar")) "⚠️ ملاحظة جودة:" else "⚠️ Quality Notice:"),
+            tags$strong("⚠️ Quality Notice:"),
             tags$span(w)
           )
         })
@@ -2086,35 +2048,35 @@ server <- function(input, output, session) {
       if (dup_ids > 0) {
         tags$div(
           class = "health-alert health-alert-warning",
-          tags$strong(if (identical(lang, "ar")) "⚠️ تحذير:" else "⚠️ Warning:"),
-          tags$span(if (identical(lang, "ar")) paste("تم اكتشاف", dup_ids, "رقم هوية مكرر في الملف المرفوع. سيتم فحص وتحديد التكرارات الداخلية أثناء المطابقة.") else paste(dup_ids, "duplicate National ID(s) detected within the raw upload file. Internal duplicates will be identified during matching."))
+          tags$strong("⚠️ Warning:"),
+          tags$span(paste(dup_ids, "duplicate National ID(s) detected within the raw upload file. Internal duplicates will be identified during matching."))
         )
       },
       if (short_phones > 0) {
         tags$div(
           class = "health-alert health-alert-info",
-          tags$strong(if (identical(lang, "ar")) "ℹ️ إشعار:" else "ℹ️ Notice:"),
-          tags$span(if (identical(lang, "ar")) paste(short_phones, "رقم هاتف يحتوي على أقل من 9 أرقام وسيتم توحيد صيغتها تلقائياً.") else paste(short_phones, "phone number(s) have fewer than 9 digits and will be normalized."))
+          tags$strong("ℹ️ Notice:"),
+          tags$span(paste(short_phones, "phone number(s) have fewer than 9 digits and will be normalized."))
         )
       },
       if (!is.null(id_col) && id_pct < 80) {
         tags$div(
           class = "health-alert health-alert-warning",
-          tags$strong(if (identical(lang, "ar")) "⚠️ تنبيه:" else "⚠️ Advisory:"),
-          tags$span(if (identical(lang, "ar")) paste0("نسبة اكتمال أرقام الهويات منخفضة (", id_pct, "%). سيعتمد محرك المطابقة على مطابقة الأسماء وأرقام الهواتف.") else paste0("National ID coverage is low (", id_pct, "%). The deduplication engine will prioritize Name and Phone fuzzy matching."))
+          tags$strong("⚠️ Advisory:"),
+          tags$span(paste0("National ID coverage is low (", id_pct, "%). The deduplication engine will prioritize Name and Phone fuzzy matching."))
         )
       },
       if (dup_ids == 0 && (is.null(id_col) || id_pct >= 80) && (is.null(phone_col) || phone_pct >= 80)) {
         tags$div(
           class = "health-alert health-alert-success",
-          tags$strong(if (identical(lang, "ar")) "✓ فحص الجودة:" else "✓ Quality Check:"),
-          tags$span(if (identical(lang, "ar")) "تغطية ممتازة للحقول الأساسية. بيانات الملف سليمة وجاهزة لمطابقة الحقول." else "High field coverage detected. Dataset is healthy and ready for column mapping.")
+          tags$strong("✓ Quality Check:"),
+          tags$span("High field coverage detected. Dataset is healthy and ready for column mapping.")
         )
       },
 
       tags$div(
         style = "display: flex; justify-content: flex-end; margin-top: 16px;",
-        actionButton("confirm_upload_health_btn", if (identical(lang, "ar")) "الانتقال إلى الخطوة 2: تأكيد مطابقة الحقول ➔" else "Proceed to Step 2: Confirm Mapping ➔", class = "btn-primary")
+        actionButton("confirm_upload_health_btn", "Proceed to Step 2: Confirm Mapping ➔", class = "btn-primary")
       )
     )
   })
@@ -2492,13 +2454,12 @@ server <- function(input, output, session) {
   # Interactive Guided Stepper: replaces simple breadcrumb links with a rich visual stepper.
   # When a job is running, navigation is locked and the cancel button is used to interrupt.
   output$breadcrumb_nav <- renderUI({
-    lang <- current_lang()
     steps <- list(
-      upload = list(title = tr("step_upload_title", lang = lang), desc = tr("step_upload_desc", lang = lang)),
-      mapping = list(title = tr("step_mapping_title", lang = lang), desc = tr("step_mapping_desc", lang = lang)),
-      strategy = list(title = tr("step_strategy_title", lang = lang), desc = tr("step_strategy_desc", lang = lang)),
-      matching = list(title = tr("step_matching_title", lang = lang), desc = tr("step_matching_desc", lang = lang)),
-      results = list(title = tr("step_results_title", lang = lang), desc = tr("step_results_desc", lang = lang))
+      upload = list(title = "Upload & Verify", desc = "Data Hygiene"),
+      mapping = list(title = "Map Columns", desc = "Field Matching"),
+      strategy = list(title = "Configure", desc = "Rules & Thresholds"),
+      matching = list(title = "Run Matching", desc = "Pairwise Engine"),
+      results = list(title = "Results", desc = "Review & Export")
     )
     cur <- current_step()
     job <- job_status()
@@ -2516,10 +2477,10 @@ server <- function(input, output, session) {
         tags$div(
           class = "d-flex align-items-center justify-content-between",
           tags$div(
-            tags$strong(style = "color: var(--app-forest); font-size: 1rem;", tr("system_settings", lang = lang)),
-            tags$span(style = "color: #64748B; font-size: 0.85rem; margin-left: 8px;", paste0("— ", tr("settings_area", lang = lang)))
+            tags$strong(style = "color: var(--app-forest); font-size: 1rem;", "System Settings"),
+            tags$span(style = "color: #64748B; font-size: 0.85rem; margin-left: 8px;", "— Settings Area")
           ),
-          actionButton("close_settings", if (identical(lang, "ar")) "← العودة إلى مسار العمل" else "← Back to Workflow", class = "btn-secondary btn-sm")
+          actionButton("close_settings", "← Back to Workflow", class = "btn-secondary btn-sm")
         )
       )
     }
@@ -2535,7 +2496,7 @@ server <- function(input, output, session) {
         can_navigate <- is_completed && !isTRUE(running)
 
         status_class <- if (is_active) "active" else if (is_completed) "completed" else "pending"
-        badge_text <- if (is_active) tr("badge_current", lang = lang) else if (is_completed) tr("badge_done", lang = lang) else tr("badge_pending", lang = lang)
+        badge_text <- if (is_active) "Current" else if (is_completed) "Done" else "Pending"
         indicator_content <- if (is_completed) "✓" else as.character(i)
 
         content <- tagList(
@@ -2736,7 +2697,6 @@ server <- function(input, output, session) {
   })
 
   output$run_match_button_ui <- renderUI({
-    lang <- current_lang()
     job <- job_status()
     running <- !is.null(job) && job$status %in% c("queued", "running")
     completed <- !is.null(job) && job$status == "completed"
@@ -2748,21 +2708,20 @@ server <- function(input, output, session) {
         class = "btn btn-primary disabled btn-matching-running",
         disabled = "disabled",
         tags$span(class = "spinner-border spinner-border-sm me-2", role = "status", `aria-hidden` = "true"),
-        tr("btn_matching_progress", lang = lang)
+        "Matching in progress..."
       )
     } else if (completed) {
-      actionButton("run_match", tr("btn_rerun_matching", lang = lang), class = "btn-primary")
+      actionButton("run_match", "Re-run matching", class = "btn-primary")
     } else {
-      actionButton("run_match", tr("btn_run_matching", lang = lang), class = "btn-primary")
+      actionButton("run_match", "Run matching", class = "btn-primary")
     }
   })
 
   output$cancel_button <- renderUI({
-    lang <- current_lang()
     job <- job_status()
     running <- !is.null(job) && job$status %in% c("queued", "running")
     class <- if (running) "btn-danger" else "btn-danger disabled"
-    actionButton("cancel_job", tr("btn_stop_job", lang = lang), class = class, disabled = !running)
+    actionButton("cancel_job", "Stop & start over", class = class, disabled = !running)
   })
 
   output$status_ui <- renderUI({
@@ -3341,28 +3300,25 @@ server <- function(input, output, session) {
     n_med <- nrow(medium_conf_raw())
     n_internal <- nrow(internal_dups_raw())
 
-    lang <- current_lang()
     tags$div(
-      tags$p(style = "font-size: 0.85rem; margin-bottom: 6px;", tags$strong(if (identical(lang, "ar")) "الملف: " else "File: "), filename),
-      tags$p(style = "font-size: 0.85rem; margin-bottom: 6px;", tags$strong(if (identical(lang, "ar")) "وقت الاكتمال: " else "Completed: "), format(Sys.time(), "%Y-%m-%d %H:%M")),
-      tags$p(style = "font-size: 0.85rem; margin-bottom: 6px;", tags$strong(tr("total_identified", lang = lang)), paste(n_high + n_med + n_internal, tr("potential_duplicates", lang = lang))),
-      tags$p(style = "font-size: 0.78rem; color:#64748B;", tr("export_dossier_desc", lang = lang))
+      tags$p(style = "font-size: 0.85rem; margin-bottom: 6px;", tags$strong("File: "), filename),
+      tags$p(style = "font-size: 0.85rem; margin-bottom: 6px;", tags$strong("Completed: "), format(Sys.time(), "%Y-%m-%d %H:%M")),
+      tags$p(style = "font-size: 0.85rem; margin-bottom: 6px;", tags$strong("Total Identified: "), paste(n_high + n_med + n_internal, "potential duplicates")),
+      tags$p(style = "font-size: 0.78rem; color:#64748B;", "The exported Excel dossier contains all executive summary metrics, high confidence pairs, medium review queue, internal duplicates, and run metadata.")
     )
   })
 
   output$export_button <- renderUI({
-    lang <- current_lang()
     job <- job_status()
     ready <- !is.null(job) && job$status == "completed"
     class <- if (ready) "btn-secondary" else "btn-secondary disabled"
-    downloadButton("export_results", tr("btn_export_results", lang = lang), class = class, disabled = !ready)
+    downloadButton("export_results", "Export results", class = class, disabled = !ready)
   })
 
   output$export_status_ui <- renderUI({
-    lang <- current_lang()
     job <- job_status()
     if (is.null(job) || job$status != "completed") {
-      return(tags$p(style = "color:#6b7280; margin-top:8px;", tr("export_will_enable", lang = lang)))
+      return(tags$p(style = "color:#6b7280; margin-top:8px;", "Export will be enabled once matching completes."))
     }
     status <- export_status()
     if (!isTRUE(nzchar(status))) return(NULL)
@@ -3454,15 +3410,14 @@ server <- function(input, output, session) {
 
   output$step_label <- renderUI({
     step <- current_step()
-    lang <- current_lang()
-    labels <- list(
-      upload = if (identical(lang, "ar")) "الخطوة 1 من 5" else "Step 1 of 5",
-      mapping = if (identical(lang, "ar")) "الخطوة 2 من 5" else "Step 2 of 5",
-      strategy = if (identical(lang, "ar")) "الخطوة 3 من 5" else "Step 3 of 5",
-      matching = if (identical(lang, "ar")) "الخطوة 4 من 5" else "Step 4 of 5",
-      results = if (identical(lang, "ar")) "الخطوة 5 من 5" else "Step 5 of 5",
-      settings = tr("settings_header", lang = lang),
-      admin = tr("admin_header_title", lang = lang)
+    labels <- c(
+      upload = "Step 1 of 5",
+      mapping = "Step 2 of 5",
+      strategy = "Step 3 of 5",
+      matching = "Step 4 of 5",
+      results = "Step 5 of 5",
+      settings = "Settings",
+      admin = "User Administration"
     )
     # Defensive: ensure step is a valid name
     if (is.null(step) || !is.character(step) || length(step) != 1 || !(step %in% names(labels))) {
@@ -3473,33 +3428,21 @@ server <- function(input, output, session) {
 
   output$step_ui <- renderUI({
     step <- current_step()
-    lang <- current_lang()
     valid_steps <- c("upload", "mapping", "strategy", "matching", "results", "settings", "admin")
     if (is.null(step) || !is.character(step) || length(step) != 1 || !(step %in% valid_steps)) {
       step <- "upload"
     }
     switch(step,
-      upload = upload_step_ui(can_fetch_master = isTRUE(can_fetch_master()), lang = lang),
-      mapping = mapping_step_ui(
-        lang = lang,
-        selected_fields = isolate(input$match_fields %||% match_fields())
-      ),
-      strategy = strategy_step_ui(
-        lang = lang,
-        high_val = isolate(input$threshold_high %||% fuzzy_high_threshold() %||% 90),
-        med_val = isolate(input$threshold_medium %||% fuzzy_medium_threshold() %||% 75),
-        max_cand_val = isolate(input$max_candidates %||% max_candidates() %||% 500),
-        filter_mpca_val = isolate(input$filter_recent_mpca %||% filter_recent_mpca() %||% FALSE),
-        mpca_months_val = isolate(input$mpca_window_months %||% mpca_window_months() %||% 6)
-      ),
-      matching = matching_step_ui(lang = lang),
+      upload = upload_step_ui(can_fetch_master = isTRUE(can_fetch_master())),
+      mapping = mapping_step_ui(),
+      strategy = strategy_step_ui(),
+      matching = matching_step_ui(),
       settings = settings_step_ui(
         can_edit_token = isTRUE(can_edit_token()),
-        can_edit_form_id = isTRUE(can_edit_form_id()),
-        lang = lang
+        can_edit_form_id = isTRUE(can_edit_form_id())
       ),
-      admin = admin_step_ui(lang = lang),
-      results = results_step_ui(lang = lang)
+      admin = admin_step_ui(),
+      results = results_step_ui()
     )
   })
 }
