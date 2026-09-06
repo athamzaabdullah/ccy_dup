@@ -45,10 +45,7 @@ main_ui <- function(app_name, show_admin = FALSE, admin_label = "Admin", show_se
         uiOutput("topbar_actions")
       )
     ),
-    div(
-      class = "stepper-container",
-      uiOutput("breadcrumb_nav")
-    ),
+    uiOutput("stepper_container_ui"),
     div(class = "step-content", uiOutput("step_ui"))
   )
 }

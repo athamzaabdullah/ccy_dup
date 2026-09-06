@@ -2455,6 +2455,16 @@ server <- function(input, output, session) {
     current_step("matching")
   })
 
+  # Dynamic Stepper Container: suppressed entirely in admin area to avoid duplicate headers
+  output$stepper_container_ui <- renderUI({
+    cur <- current_step()
+    if (identical(cur, "admin")) return(NULL)
+    div(
+      class = "stepper-container",
+      uiOutput("breadcrumb_nav")
+    )
+  })
+
   # Interactive Guided Stepper: replaces simple breadcrumb links with a rich visual stepper.
   # When a job is running, navigation is locked and the cancel button is used to interrupt.
   output$breadcrumb_nav <- renderUI({
@@ -2470,15 +2480,19 @@ server <- function(input, output, session) {
     running <- !is.null(job) && job$status %in% c("queued", "running")
     cur_idx <- match(cur, names(steps))
 
-    # If in settings or admin, show clear administration header
+    # If in admin, suppress stepper navigation entirely — the Admin Control Center has its own dedicated header
+    if (identical(cur, "admin")) {
+      return(NULL)
+    }
+
+    # If in settings, show settings header
     if (is.na(cur_idx)) {
-      label <- if (cur == "admin") "User Administration" else "System Settings"
       return(
         tags$div(
           class = "d-flex align-items-center justify-content-between",
           tags$div(
-            tags$strong(style = "color: var(--app-forest); font-size: 1rem;", label),
-            tags$span(style = "color: #64748B; font-size: 0.85rem; margin-left: 8px;", "— Administration Area")
+            tags$strong(style = "color: var(--app-forest); font-size: 1rem;", "System Settings"),
+            tags$span(style = "color: #64748B; font-size: 0.85rem; margin-left: 8px;", "— Settings Area")
           ),
           actionButton("close_settings", "← Back to Workflow", class = "btn-secondary btn-sm")
         )
