@@ -193,4 +193,26 @@ test_that("check_upload_hygiene detects scientific notation, blank rows, and pla
   warn_text <- paste(res$warnings, collapse = " ")
   expect_true(grepl("scientific notation", warn_text, ignore.case = TRUE))
   expect_true(grepl("empty row", warn_text, ignore.case = TRUE))
+
+  # Test structured checks list
+  expect_true(is.list(res$checks))
+  expect_equal(res$checks$sci_notation$status, "warn")
+  expect_equal(res$checks$empty_rows$status, "info")
+  expect_equal(res$checks$dup_headers$status, "pass")
+
+  # Clean dataset checks
+  clean_df <- data.frame(
+    "Full Name" = c("Ahmed Ali", "Khaled Salem"),
+    "Phone" = c("771234567", "779876543"),
+    "National ID" = c("5010454023", "1020304050"),
+    check.names = FALSE,
+    stringsAsFactors = FALSE
+  )
+  clean_res <- check_upload_hygiene(clean_df)
+  expect_equal(clean_res$issue_count, 0)
+  expect_equal(clean_res$checks$sci_notation$status, "pass")
+  expect_equal(clean_res$checks$empty_rows$status, "pass")
+  expect_equal(clean_res$checks$dup_headers$status, "pass")
+  expect_equal(clean_res$checks$placeholders$status, "pass")
 })
+

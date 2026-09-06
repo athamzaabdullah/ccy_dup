@@ -1055,3 +1055,231 @@ body {
   font-size: 0.72rem;
   font-weight: 700;
 }
+
+/* ==========================================================================
+   22. Pre-Upload Data Hygiene & Quality Checks System
+   ========================================================================== */
+.hygiene-box {
+  background: #FFFFFF;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  box-shadow: var(--app-shadow-xs);
+}
+
+.hygiene-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.hygiene-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--app-forest);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hygiene-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.hygiene-card {
+  padding: 10px 12px;
+  border-radius: var(--app-radius-xs);
+  border: 1px solid var(--app-border);
+  background: #FAFAFA;
+  transition: all 0.15s ease;
+}
+
+.hygiene-card:hover {
+  border-color: var(--app-border-strong);
+  background: #FFFFFF;
+}
+
+.hygiene-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.hygiene-card-name {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--app-text);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.hygiene-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.hygiene-badge-pass {
+  background: #DCFCE7;
+  color: #15803D;
+  border: 1px solid #BBF7D0;
+}
+
+.hygiene-badge-warn {
+  background: #FEF3C7;
+  color: #B45309;
+  border: 1px solid #FDE68A;
+}
+
+.hygiene-badge-info {
+  background: #E0F2FE;
+  color: #0369A1;
+  border: 1px solid #BAE6FD;
+}
+
+.hygiene-card-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 2px;
+}
+
+.hygiene-card-detail {
+  font-size: 0.71rem;
+  color: var(--app-text-muted);
+  line-height: 1.35;
+}
+
+/* ==========================================================================
+   23. Modern Admin Workspace Design
+   ========================================================================== */
+.admin-wrap {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.admin-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  background: #FFFFFF;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  margin-bottom: 20px;
+  box-shadow: var(--app-shadow-xs);
+}
+
+.admin-header-title h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--app-forest);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-header-title p {
+  margin: 2px 0 0;
+  font-size: 0.82rem;
+  color: var(--app-text-muted);
+}
+
+.admin-card-surface {
+  background: #FFFFFF;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  padding: 20px;
+  box-shadow: var(--app-shadow-xs);
+  margin-bottom: 18px;
+}
+
+.admin-section-heading {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--app-forest);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.admin-stat-card {
+  padding: 14px 16px;
+  background: #FFFFFF;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  box-shadow: var(--app-shadow-xs);
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-stat-card .stat-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--app-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 4px;
+}
+
+.admin-stat-card .stat-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--app-forest);
+  line-height: 1.1;
+}
+
+.admin-stat-card .stat-hint {
+  font-size: 0.72rem;
+  color: #64748B;
+  margin-top: 4px;
+}
+
+/* Nav Pills / Tabs inside Admin */
+.admin-nav-tabs .nav-link {
+  font-weight: 600 !important;
+  font-size: 0.88rem !important;
+  color: var(--app-text) !important;
+  padding: 10px 18px !important;
+  border-radius: var(--app-radius-xs) !important;
+  transition: all 0.15s ease !important;
+}
+
+.admin-nav-tabs .nav-link.active {
+  background-color: var(--app-ink) !important;
+  color: #FFFFFF !important;
+}
+
+.admin-user-grid {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 960px) {
+  .admin-user-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

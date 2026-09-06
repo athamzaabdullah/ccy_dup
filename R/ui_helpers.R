@@ -317,17 +317,20 @@ settings_step_ui <- function(can_edit_token = FALSE, can_edit_form_id = FALSE) {
 
 admin_step_ui <- function() {
   div(
-    class = "settings-wrap",
-    card(
-      class = "app-card",
-      card_header(tags$h4("User Administration")),
-      card_body(
-        uiOutput("admin_access_summary"),
-        uiOutput("admin_workspace_ui"),
-        div(style = "display:flex; gap:12px; margin-top:24px; flex-wrap:wrap;",
-          actionButton("admin_back", "Back to workflow", class = "btn-secondary")
-        )
+    class = "admin-wrap",
+    div(
+      class = "admin-header-bar",
+      div(
+        class = "admin-header-title",
+        tags$h3(tags$span(style = "color: var(--app-forest);", "⚙️"), "System Administration & Control Center"),
+        tags$p("Manage authorized user accounts, partner directories, compliance audit trails, and system backups.")
+      ),
+      div(
+        class = "d-flex gap-2 align-items-center",
+        actionButton("admin_back", "← Back to Deduplication Workflow", class = "btn-secondary")
       )
-    )
+    ),
+    uiOutput("admin_access_summary"),
+    uiOutput("admin_workspace_ui")
   )
 }

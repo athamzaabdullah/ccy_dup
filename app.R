@@ -119,6 +119,7 @@ server <- function(input, output, session) {
   # upload_error holds validation messages related to the uploaded file
   upload_error <- reactiveVal(NULL)
   upload_warnings <- reactiveVal(character(0))
+  upload_hygiene_checks <- reactiveVal(NULL)
   current_job <- reactiveVal(NULL)
 
   # Automated TTL data retention cleanup on startup (Pillar 3.1)
@@ -813,18 +814,22 @@ server <- function(input, output, session) {
 
   output$admin_access_summary <- renderUI({
     if (!isTRUE(can_open_admin_workspace())) return(NULL)
-    tagList(
-      p(
+    tags$div(
+      class = "mb-3 p-3",
+      style = "background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: var(--app-radius-sm); font-size: 0.84rem; color: #166534; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;",
+      tags$div(
+        tags$strong("Access Scope: "),
         if (isTRUE(is_ccy_master())) {
-          "CCY master access: create, edit, deactivate, delete, back up, and restore all users."
+          "CCY Master Administrator (Full Privileges: Manage all users across consortium partners, maintain partner registries, review compliance audit trails, and execute encrypted system backups)."
         } else {
           paste0(
-            "Partner admin access for partner \"", auth$partner_name,
-            "\": manage up to ", config$limits$partner_users_max,
-            " deduplicator users and maintain the shared ActivityInfo token."
+            "Partner Administrator for \"", auth$partner_name,
+            "\": Scoped access to manage up to ", config$limits$partner_users_max,
+            " deduplicator user accounts within your organization."
           )
         }
-      )
+      ),
+      tags$span(class = "status-pill status-pill-ready", if (isTRUE(is_ccy_master())) "Master Privileges" else "Partner Admin")
     )
   })
 
@@ -833,51 +838,118 @@ server <- function(input, output, session) {
       return(tags$p(style = "color:#b91c1c;", "User administration is not available for your role."))
     }
 
+    is_master <- isTRUE(is_ccy_master())
     role_choices <- setNames(user_roles, vapply(user_roles, role_label, character(1)))
-    tagList(
-      selectInput(
-        "admin_selected_user",
-        "Existing user",
-        choices = c("Select a user" = "", manageable_user_choices()),
-        selected = "",
-        selectize = FALSE
-      ),
-      if (nrow(manageable_users()) == 0) {
-        p(style = "color:#6b7280; margin-top:-8px;", "No users are currently available in your management scope.")
-      },
-      textInput("admin_user_email", "User email"),
-      passwordInput("admin_user_password", "Password (required for new users)"),
-      if (isTRUE(is_ccy_master())) {
-        selectInput("admin_user_role", "Role", choices = role_choices, selected = "partner_deduplicator")
-      } else {
-        selectInput("admin_user_role", "Role", choices = setNames("partner_deduplicator", "Partner deduplicator"), selected = "partner_deduplicator")
-      },
-      if (isTRUE(is_ccy_master())) {
-        selectInput("admin_user_partner", "Partner name", choices = partner_names(), selected = if (length(partner_names()) >= 1) partner_names()[1] else character(0), selectize = FALSE)
-      } else {
-        tagList(
-          tags$label(class = "control-label", "Partner name"),
-          tags$p(
-            style = "margin-bottom:12px; color:#475569;",
-            paste0("Fixed for your account: ", auth$partner_name)
+    users <- manageable_users()
+    n_users <- nrow(users)
+    n_active <- sum(users$active, na.rm = TRUE)
+
+    user_tab <- nav_panel(
+      title = tags$span("👥 User Management", tags$span(class = "badge bg-light text-dark ms-1", n_users)),
+      div(
+        class = "pt-3",
+        div(
+          class = "admin-user-grid",
+          # Left: Account Editor
+          div(
+            class = "app-card",
+            style = "padding: 18px; border: 1px solid var(--app-border); border-radius: var(--app-radius-md); background: #FFFFFF; height: fit-content;",
+            tags$div(
+              style = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #F1F5F9;",
+              tags$strong(style = "color: var(--app-forest); font-size: 0.95rem;", "👤 Account Editor"),
+              tags$span(class = "badge bg-light text-muted", "Create / Update")
+            ),
+            selectInput(
+              "admin_selected_user",
+              "Select Existing User to Edit",
+              choices = c("➕ Create New User" = "", manageable_user_choices()),
+              selected = "",
+              selectize = FALSE
+            ),
+            textInput("admin_user_email", "Email Address", placeholder = "officer@partner.ngo"),
+            passwordInput("admin_user_password", "Password", placeholder = "Leave blank to keep existing"),
+            if (is_master) {
+              selectInput("admin_user_role", "Assigned System Role", choices = role_choices, selected = "partner_deduplicator")
+            } else {
+              selectInput("admin_user_role", "Assigned System Role", choices = setNames("partner_deduplicator", "Partner Deduplicator"), selected = "partner_deduplicator")
+            },
+            if (is_master) {
+              selectInput("admin_user_partner", "Partner Organization", choices = partner_names(), selected = if (length(partner_names()) >= 1) partner_names()[1] else character(0), selectize = FALSE)
+            } else {
+              tagList(
+                tags$label(class = "control-label", "Partner Organization"),
+                tags$p(style = "margin-bottom:12px; color:#475569; font-weight:600;", paste0("🏢 ", auth$partner_name))
+              )
+            },
+            tags$div(
+              style = "margin-top: 8px; margin-bottom: 14px; padding: 8px 12px; background: #F8FAFC; border-radius: 6px; border: 1px solid #E2E8F0;",
+              checkboxInput("admin_user_active", "Account Active & Permitted to Login", value = TRUE)
+            ),
+            actionButton("admin_save_user", "💾 Save User Account", class = "btn-primary w-100 mb-2"),
+            tags$div(
+              style = "display: flex; gap: 6px;",
+              actionButton("admin_clear_user_form", "🔄 Reset", class = "btn-secondary flex-grow-1", style = "font-size: 0.8rem; padding: 6px 10px;"),
+              actionButton("admin_toggle_user", "⚡ Toggle", class = "btn-ghost flex-grow-1", style = "font-size: 0.8rem; padding: 6px 10px;"),
+              actionButton("admin_delete_user", "🗑️ Delete", class = "btn-danger flex-grow-1", style = "font-size: 0.8rem; padding: 6px 10px;")
+            )
+          ),
+          # Right: Users Directory Table
+          div(
+            class = "app-card",
+            style = "padding: 18px; border: 1px solid var(--app-border); border-radius: var(--app-radius-md); background: #FFFFFF;",
+            tags$div(
+              style = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;",
+              tags$strong(style = "color: var(--app-forest); font-size: 0.95rem;", "👥 Authorized Users Directory"),
+              tags$span(style = "font-size: 0.8rem; color: #166534; font-weight: 600;", paste0("✓ ", n_active, " of ", n_users, " accounts active"))
+            ),
+            tags$p(style = "color: #64748B; font-size: 0.82rem; margin-bottom: 14px;", "Click any user row in the table below to load their account details into the editor on the left."),
+            DT::DTOutput("admin_users_table")
           )
         )
-      },
-      checkboxInput("admin_user_active", "Active", value = TRUE),
-      div(
-        style = "display:flex; gap:10px; margin-top:12px; margin-bottom:16px; flex-wrap:wrap;",
-        actionButton("admin_save_user", "💾 Save User", class = "btn-primary"),
-        actionButton("admin_clear_user_form", "🔄 Clear Form", class = "btn-secondary"),
-        actionButton("admin_toggle_user", "⚡ Toggle Active", class = "btn-ghost"),
-        actionButton("admin_delete_user", "🗑️ Delete User", class = "btn-danger")
-      ),
-      tags$hr(style = "margin: 20px 0; border-color: var(--app-border);"),
-      tags$h5(style = "font-weight: 700; color: var(--app-forest); margin-bottom: 8px;", "👥 Managed Users Directory"),
-      DT::DTOutput("admin_users_table"),
-      uiOutput("partner_registry_ui"),
-      uiOutput("admin_backup_ui"),
-      uiOutput("admin_audit_log_ui")
+      )
     )
+
+    audit_tab <- nav_panel(
+      title = tags$span("📋 Download & PII Audit Trail"),
+      div(
+        class = "pt-3",
+        uiOutput("admin_audit_log_ui")
+      )
+    )
+
+    tabs_list <- list(user_tab)
+
+    if (is_master) {
+      partner_tab <- nav_panel(
+        title = tags$span("🏢 Partner Registry", tags$span(class = "badge bg-light text-dark ms-1", length(partner_names()))),
+        div(
+          class = "pt-3",
+          uiOutput("partner_registry_ui")
+        )
+      )
+      backup_tab <- nav_panel(
+        title = tags$span("💾 Backup & Recovery"),
+        div(
+          class = "pt-3",
+          uiOutput("admin_backup_ui")
+        )
+      )
+      tabs_list <- list(user_tab, partner_tab, audit_tab, backup_tab)
+    } else {
+      tabs_list <- list(user_tab, audit_tab)
+    }
+
+    do.call(navset_card_tab, c(list(id = "admin_main_tabs"), tabs_list))
+  })
+
+  # Instant click-to-edit row selector for users table
+  observeEvent(input$admin_users_table_rows_selected, {
+    idx <- input$admin_users_table_rows_selected
+    req(length(idx) == 1)
+    users <- manageable_users()
+    req(nrow(users) >= idx)
+    selected_email <- users$email[idx]
+    updateSelectInput(session, "admin_selected_user", selected = selected_email)
   })
 
   output$admin_users_table <- renderDT({
@@ -888,38 +960,58 @@ server <- function(input, output, session) {
     }
     show_df <- users[, c("email", "role", "partner_name", "active", "updated_at"), drop = FALSE]
     show_df$role <- vapply(show_df$role, role_label, character(1))
-    names(show_df) <- c("Email", "Role", "Partner name", "Active", "Updated at")
-    safe_datatable(show_df, opts = list(pageLength = 10))
+    show_df$active <- ifelse(show_df$active, "✓ Active", "✕ Inactive")
+    names(show_df) <- c("Email", "Role", "Partner", "Status", "Last Updated")
+    safe_datatable(show_df, opts = list(pageLength = 8, scrollX = TRUE), selection = "single")
   })
 
   output$partner_registry_ui <- renderUI({
     if (!isTRUE(is_ccy_master())) return(NULL)
     partners <- partner_names()
     tagList(
-      tags$hr(style = "margin: 24px 0; border-color: var(--app-border);"),
-      tags$h5(style = "color: var(--app-forest); font-weight: 700; margin-bottom: 4px;", "🏢 Partner Organization Registry"),
-      tags$p(style = "color: #64748B; font-size: 0.85rem; margin-bottom: 16px;", "CCY Master administrators can manage the partner organization directory used for partner scopes and automated mapping presets."),
+      div(
+        class = "admin-stat-row",
+        div(
+          class = "admin-stat-card",
+          tags$span(class = "stat-label", "Consortium Organizations"),
+          tags$span(class = "stat-value", length(partners)),
+          tags$span(class = "stat-hint", "Active CCY member agencies")
+        )
+      ),
       layout_columns(
         col_widths = c(6, 6),
         tags$div(
           class = "app-card",
-          style = "padding: 16px; border: 1px solid var(--app-border); border-radius: 6px; background: #FFFFFF;",
-          tags$strong(style = "font-size: 0.85rem; color: var(--app-forest);", "➕ Register New Partner Organization"),
-          tags$div(
-            style = "margin-top: 10px;",
-            textInput("partner_name_new", "Partner Organization Name", placeholder = "e.g. ACF, DRC, NRC, SCI, CARE", width = "100%"),
-            actionButton("partner_name_add", "➕ Add Partner to Registry", class = "btn-primary btn-sm mt-2")
-          )
+          style = "padding: 18px; border: 1px solid var(--app-border); border-radius: var(--app-radius-md); background: #FFFFFF;",
+          tags$strong(style = "font-size: 0.95rem; color: var(--app-forest);", "➕ Register New Partner Organization"),
+          tags$p(style = "color: #64748B; font-size: 0.82rem; margin-top: 4px; margin-bottom: 12px;",
+                 "Add a new consortium partner to allow agency-scoped user creation and automated column mapping presets."),
+          textInput("partner_name_new", "Partner Organization Code / Acronym", placeholder = "e.g. ACF, DRC, NRC, SCI, CARE, BFD, YFCA", width = "100%"),
+          actionButton("partner_name_add", "➕ Add Partner to Registry", class = "btn-primary w-100 mt-2")
         ),
         tags$div(
           class = "app-card",
-          style = "padding: 16px; border: 1px solid var(--app-border); border-radius: 6px; background: #FFFFFF;",
-          tags$strong(style = "font-size: 0.85rem; color: #DC2626;", "🗑️ Remove Existing Partner"),
-          tags$div(
-            style = "margin-top: 10px;",
-            selectInput("partner_name_remove", "Select Partner to Remove", choices = partners, selected = if (length(partners) >= 1) partners[1] else character(0), selectize = FALSE, width = "100%"),
-            actionButton("partner_name_remove_btn", "🗑️ Remove Selected Partner", class = "btn-danger btn-sm mt-2")
-          )
+          style = "padding: 18px; border: 1px solid var(--app-border); border-radius: var(--app-radius-md); background: #FFFFFF;",
+          tags$strong(style = "font-size: 0.95rem; color: #DC2626;", "🗑️ Remove Existing Partner"),
+          tags$p(style = "color: #64748B; font-size: 0.82rem; margin-top: 4px; margin-bottom: 12px;",
+                 "Removing an organization prevents assigning new accounts to it. Existing user records remain intact."),
+          selectInput("partner_name_remove", "Select Partner to Remove", choices = partners, selected = if (length(partners) >= 1) partners[1] else character(0), selectize = FALSE, width = "100%"),
+          actionButton("partner_name_remove_btn", "🗑️ Remove Selected Partner", class = "btn-danger w-100 mt-2")
+        )
+      ),
+      tags$div(
+        class = "mt-3 p-3",
+        style = "background: #F8FAFC; border: 1px solid var(--app-border); border-radius: var(--app-radius-sm);",
+        tags$strong(style = "color: var(--app-forest); font-size: 0.85rem;", "🏢 Active Consortium Partner Directory:"),
+        tags$div(
+          style = "display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;",
+          lapply(partners, function(p) {
+            tags$span(
+              class = "badge",
+              style = "background: #FFFFFF; color: #1E293B; border: 1px solid #CBD5E1; padding: 6px 12px; font-size: 0.82rem; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.04);",
+              paste0("🏢 ", p)
+            )
+          })
         )
       )
     )
@@ -930,25 +1022,36 @@ server <- function(input, output, session) {
     admin_backup_refresh()
     backups <- list_user_backups(config$paths$user_backups)
     choices <- setNames(backups, basename(backups))
+    n_backups <- length(backups)
+
     tagList(
-      tags$hr(),
-      tags$strong("Backup and restore"),
-      p(style = "color:#475569;", "Backups include users, scoped tokens, and admin settings."),
       div(
-        class = "admin-backup-grid",
+        class = "admin-stat-row",
         div(
-          class = "admin-backup-cell admin-backup-action",
-          tags$label(class = "control-label", "Create backup"),
-          actionButton("admin_create_backup", "Create backup", class = "btn-secondary w-100")
+          class = "admin-stat-card",
+          tags$span(class = "stat-label", "Available System Backups"),
+          tags$span(class = "stat-value", n_backups),
+          tags$span(class = "stat-hint", "Encrypted configuration archives")
+        )
+      ),
+      layout_columns(
+        col_widths = c(6, 6),
+        tags$div(
+          class = "app-card",
+          style = "padding: 18px; border: 1px solid var(--app-border); border-radius: var(--app-radius-md); background: #FFFFFF;",
+          tags$strong(style = "font-size: 0.95rem; color: var(--app-forest);", "💾 Create Instant System Backup"),
+          tags$p(style = "color: #64748B; font-size: 0.82rem; margin-top: 4px; margin-bottom: 14px;",
+                 "Captures an immutable snapshot of all authorized users, scoped tokens, partner registries, and application configurations."),
+          actionButton("admin_create_backup", "💾 Create Backup Now", class = "btn-secondary w-100", style = "font-weight: 600; padding: 10px;")
         ),
-        div(
-          class = "admin-backup-cell admin-backup-select",
-          selectInput("admin_restore_backup", "Available backups", choices = choices, selected = if (length(backups) >= 1) backups[1] else character(0), selectize = FALSE)
-        ),
-        div(
-          class = "admin-backup-cell admin-backup-action",
-          tags$label(class = "control-label", "Restore selected backup"),
-          actionButton("admin_restore_backup_btn", "Restore backup", class = "btn-danger w-100")
+        tags$div(
+          class = "app-card",
+          style = "padding: 18px; border: 1px solid var(--app-border); border-radius: var(--app-radius-md); background: #FFFFFF;",
+          tags$strong(style = "font-size: 0.95rem; color: #DC2626;", "🔄 Restore System from Archive"),
+          tags$p(style = "color: #64748B; font-size: 0.82rem; margin-top: 4px; margin-bottom: 8px;",
+                 "Select an archive to roll back users, tokens, and settings. Current configurations will be superseded."),
+          selectInput("admin_restore_backup", "Available Historical Backups", choices = choices, selected = if (length(backups) >= 1) backups[1] else character(0), selectize = FALSE, width = "100%"),
+          actionButton("admin_restore_backup_btn", "⚠️ Restore Selected Archive", class = "btn-danger w-100", style = "font-weight: 600; padding: 10px;")
         )
       )
     )
@@ -956,11 +1059,52 @@ server <- function(input, output, session) {
 
   output$admin_audit_log_ui <- renderUI({
     if (!isTRUE(can_open_admin_workspace())) return(NULL)
+    log_df <- get_export_audit_log()
+    n_events <- nrow(log_df)
+    n_records <- if (n_events > 0) sum(as.numeric(log_df$record_count), na.rm = TRUE) else 0
+    n_masked <- if (n_events > 0) sum(isTRUE(log_df$pii_masked) | log_df$pii_masked == "TRUE", na.rm = TRUE) else 0
+    n_unmasked <- n_events - n_masked
+
     tagList(
-      tags$hr(style = "margin: 24px 0; border-color: var(--app-border);"),
-      tags$h5(style = "color: var(--app-forest); font-weight: 700; margin-bottom: 4px;", "📋 Export & PII Download Audit Trail"),
-      tags$p(style = "color: #64748B; font-size: 0.85rem; margin-bottom: 16px;", "Tamper-evident log of all dossier exports and beneficiary PII downloads."),
-      DT::DTOutput("admin_audit_log_table")
+      div(
+        class = "admin-stat-row",
+        div(
+          class = "admin-stat-card",
+          tags$span(class = "stat-label", "Total Export Events"),
+          tags$span(class = "stat-value", format(n_events, big.mark = ",")),
+          tags$span(class = "stat-hint", "Logged download transactions")
+        ),
+        div(
+          class = "admin-stat-card",
+          tags$span(class = "stat-label", "Beneficiary Records"),
+          tags$span(class = "stat-value", format(n_records, big.mark = ",")),
+          tags$span(class = "stat-hint", "Total candidate pairs exported")
+        ),
+        div(
+          class = "admin-stat-card",
+          tags$span(class = "stat-label", "PII-Masked Exports"),
+          tags$span(class = "stat-value", style = "color: #15803D;", format(n_masked, big.mark = ",")),
+          tags$span(class = "stat-hint", "Protected partner exports")
+        ),
+        div(
+          class = "admin-stat-card",
+          tags$span(class = "stat-label", "Master Unmasked Exports"),
+          tags$span(class = "stat-value", style = "color: #B45309;", format(n_unmasked, big.mark = ",")),
+          tags$span(class = "stat-hint", "CCY Master oversight downloads")
+        )
+      ),
+      div(
+        class = "app-card",
+        style = "padding: 18px; border: 1px solid var(--app-border); border-radius: var(--app-radius-md); background: #FFFFFF;",
+        tags$div(
+          style = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;",
+          tags$strong(style = "color: var(--app-forest); font-size: 0.95rem;", "📋 Tamper-Evident Download Audit Trail"),
+          tags$span(style = "font-size: 0.78rem; color: #64748B;", "CSV & RDS audit mirror active")
+        ),
+        tags$p(style = "color: #64748B; font-size: 0.82rem; margin-bottom: 14px;",
+               "Complies with CCY Yemen Data Protection Standard Operating Procedures. Every beneficiary dossier export is logged with operator identity and PII masking status."),
+        DT::DTOutput("admin_audit_log_table")
+      )
     )
   })
 
@@ -971,8 +1115,10 @@ server <- function(input, output, session) {
       return(safe_datatable(data.frame(Status = "No export downloads logged yet."), opts = list(pageLength = 5)))
     }
     show_log <- log_df[, c("timestamp", "user_email", "user_role", "partner_name", "record_count", "pii_masked", "file_name"), drop = FALSE]
-    names(show_log) <- c("Timestamp", "User Email", "Role", "Partner", "Records", "PII Masked?", "Filename")
-    safe_datatable(show_log, opts = list(pageLength = 5))
+    show_log$user_role <- vapply(show_log$user_role, role_label, character(1))
+    show_log$pii_masked <- ifelse(isTRUE(show_log$pii_masked) | show_log$pii_masked == "TRUE", "🔒 Masked", "🔓 Full PII")
+    names(show_log) <- c("Timestamp", "User Email", "Role", "Partner", "Records", "PII Status", "File Name")
+    safe_datatable(show_log, opts = list(pageLength = 8, scrollX = TRUE), selection = "none")
   })
 
 
@@ -1404,6 +1550,7 @@ server <- function(input, output, session) {
     diag <- check_upload_hygiene(df)
     clean_df <- diag$clean_df
     upload_warnings(diag$warnings)
+    upload_hygiene_checks(diag$checks)
 
     upload_error(NULL)
     upload_df(clean_df)
@@ -1727,11 +1874,12 @@ server <- function(input, output, session) {
           class = "empty-state-card",
           tags$div(class = "empty-state-icon", tags$span(style = "font-size: 2.2rem; color: var(--app-sea);", "📁")),
           tags$h5("No spreadsheet uploaded yet"),
-          tags$p("Upload an Excel (.xlsx/.xls) or CSV partner list on the left to verify record health and preview rows."),
+          tags$p("Upload an Excel (.xlsx/.xls) or CSV partner list on the left to verify record health, run automated hygiene audits, and preview rows."),
           tags$div(
             class = "empty-state-features",
             tags$div(class = "feature-pill", tags$strong("⚡ Instant Health Check: "), "Coverage analysis for IDs & phone numbers"),
-                        tags$div(class = "feature-pill", tags$strong("🔒 Data Protection: "), "Zero external transmission; processed in-memory")
+            tags$div(class = "feature-pill", tags$strong("🛡️ Data Hygiene Audits: "), "Automatic scans for scientific notation (e.g. 7.71E+08), empty rows, duplicate headers, and placeholder sequences"),
+            tags$div(class = "feature-pill", tags$strong("🔒 Data Protection: "), "Zero external transmission; processed in-memory")
           )
         )
       )
@@ -1772,6 +1920,15 @@ server <- function(input, output, session) {
       short_phones <- sum(nchar(clean_digits) > 0 & nchar(clean_digits) < 9)
     }
 
+    # Retrieve Pre-Upload Data Hygiene Checks (Pillar 4.1)
+    hygiene <- upload_hygiene_checks()
+    if (is.null(hygiene) || length(hygiene) == 0) {
+      diag_fallback <- check_upload_hygiene(df)
+      hygiene <- diag_fallback$checks
+    }
+
+    warn_list <- upload_warnings()
+
     tagList(
       tags$div(
         style = "display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: var(--app-radius-xs); margin-bottom: 12px;",
@@ -1806,9 +1963,94 @@ server <- function(input, output, session) {
         )
       ),
 
+      # Pre-Upload Data Hygiene & Quality Checks System (Pillar 4.1)
+      tags$div(
+        class = "hygiene-box",
+        tags$div(
+          class = "hygiene-header",
+          tags$div(
+            class = "hygiene-title",
+            tags$span(style = "font-size: 1.15rem;", "🛡️"),
+            tags$span("Pre-Upload Data Hygiene & Quality Audits")
+          ),
+          tags$span(
+            class = paste0("badge ", if (length(warn_list) == 0) "bg-success" else "bg-warning text-dark"),
+            style = "font-size: 0.74rem; padding: 4px 10px; border-radius: 12px; font-weight: 600;",
+            if (length(warn_list) == 0) "✓ All 4 Hygiene Audits Passed" else paste0("⚠️ ", length(warn_list), " Quality Notice(s)")
+          )
+        ),
+        tags$div(
+          class = "hygiene-grid",
+          # 1. Scientific Notation Scan
+          {
+            c_sci <- hygiene$sci_notation
+            is_pass <- !is.null(c_sci) && identical(c_sci$status, "pass")
+            tags$div(
+              class = "hygiene-card",
+              tags$div(
+                class = "hygiene-card-header",
+                tags$div(class = "hygiene-card-name", tags$span("🔬"), "Scientific Format"),
+                tags$span(class = paste("hygiene-badge", if (is_pass) "hygiene-badge-pass" else "hygiene-badge-warn"),
+                          if (is_pass) "✓ Clean" else if (!is.null(c_sci)) c_sci$badge else "Corrupted")
+              ),
+              tags$div(class = "hygiene-card-label", if (!is.null(c_sci)) c_sci$label else "No exponential numbers"),
+              tags$div(class = "hygiene-card-detail", if (!is.null(c_sci)) c_sci$detail else "Guarantees 9-digit phones and 11-digit IDs are intact.")
+            )
+          },
+          # 2. Empty Row Removal
+          {
+            c_emp <- hygiene$empty_rows
+            is_pass <- !is.null(c_emp) && identical(c_emp$status, "pass")
+            tags$div(
+              class = "hygiene-card",
+              tags$div(
+                class = "hygiene-card-header",
+                tags$div(class = "hygiene-card-name", tags$span("🧹"), "Empty Row Audit"),
+                tags$span(class = paste("hygiene-badge", if (is_pass) "hygiene-badge-pass" else "hygiene-badge-info"),
+                          if (is_pass) "✓ 0 Blank" else if (!is.null(c_emp)) c_emp$badge else "Cleaned")
+              ),
+              tags$div(class = "hygiene-card-label", if (!is.null(c_emp)) c_emp$label else "Blank rows auto-pruned"),
+              tags$div(class = "hygiene-card-detail", if (!is.null(c_emp)) c_emp$detail else "Empty rows pruned to prevent indexing offset.")
+            )
+          },
+          # 3. Header Integrity
+          {
+            c_hdr <- hygiene$dup_headers
+            is_pass <- !is.null(c_hdr) && identical(c_hdr$status, "pass")
+            tags$div(
+              class = "hygiene-card",
+              tags$div(
+                class = "hygiene-card-header",
+                tags$div(class = "hygiene-card-name", tags$span("📑"), "Header Integrity"),
+                tags$span(class = paste("hygiene-badge", if (is_pass) "hygiene-badge-pass" else "hygiene-badge-warn"),
+                          if (is_pass) "✓ All Unique" else if (!is.null(c_hdr)) c_hdr$badge else "Duplicates")
+              ),
+              tags$div(class = "hygiene-card-label", if (!is.null(c_hdr)) c_hdr$label else "Unique column headers"),
+              tags$div(class = "hygiene-card-detail", if (!is.null(c_hdr)) c_hdr$detail else "Prevents column collisions during mapping.")
+            )
+          },
+          # 4. Dummy & Placeholder Filter
+          {
+            c_plc <- hygiene$placeholders
+            is_pass <- !is.null(c_plc) && identical(c_plc$status, "pass")
+            tags$div(
+              class = "hygiene-card",
+              tags$div(
+                class = "hygiene-card-header",
+                tags$div(class = "hygiene-card-name", tags$span("🛡️"), "Placeholder Scan"),
+                tags$span(class = paste("hygiene-badge", if (is_pass) "hygiene-badge-pass" else "hygiene-badge-warn"),
+                          if (is_pass) "✓ Clean" else if (!is.null(c_plc)) c_plc$badge else "Flagged")
+              ),
+              tags$div(class = "hygiene-card-label", if (!is.null(c_plc)) c_plc$label else "Dummy placeholder filter"),
+              tags$div(class = "hygiene-card-detail", if (!is.null(c_plc)) c_plc$detail else "Excludes generic values (e.g. 0000) from exact matching.")
+            )
+          }
+        )
+      ),
+
       # Health Alert Banners
-      if (length(upload_warnings()) > 0) {
-        lapply(upload_warnings(), function(w) {
+      if (length(warn_list) > 0) {
+        lapply(warn_list, function(w) {
           tags$div(
             class = "health-alert health-alert-warning",
             style = "border-left: 4px solid #D97706; background: #FFFBEB; margin-bottom: 8px;",
@@ -3143,6 +3385,8 @@ server <- function(input, output, session) {
   observeEvent(input$restart_dedup_btn, {
     upload_df(NULL)
     upload_error(NULL)
+    upload_warnings(character(0))
+    upload_hygiene_checks(NULL)
     current_job(NULL)
     filter_recent_mpca(FALSE)
     mpca_window_months(6)
