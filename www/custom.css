@@ -863,42 +863,44 @@ body {
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 18px;
   width: 100%;
 }
 
 .section-header-content {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   flex: 1;
-  min-width: 260px;
+  min-width: 280px;
 }
 
 .section-header-title {
-  font-size: 1.15rem;
+  font-size: 1.2rem;
   font-weight: 700;
   color: var(--app-forest);
   margin: 0;
   letter-spacing: -0.015em;
   display: flex;
   align-items: center;
-  gap: 8px;
-  line-height: 1.3;
+  gap: 10px;
+  line-height: 1.35;
 }
 
 .section-header-icon {
-  font-size: 1.25rem;
+  font-size: 1.35rem;
   line-height: 1;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
 
 .section-header-desc {
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   color: var(--app-text-muted);
   margin: 0;
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
 .section-header-actions {
@@ -908,73 +910,119 @@ body {
   flex-wrap: wrap;
 }
 
-/* Match Engine Criteria Scope Card */
-.mapping-scope-card {
-  margin-bottom: 28px;
+.section-header-btn {
+  font-size: 0.815rem !important;
+  font-weight: 600 !important;
+  padding: 6px 14px !important;
+  border-radius: var(--app-radius-sm, 6px) !important;
+  border: 1px solid var(--app-border) !important;
+  background: #FFFFFF !important;
+  color: var(--app-text) !important;
+  transition: all 0.18s ease-in-out !important;
+}
+
+.section-header-btn:hover {
+  background: #F8FAFC !important;
+  border-color: var(--app-forest) !important;
+  color: var(--app-forest) !important;
+  box-shadow: var(--app-shadow-xs) !important;
+}
+
+/* Match Engine Scope & Criteria Configuration Card */
+.mapping-scope-card,
+.mapping-workbench-card {
+  margin-bottom: 32px;
   box-shadow: var(--app-shadow-sm);
   border-radius: var(--app-radius-md);
   border: 1px solid var(--app-border);
+  overflow: hidden;
+  background: var(--app-card-bg);
+}
+
+.mapping-scope-card > .card-header,
+.mapping-workbench-card > .card-header {
+  padding: 20px 24px;
+  background: #FAFAFA;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.mapping-scope-card > .card-body {
+  padding: 24px;
+  background: #FFFFFF;
 }
 
 .match-criteria-container {
-  width: 100%;
+  width: 100% !important;
 }
 
-/* Symmetrical & Balanced 3-Column Grid for Criteria Boxes */
+.match-criteria-container .shiny-input-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-bottom: 0 !important;
+}
+
+/* Symmetrical & Balanced Responsive Grid for Criteria Boxes */
 .match-criteria-container .shiny-options-group {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-  width: 100%;
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 16px !important;
+  width: 100% !important;
   align-items: stretch;
 }
 
 @media (max-width: 1100px) {
   .match-criteria-container .shiny-options-group {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 14px !important;
   }
 }
 
 @media (max-width: 640px) {
   .match-criteria-container .shiny-options-group {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
   }
 }
 
 /* Uniform Height, Padded Card Box Container */
 .match-criteria-container .checkbox {
   display: flex !important;
-  height: 100%;
+  width: 100% !important;
+  height: 100% !important;
   margin: 0 !important;
   padding: 0 !important;
 }
 
 .match-criteria-container .checkbox label {
   display: flex !important;
-  flex-direction: row;
-  align-items: flex-start;
-  gap: 14px;
+  flex-direction: row !important;
+  align-items: flex-start !important;
+  gap: 12px !important;
   background: #FFFFFF;
   border: 1.5px solid var(--app-border);
   border-radius: var(--app-radius-md);
-  padding: 16px 18px;
-  width: 100%;
-  height: 100%;
+  padding: 16px 18px !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100px;
   cursor: pointer;
   position: relative;
   transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
   margin-bottom: 0 !important;
-  box-sizing: border-box;
+  box-sizing: border-box !important;
 }
 
-/* Native Checkbox Alignment & Accessible Focus */
+/* Native Checkbox Alignment & Accessible Focus (Overriding Bootstrap absolute positioning) */
 .match-criteria-container .checkbox input[type="checkbox"] {
-  margin-top: 2px !important;
-  width: 18px;
-  height: 18px;
+  position: relative !important;
+  margin: 3px 0 0 0 !important;
+  left: auto !important;
+  top: auto !important;
+  width: 18px !important;
+  height: 18px !important;
   accent-color: var(--app-forest);
   cursor: pointer;
-  flex-shrink: 0;
+  flex-shrink: 0 !important;
   border-radius: 4px;
 }
 
@@ -983,24 +1031,34 @@ body {
   outline-offset: 3px !important;
 }
 
+/* Shiny wraps choiceNames in a <span> - force flex column expansion */
+.match-criteria-container .checkbox label > span {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
 /* Interactive States (Hover & Active/Checked Card Tint) */
 .match-criteria-container .checkbox label:hover {
-  border-color: var(--app-ink-light);
-  background: #F8FAFC;
-  box-shadow: var(--app-shadow-xs);
+  border-color: var(--app-ink-light) !important;
+  background: #F8FAFC !important;
+  box-shadow: var(--app-shadow-xs) !important;
   transform: translateY(-1px);
 }
 
 .match-criteria-container .checkbox:has(input[type="checkbox"]:checked) label {
-  background-color: #F0FDF4;
-  border-color: #86EFAC;
-  box-shadow: 0 1px 3px rgba(22, 101, 52, 0.08);
+  background-color: #F0FDF4 !important;
+  border-color: #86EFAC !important;
+  box-shadow: 0 1px 3px rgba(22, 101, 52, 0.08) !important;
 }
 
 .match-criteria-container .checkbox:has(input[type="checkbox"]:checked) label:hover {
-  background-color: #ECFDF5;
-  border-color: var(--app-forest);
-  box-shadow: var(--app-shadow-sm);
+  background-color: #ECFDF5 !important;
+  border-color: var(--app-forest) !important;
+  box-shadow: var(--app-shadow-sm) !important;
 }
 
 /* Child Card Content Architecture */
@@ -1011,6 +1069,7 @@ body {
   flex: 1;
   min-width: 0;
   height: 100%;
+  gap: 10px;
 }
 
 .match-field-header {
@@ -1019,7 +1078,6 @@ body {
   justify-content: space-between;
   gap: 10px;
   width: 100%;
-  margin-bottom: 8px;
 }
 
 .match-field-title-group {
@@ -1037,21 +1095,21 @@ body {
 }
 
 .match-field-title {
-  font-size: 0.9rem;
+  font-size: 0.925rem;
   color: var(--app-text);
   font-weight: 700;
   line-height: 1.35;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .match-field-desc {
-  font-size: 0.785rem;
+  font-size: 0.795rem;
   color: var(--app-text-muted);
   line-height: 1.45;
   margin-top: auto;
-  padding-top: 2px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(226, 232, 240, 0.9);
 }
 
 /* Role Classification Badges (WCAG AA High Contrast >= 4.5:1) */

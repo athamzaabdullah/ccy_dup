@@ -115,8 +115,8 @@ mapping_step_ui <- function() {
           ),
           div(
             class = "section-header-actions",
-            actionButton("select_all_fields_btn", "Select All", class = "btn-ghost btn-sm", style = "font-size: 0.8rem; padding: 5px 12px;"),
-            actionButton("reset_std_fields_btn", "Reset Standard", class = "btn-ghost btn-sm", style = "font-size: 0.8rem; padding: 5px 12px;")
+            actionButton("select_all_fields_btn", "Select All", class = "btn-ghost btn-sm section-header-btn"),
+            actionButton("reset_std_fields_btn", "Reset Standard", class = "btn-ghost btn-sm section-header-btn")
           )
         )
       ),
@@ -126,6 +126,7 @@ mapping_step_ui <- function() {
           checkboxGroupInput(
             "match_fields",
             label = tags$span(class = "visually-hidden", "Match engine criteria selection"),
+            width = "100%",
             choiceNames = list(
               div(
                 class = "match-field-item",
