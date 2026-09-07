@@ -303,5 +303,89 @@ test_that("export sorts columns by relativity placing related upload and master 
   expect_false("master_dist_date_calc_new" %in% cols)
 })
 
+test_that("cross-partner PII masking strictly isolates partner data and prevents third-party leaks", {
+  u_drc <- data.frame(
+    organization = "DRC",
+    governorate = "Sanaa",
+    district = "D1",
+    sub_district = "SD1",
+    village = "V1",
+    hoh_ID_number = "5010454023",
+    phone_number = "771234567",
+    secondary_phone_number = "779998877",
+    hoh_arabic_name = "محمد علي صالح",
+    stringsAsFactors = FALSE
+  )
+  
+  m_drc <- data.frame(
+    organization = "DRC",
+    governorate = "Sanaa",
+    district = "D1",
+    sub_district = "SD1",
+    village = "V1",
+    hoh_ID_number = "5010454023",
+    primary_phone_number = "771234567",
+    secondary_phone_number = "779998877",
+    hoh_arabic_name = "محمد علي صالح",
+    stringsAsFactors = FALSE
+  )
+
+  # Scenario 1: User is NRC (partner_admin), uploads DRC record matching DRC master
+  # DRC master PII is MASKED (cross-partner protection), while Upload PII remains UNMASKED (user data sovereignty)!
+  res_nrc_user <- run_dedup(upload_df = u_drc, master_df = m_drc, partner_org = "NRC", user_role = "partner_admin")
+  lm1 <- res_nrc_user$list_vs_master_exact
+  expect_equal(nrow(lm1), 1)
+  expect_equal(lm1$master_hoh_ID_number[1], "*******023")
+  expect_equal(lm1$master_primary_phone_number[1], "******567")
+  expect_equal(lm1$master_secondary_phone_number[1], "******877")
+  expect_equal(lm1$upload_hoh_ID_number[1], "5010454023") # Uploaded PII remains raw and unmasked
+  expect_equal(lm1$upload_phone_number[1], "771234567")
+
+  # Scenario 2: User is DRC (partner_admin), uploads DRC record matching DRC master -> UNMASKED
+  res_drc_user <- run_dedup(upload_df = u_drc, master_df = m_drc, partner_org = "DRC", user_role = "partner_admin")
+  lm2 <- res_drc_user$list_vs_master_exact
+  expect_equal(nrow(lm2), 1)
+  expect_equal(lm2$master_hoh_ID_number[1], "5010454023")
+  expect_equal(lm2$master_primary_phone_number[1], "771234567")
+  expect_equal(lm2$master_secondary_phone_number[1], "779998877")
+  expect_equal(lm2$upload_hoh_ID_number[1], "5010454023")
+  expect_equal(lm2$upload_phone_number[1], "771234567")
+
+  # Scenario 3: Consortium Lead (ccy_master) running match -> UNMASKED
+  res_lead <- run_dedup(upload_df = u_drc, master_df = m_drc, partner_org = "DRC", user_role = "ccy_master")
+  lm3 <- res_lead$list_vs_master_exact
+  expect_equal(nrow(lm3), 1)
+  expect_equal(lm3$master_hoh_ID_number[1], "5010454023")
+  expect_equal(lm3$master_primary_phone_number[1], "771234567")
+  expect_equal(lm3$master_secondary_phone_number[1], "779998877")
+  expect_equal(lm3$upload_hoh_ID_number[1], "5010454023")
+  expect_equal(lm3$upload_phone_number[1], "771234567")
+})
+
+test_that("Same-List deduplication preserves full unmasked PII for uploaded records", {
+  u_multi <- data.frame(
+    organization = c("NRC", "DRC"),
+    governorate = c("Sanaa", "Sanaa"),
+    district = c("D1", "D1"),
+    sub_district = c("SD1", "SD1"),
+    village = c("V1", "V1"),
+    hoh_ID_number = c("11010080487", "11010080487"),
+    phone_number = c("771112233", "771112233"),
+    hoh_arabic_name = c("محمد علي صالح", "محمد علي صالح"),
+    stringsAsFactors = FALSE
+  )
+  m_empty <- u_multi[0, ]
+
+  # All records in same list are uploaded by the user, so they remain raw and unmasked
+  res_sl <- run_dedup(upload_df = u_multi, master_df = m_empty, partner_org = "NRC", user_role = "partner_admin")
+  sl <- res_sl$same_list_exact
+  expect_equal(nrow(sl), 1)
+  expect_equal(sl$upload_hoh_ID_number_a[1], "11010080487")
+  expect_equal(sl$upload_phone_number_a[1], "771112233")
+  expect_equal(sl$upload_hoh_ID_number_b[1], "11010080487")
+  expect_equal(sl$upload_phone_number_b[1], "771112233")
+})
+
+
 
 

@@ -106,6 +106,12 @@ ui <- fluidPage(
       $btn.html('<span class=\"spinner-border spinner-border-sm me-2\" role=\"status\" aria-hidden=\"true\"></span>Starting deduplication...');
       $('#matching_feedback_status').html('<span class=\"matching-pulse-hint\"><span class=\"spinner-grow spinner-grow-sm\" role=\"status\" aria-hidden=\"true\"></span> Deduplication job initialized in background...</span>');
     });
+    // Immediate visual feedback when a file is selected for upload
+    $(document).on('change', '#upload_file', function() {
+      if (this.files && this.files.length > 0) {
+        Shiny.setInputValue('file_upload_started', new Date().getTime());
+      }
+    });
   ")),
   div(
     class = "app-shell",
@@ -120,6 +126,7 @@ server <- function(input, output, session) {
   upload_error <- reactiveVal(NULL)
   upload_warnings <- reactiveVal(character(0))
   upload_hygiene_checks <- reactiveVal(NULL)
+  upload_verifying <- reactiveVal(FALSE)
   current_job <- reactiveVal(NULL)
 
   # Automated TTL data retention cleanup on startup (Pillar 3.1)
@@ -1465,8 +1472,14 @@ server <- function(input, output, session) {
     }
   )
 
+  observeEvent(input$file_upload_started, {
+    upload_verifying(TRUE)
+  })
+
   observeEvent(input$upload_file, {
     req(input$upload_file)
+    upload_verifying(TRUE)
+    on.exit(upload_verifying(FALSE), add = TRUE)
     file_info <- input$upload_file
 
     # Enforce max file size (25 MB)
@@ -1493,9 +1506,9 @@ server <- function(input, output, session) {
     tryCatch({
       if (ext == "csv") {
         if (requireNamespace("readr", quietly = TRUE)) {
-          df <- as.data.frame(readr::read_csv(file_info$datapath, show_col_types = FALSE, guess_max = 5000))
+          df <- as.data.frame(readr::read_csv(file_info$datapath, col_types = readr::cols(.default = "c"), guess_max = 5000))
         } else {
-          df <- utils::read.csv(file_info$datapath, stringsAsFactors = FALSE, check.names = FALSE)
+          df <- utils::read.csv(file_info$datapath, colClasses = "character", stringsAsFactors = FALSE, check.names = FALSE)
         }
       } else {
         df <- as.data.frame(readxl::read_excel(file_info$datapath))
@@ -1533,7 +1546,7 @@ server <- function(input, output, session) {
     }
 
     # Passed validation — run pre-upload data hygiene checks (Pillar 4.1)
-    diag <- check_upload_hygiene(df)
+    diag <- check_upload_hygiene(df, file_path = file_info$datapath)
     clean_df <- diag$clean_df
     upload_warnings(diag$warnings)
     upload_hygiene_checks(diag$checks)
@@ -1834,6 +1847,10 @@ server <- function(input, output, session) {
   })
 
   output$upload_data_health_and_preview_ui <- renderUI({
+    if (isTRUE(upload_verifying())) {
+      return(data_health_skeleton())
+    }
+
     err <- upload_error()
     if (!is.null(err) && isTRUE(nzchar(err))) {
       return(
@@ -1864,7 +1881,7 @@ server <- function(input, output, session) {
           tags$div(
             class = "empty-state-features",
             tags$div(class = "feature-pill", tags$strong("⚡ Instant Health Check: "), "Coverage analysis for IDs & phone numbers"),
-            tags$div(class = "feature-pill", tags$strong("🛡️ Data Hygiene Audits: "), "Automatic scans for scientific notation (e.g. 7.71E+08), empty rows, duplicate headers, and placeholder sequences"),
+            tags$div(class = "feature-pill", tags$strong("🛡️ Data Hygiene Audits: "), "Automatic scans for scientific notation (e.g. 7.71E+08), Excel formula errors, empty rows, duplicate headers, and placeholder sequences"),
             tags$div(class = "feature-pill", tags$strong("🔒 Data Protection: "), "Zero external transmission; processed in-memory")
           )
         )
@@ -1876,8 +1893,8 @@ server <- function(input, output, session) {
     fname <- if (!is.null(input$upload_file$name)) input$upload_file$name else "Uploaded Spreadsheet"
 
     # 1. Identify National ID column candidates
-    id_col_candidates <- cols[grepl("id|national|nid|identity|card", cols, ignore.case = TRUE)]
-    id_col <- if ("hoh_ID_number" %in% cols) "hoh_ID_number" else if (length(id_col_candidates) > 0) id_col_candidates[1] else NULL
+    id_col_candidates <- cols[grepl("national.*id|id.*number|nid|hh.*id|id_number", cols, ignore.case = TRUE)]
+    id_col <- if ("id_number" %in% cols) "id_number" else if (length(id_col_candidates) > 0) id_col_candidates[1] else NULL
     
     id_count <- 0
     id_pct <- 0
@@ -1909,7 +1926,7 @@ server <- function(input, output, session) {
     # Retrieve Pre-Upload Data Hygiene Checks (Pillar 4.1)
     hygiene <- upload_hygiene_checks()
     if (is.null(hygiene) || length(hygiene) == 0) {
-      diag_fallback <- check_upload_hygiene(df)
+      diag_fallback <- check_upload_hygiene(df, file_path = if (!is.null(input$upload_file$datapath)) input$upload_file$datapath else NULL)
       hygiene <- diag_fallback$checks
     }
 
@@ -1962,7 +1979,7 @@ server <- function(input, output, session) {
           tags$span(
             class = paste0("badge ", if (length(warn_list) == 0) "bg-success" else "bg-warning text-dark"),
             style = "font-size: 0.74rem; padding: 4px 10px; border-radius: 12px; font-weight: 600;",
-            if (length(warn_list) == 0) "✓ All 4 Hygiene Audits Passed" else paste0("⚠️ ", length(warn_list), " Quality Notice(s)")
+            if (length(warn_list) == 0) "✓ All 5 Hygiene Audits Passed" else paste0("⚠️ ", length(warn_list), " Quality Notice(s)")
           )
         ),
         tags$div(
@@ -1983,20 +2000,20 @@ server <- function(input, output, session) {
               tags$div(class = "hygiene-card-detail", if (!is.null(c_sci)) c_sci$detail else "Guarantees 9-digit phones and 11-digit IDs are intact.")
             )
           },
-          # 2. Empty Row Removal
+          # 2. Broken Excel Formulas Scan
           {
-            c_emp <- hygiene$empty_rows
-            is_pass <- !is.null(c_emp) && identical(c_emp$status, "pass")
+            c_form <- hygiene$formula_errors
+            is_pass <- !is.null(c_form) && identical(c_form$status, "pass")
             tags$div(
               class = "hygiene-card",
               tags$div(
                 class = "hygiene-card-header",
-                tags$div(class = "hygiene-card-name", tags$span("🧹"), "Empty Row Audit"),
-                tags$span(class = paste("hygiene-badge", if (is_pass) "hygiene-badge-pass" else "hygiene-badge-info"),
-                          if (is_pass) "✓ 0 Blank" else if (!is.null(c_emp)) c_emp$badge else "Cleaned")
+                tags$div(class = "hygiene-card-name", tags$span("⚠️"), "Excel Formulas"),
+                tags$span(class = paste("hygiene-badge", if (is_pass) "hygiene-badge-pass" else "hygiene-badge-warn"),
+                          if (is_pass) "✓ 0 Errors" else if (!is.null(c_form)) c_form$badge else "Errors")
               ),
-              tags$div(class = "hygiene-card-label", if (!is.null(c_emp)) c_emp$label else "Blank rows auto-pruned"),
-              tags$div(class = "hygiene-card-detail", if (!is.null(c_emp)) c_emp$detail else "Empty rows pruned to prevent indexing offset.")
+              tags$div(class = "hygiene-card-label", if (!is.null(c_form)) c_form$label else "No broken formula tokens"),
+              tags$div(class = "hygiene-card-detail", if (!is.null(c_form)) c_form$detail else "Scans for #REF!, #VALUE!, #N/A formula artifacts.")
             )
           },
           # 3. Header Integrity
@@ -2015,7 +2032,23 @@ server <- function(input, output, session) {
               tags$div(class = "hygiene-card-detail", if (!is.null(c_hdr)) c_hdr$detail else "Prevents column collisions during mapping.")
             )
           },
-          # 4. Dummy & Placeholder Filter
+          # 4. Empty Row & Whitespace Removal
+          {
+            c_emp <- hygiene$empty_rows
+            is_pass <- !is.null(c_emp) && identical(c_emp$status, "pass")
+            tags$div(
+              class = "hygiene-card",
+              tags$div(
+                class = "hygiene-card-header",
+                tags$div(class = "hygiene-card-name", tags$span("🧹"), "Empty Rows & Spaces"),
+                tags$span(class = paste("hygiene-badge", if (is_pass) "hygiene-badge-pass" else "hygiene-badge-info"),
+                          if (is_pass) "✓ 0 Blank" else if (!is.null(c_emp)) c_emp$badge else "Cleaned")
+              ),
+              tags$div(class = "hygiene-card-label", if (!is.null(c_emp)) c_emp$label else "Blank rows auto-pruned"),
+              tags$div(class = "hygiene-card-detail", if (!is.null(c_emp)) c_emp$detail else "Blank rows pruned; non-breaking spaces sanitized.")
+            )
+          },
+          # 5. Dummy & Placeholder Filter
           {
             c_plc <- hygiene$placeholders
             is_pass <- !is.null(c_plc) && identical(c_plc$status, "pass")
@@ -2090,7 +2123,40 @@ server <- function(input, output, session) {
     }
   })
 
+  output$confirm_upload_btn_container <- renderUI({
+    if (isTRUE(upload_verifying())) {
+      tags$button(
+        id = "confirm_upload",
+        type = "button",
+        class = "btn btn-primary disabled mt-3",
+        disabled = "disabled",
+        style = "cursor: not-allowed; opacity: 0.65; pointer-events: none;",
+        `aria-disabled` = "true",
+        `aria-busy` = "true",
+        tags$span(class = "spinner-border spinner-border-sm me-2", role = "status", `aria-hidden` = "true"),
+        "Verifying Spreadsheet..."
+      )
+    } else if (is.null(upload_df()) || !is.null(upload_error())) {
+      tags$button(
+        id = "confirm_upload",
+        type = "button",
+        class = "btn btn-primary disabled mt-3",
+        disabled = "disabled",
+        style = "cursor: not-allowed; opacity: 0.65; pointer-events: none;",
+        title = "Upload a valid spreadsheet to continue",
+        `aria-disabled` = "true",
+        "Confirm upload & continue"
+      )
+    } else {
+      actionButton("confirm_upload", "Confirm upload & continue ➔", class = "btn-primary mt-3")
+    }
+  })
+
   observeEvent(input$confirm_upload, {
+    if (isTRUE(upload_verifying())) {
+      showNotification("Please wait for spreadsheet verification to finish.", type = "warning")
+      return()
+    }
     if (is.null(upload_df())) {
       showNotification("Upload a file before continuing.", type = "error")
       return()
@@ -2103,6 +2169,10 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$confirm_upload_health_btn, {
+    if (isTRUE(upload_verifying())) {
+      showNotification("Please wait for spreadsheet verification to finish.", type = "warning")
+      return()
+    }
     if (is.null(upload_df())) {
       showNotification("Upload a file before continuing.", type = "error")
       return()
@@ -2204,36 +2274,123 @@ server <- function(input, output, session) {
     current_step("upload")
   })
 
+  # Real-time state management for Auto-Detect mapping feedback
+  auto_map_state <- reactiveValues(
+    active = FALSE,
+    matched = 0,
+    total = 0,
+    show_summary = FALSE,
+    status_type = "info",
+    status_message = ""
+  )
+
+  output$auto_map_btn_container <- renderUI({
+    if (isTRUE(auto_map_state$active)) {
+      tags$button(
+        id = "auto_map_btn",
+        type = "button",
+        class = "btn btn-secondary btn-sm disabled",
+        disabled = "disabled",
+        style = "padding: 6px 12px; font-size: 0.825rem; font-weight: 600; color: var(--app-forest); border-color: rgba(46, 125, 50, 0.3); opacity: 0.85;",
+        `aria-busy` = "true",
+        tags$span(class = "spinner-border spinner-border-sm me-2 text-success", role = "status", `aria-hidden` = "true"),
+        "Analyzing Columns & Mapping..."
+      )
+    } else {
+      actionButton(
+        "auto_map_btn",
+        "⚡ Auto-Detect Best Matches",
+        class = "btn-secondary btn-sm",
+        style = "padding: 6px 12px; font-size: 0.825rem; font-weight: 600; color: var(--app-forest); border-color: rgba(46, 125, 50, 0.3);"
+      )
+    }
+  })
+
+  output$auto_map_status_banner <- renderUI({
+    if (isTRUE(auto_map_state$active)) {
+      div(
+        class = "health-alert health-alert-info mb-3 d-flex align-items-center gap-3",
+        role = "status",
+        `aria-live` = "polite",
+        `aria-busy` = "true",
+        style = "border-left: 4px solid var(--app-forest); background: rgba(82, 179, 45, 0.08); padding: 10px 14px; border-radius: 6px;",
+        tags$span(class = "spinner-border spinner-border-sm text-success flex-shrink-0", role = "status", `aria-hidden` = "true"),
+        div(
+          tags$strong(style = "color: var(--app-forest);", "Scanning Uploaded Column Headers: "),
+          tags$span(style = "font-size: 0.85rem; color: #334155;", "Cross-referencing spreadsheet fields with the CCY humanitarian standard dictionary, canonical forms, and aliases...")
+        )
+      )
+    } else if (isTRUE(auto_map_state$show_summary)) {
+      alert_class <- if (identical(auto_map_state$status_type, "success")) "health-alert-success" else "health-alert-warning"
+      border_color <- if (identical(auto_map_state$status_type, "success")) "var(--app-forest)" else "#d97706"
+      bg_color <- if (identical(auto_map_state$status_type, "success")) "rgba(82, 179, 45, 0.08)" else "rgba(217, 119, 6, 0.08)"
+      icon_symbol <- if (identical(auto_map_state$status_type, "success")) "✓" else "ℹ"
+      
+      div(
+        class = paste("health-alert mb-3 d-flex align-items-center justify-content-between", alert_class),
+        role = "status",
+        `aria-live` = "polite",
+        style = paste0("border-left: 4px solid ", border_color, "; background: ", bg_color, "; padding: 10px 14px; border-radius: 6px;"),
+        div(
+          class = "d-flex align-items-center gap-2",
+          tags$strong(style = paste0("color: ", border_color, "; font-size: 1rem;"), icon_symbol),
+          tags$span(style = "font-size: 0.85rem; color: #1e293b; font-weight: 500;", auto_map_state$status_message)
+        ),
+        actionLink("dismiss_auto_map_banner", "✕ Dismiss", style = "font-size: 0.8rem; text-decoration: none; color: #64748b; font-weight: 600; cursor: pointer;")
+      )
+    } else {
+      NULL
+    }
+  })
+
+  observeEvent(input$dismiss_auto_map_banner, {
+    auto_map_state$show_summary <- FALSE
+  })
+
   # Auto-detect best column matches from CCY standard dictionary & aliases
   observeEvent(input$auto_map_btn, {
     req(upload_df())
+    auto_map_state$active <- TRUE
+    auto_map_state$show_summary <- FALSE
+    
     cols <- names(upload_df())
     req_cols <- required_columns()
+    total_req <- length(req_cols)
     matched_count <- 0
 
-    for (rc in req_cols) {
-      best <- detect_best_column_match(rc, cols)
-      if (!is.null(best) && nzchar(best)) {
-        updateSelectInput(session, paste0("map_", rc), selected = best)
-        matched_count <- matched_count + 1
+    withProgress(message = "Auto-detecting best column matches...", min = 0, max = total_req, {
+      for (i in seq_along(req_cols)) {
+        rc <- req_cols[i]
+        incProgress(1, detail = paste("Analyzing field", i, "of", total_req))
+        best <- detect_best_column_match(rc, cols)
+        if (!is.null(best) && nzchar(best)) {
+          updateSelectInput(session, paste0("map_", rc), selected = best)
+          matched_count <- matched_count + 1
+        }
       }
-    }
+    })
+
+    auto_map_state$active <- FALSE
+    auto_map_state$matched <- matched_count
+    auto_map_state$total <- total_req
+    auto_map_state$show_summary <- TRUE
 
     if (matched_count > 0) {
-      showNotification(
-        paste0("⚡ Auto-detected and aligned ", matched_count, " of ", length(req_cols), " fields based on CCY standard headers."),
-        type = "message"
-      )
+      msg <- paste0("Auto-detected and aligned ", matched_count, " of ", total_req, " fields based on CCY standard headers.")
+      auto_map_state$status_type <- "success"
+      auto_map_state$status_message <- msg
+      showNotification(paste0("⚡ ", msg), type = "message")
     } else {
-      showNotification(
-        "No automatic matches detected. Please map columns manually or load a saved preset.",
-        type = "warning"
-      )
+      msg <- "No automatic matches detected. Please map columns manually or load a saved preset."
+      auto_map_state$status_type <- "warning"
+      auto_map_state$status_message <- msg
+      showNotification(msg, type = "warning")
     }
   })
 
   # Clear all current mappings
   observeEvent(input$clear_mapping_btn, {
+    auto_map_state$show_summary <- FALSE
     req_cols <- required_columns()
     for (rc in req_cols) {
       updateSelectInput(session, paste0("map_", rc), selected = "")
@@ -2241,11 +2398,55 @@ server <- function(input, output, session) {
     showNotification("All field mappings cleared.", type = "message")
   })
 
+  # Reactive check: is the Column Alignment Workbench fully loaded and bound in the client?
+  mapping_workbench_ready <- reactive({
+    req(upload_df())
+    req_cols <- required_columns()
+    if (is.null(req_cols) || length(req_cols) == 0) return(FALSE)
+
+    # All required column mapping inputs must be bound and reported by Shiny
+    bound <- vapply(req_cols, function(rc) {
+      !is.null(input[[paste0("map_", rc)]])
+    }, logical(1))
+
+    all(bound)
+  })
+
+  # Dynamic Confirm Mapping Button Container (prevents premature clicks while workbench loads)
+  output$confirm_mapping_btn_container <- renderUI({
+    if (!isTRUE(mapping_workbench_ready())) {
+      tags$button(
+        id = "confirm_mapping",
+        type = "button",
+        class = "btn btn-primary disabled",
+        disabled = "disabled",
+        style = "cursor: not-allowed; opacity: 0.65; pointer-events: none;",
+        `aria-disabled` = "true",
+        `aria-busy` = "true",
+        tags$span(class = "spinner-border spinner-border-sm me-2", role = "status", `aria-hidden` = "true"),
+        "Loading Column Alignment..."
+      )
+    } else {
+      actionButton("confirm_mapping", "Confirm Mapping & Continue ➔", class = "btn-primary")
+    }
+  })
+
   # Real-time mapping progress indicator pill
   output$mapping_progress_pill <- renderUI({
     req_cols <- required_columns()
     df <- upload_df()
     if (is.null(req_cols) || length(req_cols) == 0 || is.null(df)) return(NULL)
+
+    if (!isTRUE(mapping_workbench_ready())) {
+      return(
+        tags$div(
+          class = "mapping-progress-pill pill-partial",
+          tags$span(class = "spinner-border spinner-border-sm text-secondary me-1", style = "width: 12px; height: 12px; border-width: 2px;", role = "status", `aria-hidden` = "true"),
+          tags$strong("Analyzing Headers..."),
+          tags$span(class = "pill-tag", "In Progress")
+        )
+      )
+    }
 
     total <- length(req_cols)
     mapped_count <- sum(vapply(req_cols, function(rc) {
@@ -2282,6 +2483,16 @@ server <- function(input, output, session) {
     req_cols <- required_columns()
     df <- upload_df()
     if (is.null(req_cols) || length(req_cols) == 0 || is.null(df)) return(NULL)
+
+    if (!isTRUE(mapping_workbench_ready())) {
+      return(
+        tags$div(
+          class = "mapping-hint-text text-muted d-flex align-items-center gap-1",
+          tags$span(class = "spinner-grow spinner-grow-sm text-primary", role = "status", `aria-hidden` = "true"),
+          tags$span("Aligning spreadsheet headers and checking criteria...")
+        )
+      )
+    }
 
     unmapped <- req_cols[!vapply(req_cols, function(rc) {
       val <- input[[paste0("map_", rc)]]
@@ -2470,6 +2681,10 @@ server <- function(input, output, session) {
 
   observeEvent(input$confirm_mapping, {
     req(upload_df())
+    if (!isTRUE(mapping_workbench_ready())) {
+      showNotification("Please wait for column alignment workbench to finish loading.", type = "warning")
+      return()
+    }
     selected <- input$match_fields
     if (is.null(selected) || length(selected) == 0) {
       showNotification("Select at least one field to match.", type = "error")
@@ -2612,7 +2827,13 @@ server <- function(input, output, session) {
       vals <- na.omit(upload_df()[["1.1. Organization Prefix"]])
       if (length(vals) > 0 && nzchar(trimws(as.character(vals[1])))) detected_partner <- trimws(as.character(vals[1]))
     }
-    partner_org_val <- if (!is.null(detected_partner)) detected_partner else (auth$partner_name %||% NULL)
+    partner_org_val <- if (!is.null(auth$partner_name) && nzchar(trimws(auth$partner_name))) {
+      trimws(auth$partner_name)
+    } else if (!is.null(detected_partner) && nzchar(trimws(detected_partner))) {
+      trimws(detected_partner)
+    } else {
+      NULL
+    }
 
     job_id <- enqueue_match_job(
       upload_df(),

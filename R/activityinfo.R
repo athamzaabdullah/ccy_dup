@@ -169,24 +169,51 @@ activityinfo_fetch_all_progress <- function(cfg = config$activityinfo, form_ids 
 
 extract_lean_master <- function(df) {
   if (is.null(df) || !is.data.frame(df) || nrow(df) == 0) return(df)
+
+  # 1. Direct and normalized matching against canonical mapping dictionary
+  matched_by_dict <- character(0)
+  if (exists("get_activityinfo_mapping_dict", mode = "function")) {
+    dict <- get_activityinfo_mapping_dict()
+    all_dict_terms <- unique(c(names(dict), unlist(dict, use.names = FALSE)))
+    clean_str <- function(s) tolower(gsub("[^a-zA-Z0-9]", "", s))
+    clean_dict_terms <- clean_str(all_dict_terms)
+    clean_df_cols <- clean_str(names(df))
+    matched_by_dict <- names(df)[names(df) %in% all_dict_terms | clean_df_cols %in% clean_dict_terms]
+  }
+
+  # 2. Comprehensive regex patterns covering standard humanitarian question numbering and system fields
   essential_patterns <- c(
     "^(@|_)?id$", "^record_id$", "^status$",
     "QA_CODE_SN", "QA_Code", "qa_code",
-    "organization", "partner", "1\\.1\\.",
-    "Main Form Partner Batch Code", "batch",
-    "hoh_arabic_name", "3\\.1\\.", "name",
-    "hoh_spouse_name", "3\\.3\\.", "spouse",
-    "hoh_sex", "gender", "sex", "3\\.5\\.",
-    "hoh_age", "age", "3\\.4\\.",
-    "hoh_ID_number", "id_number", "3\\.12\\.", "id_type", "3\\.11\\.",
-    "primary_phone", "secondary_phone", "phone", "2\\.1\\.", "2\\.2\\.",
-    "governorate", "1\\.11\\.", "district", "1\\.12\\.", "sub[-_ ]?district", "1\\.13\\.", "village", "1\\.14\\.",
-    "dist_date", "Dist_Date", "system_date", "1\\.4\\.", "Dist_Type", "dist_type"
+    "Main[ _]Form[ _]Partner[ _]Batch[ _]Code", "batch",
+    # Specific section-number anchors starting at the beginning of the column name
+    "^(upload_)?3[._]12([._ ]|$)", "id[-_ ]?number", "national[-_ ]?id", "nid", "hoh[-_ ]?id",
+    "^(upload_)?3[._]11([._ ]|$)", "id[-_ ]?type", "main[-_ ]?form[-_ ]?of[-_ ]?id",
+    "^(upload_)?3[._]1([._ ]|$)", "hoh[-_ ]?arabic[-_ ]?name", "hoh[-_ ]?name",
+    "^(upload_)?3[._]2([._ ]|$)", "marital[-_ ]?status",
+    "^(upload_)?3[._]3([._ ]|$)", "spouse[-_ ]?name", "hoh[-_ ]?spouse",
+    "^(upload_)?3[._]4([._ ]|$)", "hoh[-_ ]?age",
+    "^(upload_)?3[._]5([._ ]|$)", "hoh[-_ ]?(sex|gender)",
+    "^(upload_)?2[._]1([._ ]|$)", "primary[-_ ]?phone",
+    "^(upload_)?2[._]2([._ ]|$)", "secondary[-_ ]?phone",
+    "^(upload_)?2[._]3([._ ]|$)", "beneficiary[-_ ]?status",
+    "^(upload_)?1[._]1([._ ]|$)", "partner", "organization",
+    "^(upload_)?1[._]2([._ ]|$)", "interviewer",
+    "^(upload_)?1[._]4([._ ]|$)", "system[-_ ]?date",
+    "^(upload_)?1[._]11([._ ]|$)", "governorate",
+    "^(upload_)?1[._]12([._ ]|$)", "district",
+    "^(upload_)?1[._]13([._ ]|$)", "sub[-_ ]?district",
+    "^(upload_)?1[._]14([._ ]|$)", "village",
+    "family[-_ ]?size", "household[-_ ]?size",
+    "dist[-_ ]?date", "Dist_Date_Calc_New", "Last[ _]Receipt[ _]Date",
+    "Dist_Type", "dist_type", "Distribution[ _]Type"
   )
   combined <- paste(essential_patterns, collapse = "|")
-  keep_cols <- grep(combined, names(df), ignore.case = TRUE, value = TRUE)
+  pattern_cols <- grep(combined, names(df), ignore.case = TRUE, value = TRUE)
+
+  keep_cols <- unique(c(matched_by_dict, pattern_cols))
   if (length(keep_cols) > 0) {
-    df[, unique(keep_cols), drop = FALSE]
+    df[, keep_cols, drop = FALSE]
   } else {
     df
   }

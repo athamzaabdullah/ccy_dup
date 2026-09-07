@@ -188,6 +188,20 @@ enqueue_match_job <- function(upload_df, snapshot_path, mapping = NULL,
       load_path <- if (file.exists(lean_path)) lean_path else snapshot_path
       master_df <- readRDS(load_path)
 
+      # Self-healing: verify master_df contains an ID number column.
+      # If an older/stale lean snapshot lacked the ID field, re-extract from the full snapshot.
+      has_id_col <- any(grepl("^(upload_)?3[._]12([._ ]|$)|id[-_ ]?number|national[-_ ]?id|nid|hoh[-_ ]?id", names(master_df), ignore.case = TRUE))
+      if (!has_id_col && file.exists(snapshot_path) && !identical(load_path, snapshot_path)) {
+        set_job_progress(id, 15, "Refreshing lean master cache with required ID fields")
+        tryCatch({
+          full_snap <- readRDS(snapshot_path)
+          master_df <- extract_lean_master(full_snap)
+          saveRDS(master_df, lean_path)
+        }, error = function(e) {
+          master_df <<- readRDS(snapshot_path)
+        })
+      }
+
       if (job_is_canceled(id)) return(NULL)
       set_job_progress(id, 30, "Loading upload data")
       upload_df <- readRDS(upload_path)
