@@ -114,3 +114,91 @@ test_that("get_field_bilingual_label formats bilingual strings correctly", {
   # Unrecognized field returns original name
   expect_equal(get_field_bilingual_label("custom_field_xyz"), "custom_field_xyz")
 })
+
+test_that("mapping_workbench_skeleton renders accessible loading skeleton", {
+  library(shiny)
+  library(bslib)
+  source(file.path("..", "..", "R", "ui_helpers.R"))
+
+  skeleton <- mapping_workbench_skeleton()
+  skel_html <- as.character(skeleton)
+
+  expect_true(grepl("mapping-skeleton-container", skel_html))
+  expect_true(grepl("mapping-skeleton-banner", skel_html))
+  expect_true(grepl('role="status"', skel_html))
+  expect_true(grepl('aria-live="polite"', skel_html))
+  expect_true(grepl('aria-busy="true"', skel_html))
+  expect_true(grepl("skeleton-shimmer", skel_html))
+  expect_true(grepl("mapping-skeleton-row", skel_html))
+  expect_true(grepl("Personal Identity", skel_html))
+  expect_true(grepl("Contact Information", skel_html))
+  expect_true(grepl("Geographic Hierarchy", skel_html))
+  expect_true(grepl("Administrative.*Project Metadata", skel_html))
+})
+
+test_that("mapping_step_ui initializes with loading skeleton and disabled confirm button", {
+  library(shiny)
+  library(bslib)
+  source(file.path("..", "..", "R", "ui_helpers.R"))
+
+  step_html <- as.character(mapping_step_ui())
+
+  # 1. mapping_ui output container has embedded skeleton
+  expect_true(grepl('id="mapping_ui"', step_html))
+  expect_true(grepl("mapping-skeleton-container", step_html))
+  expect_true(grepl('aria-busy="true"', step_html))
+
+  # 2. confirm_mapping button is initially disabled with loading spinner
+  expect_true(grepl('id="confirm_mapping_btn_container"', step_html))
+  expect_true(grepl('id="confirm_mapping"', step_html))
+  expect_true(grepl('disabled="disabled"', step_html))
+  expect_true(grepl('aria-disabled="true"', step_html))
+  expect_true(grepl('aria-busy="true"', step_html))
+  expect_true(grepl("spinner-border", step_html))
+  expect_true(grepl("Loading Column Alignment\\.\\.\\.", step_html))
+
+  # 3. mapping_validation_hint has initial loading progress indicator
+  expect_true(grepl('id="mapping_validation_hint"', step_html))
+  expect_true(grepl("Aligning spreadsheet headers and checking criteria\\.\\.\\.", step_html))
+})
+
+test_that("data_health_skeleton renders accessible loading skeleton with KPI and hygiene placeholders", {
+  library(shiny)
+  library(bslib)
+  source(file.path("..", "..", "R", "ui_helpers.R"))
+
+  skeleton <- data_health_skeleton()
+  skel_html <- as.character(skeleton)
+
+  expect_true(grepl("data-health-skeleton-container", skel_html))
+  expect_true(grepl("mapping-skeleton-banner", skel_html))
+  expect_true(grepl('role="status"', skel_html))
+  expect_true(grepl('aria-live="polite"', skel_html))
+  expect_true(grepl('aria-busy="true"', skel_html))
+  expect_true(grepl("Verifying Data Health", skel_html))
+  expect_true(grepl("health-kpi-grid", skel_html))
+  expect_true(grepl("health-kpi-chip", skel_html))
+  expect_true(grepl("hygiene-box", skel_html))
+  expect_true(grepl("hygiene-grid", skel_html))
+  expect_true(grepl("hygiene-card", skel_html))
+  expect_equal(lengths(regmatches(skel_html, gregexpr('class="hygiene-card"', skel_html))), 5)
+  expect_true(grepl("skeleton-shimmer", skel_html))
+  expect_true(grepl('disabled="disabled"', skel_html))
+  expect_true(grepl("Verifying Spreadsheet Health\\.\\.\\.", skel_html))
+})
+
+test_that("upload_step_ui initializes with disabled confirm upload button container", {
+  library(shiny)
+  library(bslib)
+  source(file.path("..", "..", "R", "ui_helpers.R"))
+
+  step_html <- as.character(upload_step_ui())
+
+  expect_true(grepl('id="confirm_upload_btn_container"', step_html))
+  expect_true(grepl('id="confirm_upload"', step_html))
+  expect_true(grepl('disabled="disabled"', step_html))
+  expect_true(grepl('aria-disabled="true"', step_html))
+  expect_true(grepl("Confirm upload &amp; continue", step_html))
+  expect_true(grepl('id="upload_data_health_and_preview_ui"', step_html))
+})
+

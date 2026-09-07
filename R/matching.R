@@ -267,7 +267,6 @@ build_self_candidates <- function(dt, limit = 500L, max_per_record = NULL) {
 
 mask_master_columns <- function(df, upload_partner = NULL, partner_org = NULL, user_role = NULL) {
   if (!is.data.frame(df) || nrow(df) == 0) return(df)
-  sensitive <- c("master_hoh_ID_number", "master_primary_phone_number", "master_secondary_phone_number", "master_phone_number")
   
   mask_val <- function(x) {
     if (is.na(x) || !nzchar(x)) return("")
@@ -292,29 +291,50 @@ mask_master_columns <- function(df, upload_partner = NULL, partner_org = NULL, u
   clean_u <- tolower(trimws(u_partners))
   clean_m <- tolower(trimws(m_orgs))
   
-  # When partners match: both non-empty and identical
-  is_same_partner <- nzchar(clean_u) & nzchar(clean_m) & (clean_u == clean_m)
-  
-  # Fallback to partner_org if u_partner is empty
-  if (!is.null(partner_org) && isTRUE(nzchar(partner_org))) {
-    fallback_clean <- tolower(trimws(partner_org))
-    fallback_match <- !nzchar(clean_u) & nzchar(clean_m) & (clean_m == fallback_clean)
-    is_same_partner <- is_same_partner | fallback_match
+  auth_partner <- if (!is.null(partner_org) && isTRUE(nzchar(trimws(partner_org)))) tolower(trimws(partner_org)) else ""
+
+  if (is_ccy_master) {
+    # Consortium Lead bypasses PII masking across all records
+    should_mask_master <- rep(FALSE, n_rows)
+  } else if (nzchar(auth_partner)) {
+    # Partner role: Master record is unmasked ONLY if it belongs to the authorized partner
+    # AND (upload record belongs to same authorized partner or upload partner is blank).
+    is_same_partner <- (clean_m == auth_partner) & (!nzchar(clean_u) | clean_u == auth_partner)
+    should_mask_master <- !is_same_partner
+  } else {
+    # Unauthenticated / local fallback: when partners match (both non-empty and identical)
+    is_same_partner <- nzchar(clean_u) & nzchar(clean_m) & (clean_u == clean_m)
+    should_mask_master <- !is_same_partner
   }
   
-  # When logged in as Consortium Lead (ccy_master), bypass PII masking across all records.
-  # Otherwise: if partners differ (!is_same_partner), mask PII.
-  should_mask <- if (is_ccy_master) rep(FALSE, n_rows) else !is_same_partner
-  
-  for (col in sensitive) {
-    if (col %in% names(df)) {
+  # Identify all master sensitive columns dynamically (uploaded PII remains unmasked)
+  is_master_sens <- function(col) {
+    grepl("^master_", col, ignore.case = TRUE) &&
+      grepl("id[-_ ]?number|national[-_ ]?id|nid|phone", col, ignore.case = TRUE) &&
+      !grepl("type|date|code|score", col, ignore.case = TRUE)
+  }
+  m_sens_cols <- unique(c(
+    names(df)[vapply(names(df), is_master_sens, logical(1))],
+    "master_hoh_ID_number", "master_primary_phone_number", "master_secondary_phone_number", "master_phone_number"
+  ))
+  m_sens_cols <- intersect(m_sens_cols, names(df))
+
+  for (col in m_sens_cols) {
+    if (any(should_mask_master)) {
       raw_vals <- as.character(df[[col]])
       masked_vals <- vapply(raw_vals, mask_val, character(1))
-      df[[col]] <- ifelse(should_mask, masked_vals, raw_vals)
+      df[[col]] <- ifelse(should_mask_master, masked_vals, raw_vals)
     }
   }
+  
   df
 }
+
+mask_same_list_columns <- function(df, partner_org = NULL, user_role = NULL) {
+  # Uploaded dataset PII is retained in full raw unmasked format per data sovereignty requirements
+  df
+}
+
 
 run_dedup <- function(upload_df,
                       master_df,
@@ -500,11 +520,22 @@ run_dedup <- function(upload_df,
         upload_row_id_a = row_a,
         upload_row_id_b = row_b
       )]
-      # Add original columns
+      # Add original columns from upload_df
+      upload_a <- upload_df[same_results$row_a, , drop = FALSE]
+      upload_b <- upload_df[same_results$row_b, , drop = FALSE]
       for (col in orig_cols) {
-        out_sl[[paste0("upload_", col, "_a")]] <- same_results[[paste0(col, "_a")]]
-        out_sl[[paste0("upload_", col, "_b")]] <- same_results[[paste0(col, "_b")]]
+        out_sl[[paste0("upload_", col, "_a")]] <- upload_a[[col]]
+        out_sl[[paste0("upload_", col, "_b")]] <- upload_b[[col]]
       }
+      if (!"upload_partner_a" %in% names(out_sl) && "partner_a" %in% names(same_results)) {
+        out_sl[["upload_partner_a"]] <- same_results$partner_a
+        out_sl[["upload_partner_b"]] <- same_results$partner_b
+      }
+      out_sl <- mask_same_list_columns(
+        as.data.frame(out_sl),
+        partner_org = partner_org,
+        user_role = user_role
+      )
     } else {
       out_sl <- data.table::data.table()
     }

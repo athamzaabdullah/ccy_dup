@@ -254,10 +254,8 @@ parse_flexible_date <- function(x) {
   out
 }
 
-map_activityinfo_columns <- function(df) {
-  if (!is.data.frame(df) || nrow(df) == 0 || ncol(df) == 0) return(df)
-  
-  mapping_dict <- list(
+get_activityinfo_mapping_dict <- function() {
+  list(
     hoh_arabic_name = c(
       "3.1. Head of household (HoH) Name (Arabic)",
       "3.1. Head of household (HoH) Name (Arabic):",
@@ -448,7 +446,12 @@ map_activityinfo_columns <- function(df) {
       "Family Size"
     )
   )
+}
 
+map_activityinfo_columns <- function(df) {
+  if (!is.data.frame(df) || nrow(df) == 0 || ncol(df) == 0) return(df)
+  
+  mapping_dict <- get_activityinfo_mapping_dict()
   curr_names <- names(df)
   new_names <- curr_names
   clean_str <- function(s) tolower(gsub("[^a-zA-Z0-9]", "", s))

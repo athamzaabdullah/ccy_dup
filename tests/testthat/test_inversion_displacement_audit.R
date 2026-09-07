@@ -122,7 +122,8 @@ test_that("extract_lean_master creates lean dataframe with only essential fields
     "district" = "Ma'ain",
     "Dist_Type" = "Flood 1 Month",
     "Random_Survey_Question_99" = "Irrelevant text",
-    "Food_Consumption_Detail_1" = "Bread",
+    "3.12 What is the Head of Household's ID number?" = "767284",
+    "3.11 What is the main form of ID that the Head of Household uses?" = "Family card",
     check.names = FALSE,
     stringsAsFactors = FALSE
   )
@@ -131,8 +132,62 @@ test_that("extract_lean_master creates lean dataframe with only essential fields
   expect_true("hoh_arabic_name" %in% names(lean))
   expect_true("Dist_Type" %in% names(lean))
   expect_true("QA_CODE_SN" %in% names(lean))
+  expect_true("3.12 What is the Head of Household's ID number?" %in% names(lean))
+  expect_true("3.11 What is the main form of ID that the Head of Household uses?" %in% names(lean))
   expect_false("Random_Survey_Question_99" %in% names(lean))
   expect_false("Food_Consumption_Detail_1" %in% names(lean))
+})
+
+test_that("partner account receives non-empty master_hoh_ID_number when matching against lean master", {
+  raw_master <- data.frame(
+    "1.1. Organization Prefix" = c("NRC", "DRC"),
+    "3.1. Head of household (HoH) Name (Arabic)" = c("محمد علي صالح", "أحمد سالم حسن"),
+    "2.1. Primary Phone Number:" = c("771112233", "774445566"),
+    "3.12 What is the Head of Household's ID number?" = c("1234567890", "9876543210"),
+    "1.11. Governorate" = c("Sanaa", "Aden"),
+    "1.12. District" = c("Ma'ain", "Al Mualla"),
+    "1.13. Sub-District" = c("SD1", "SD2"),
+    "1.14. Village" = c("V1", "V2"),
+    check.names = FALSE,
+    stringsAsFactors = FALSE
+  )
+
+  lean_m <- extract_lean_master(raw_master)
+  expect_true("3.12 What is the Head of Household's ID number?" %in% names(lean_m))
+
+  raw_upload <- data.frame(
+    "1.1. Organization Prefix" = c("DRC", "DRC"),
+    "3.1. Head of household (HoH) Name (Arabic)" = c("محمد علي صالح", "أحمد سالم حسن"),
+    "2.1. Primary Phone Number:" = c("771112233", "774445566"),
+    "3.12 What is the Head of Household's ID number?" = c("1234567890", "9876543210"),
+    "1.11. Governorate" = c("Sanaa", "Aden"),
+    "1.12. District" = c("Ma'ain", "Al Mualla"),
+    "1.13. Sub-District" = c("SD1", "SD2"),
+    "1.14. Village" = c("V1", "V2"),
+    check.names = FALSE,
+    stringsAsFactors = FALSE
+  )
+
+  res <- run_dedup(
+    upload_df = raw_upload,
+    master_df = lean_m,
+    user_role = "partner_user",
+    partner_org = "DRC"
+  )
+
+  lm <- res$list_vs_master_exact
+  expect_true(nrow(lm) == 2)
+
+  # Check that master_hoh_ID_number is NEVER empty
+  expect_false(any(lm$master_hoh_ID_number == "" | is.na(lm$master_hoh_ID_number)))
+
+  # Row 1: Upload is DRC, Master is NRC -> Different partner -> MASKED
+  row_nrc <- lm[lm$master_organization == "NRC", ]
+  expect_equal(row_nrc$master_hoh_ID_number, "*******890")
+
+  # Row 2: Upload is DRC, Master is DRC -> Same partner -> UNMASKED
+  row_drc <- lm[lm$master_organization == "DRC", ]
+  expect_equal(row_drc$master_hoh_ID_number, "9876543210")
 })
 
 test_that("cleanup_expired_payloads correctly deletes expired files and preserves fresh files", {
@@ -199,6 +254,7 @@ test_that("check_upload_hygiene detects scientific notation, blank rows, and pla
   expect_equal(res$checks$sci_notation$status, "warn")
   expect_equal(res$checks$empty_rows$status, "info")
   expect_equal(res$checks$dup_headers$status, "pass")
+  expect_equal(res$checks$formula_errors$status, "pass")
 
   # Clean dataset checks
   clean_df <- data.frame(
@@ -213,6 +269,85 @@ test_that("check_upload_hygiene detects scientific notation, blank rows, and pla
   expect_equal(clean_res$checks$sci_notation$status, "pass")
   expect_equal(clean_res$checks$empty_rows$status, "pass")
   expect_equal(clean_res$checks$dup_headers$status, "pass")
+  expect_equal(clean_res$checks$formula_errors$status, "pass")
   expect_equal(clean_res$checks$placeholders$status, "pass")
+  expect_null(clean_res$checks$length_outliers)
+})
+
+test_that("check_upload_hygiene detects various scientific formats and normalizes them safely", {
+  sci_df <- data.frame(
+    "Full Name" = c("Ali Hassan", "Fatima Omar", "Saeed Salem", "Mariam Nour"),
+    "National ID" = c("1.02E10", "7.71e+08", "5010454023", "1e10"),
+    "Phone Number" = c("771234567", "7.71E8", "773344556", "779988112"),
+    check.names = FALSE,
+    stringsAsFactors = FALSE
+  )
+
+  res <- check_upload_hygiene(sci_df)
+  expect_equal(res$checks$sci_notation$status, "warn")
+  expect_true(grepl("Formatted", res$checks$sci_notation$badge))
+
+  # Check in-memory normalization in clean_df
+  clean_ids <- as.character(res$clean_df[["National ID"]])
+  expect_equal(clean_ids[1], "10200000000")
+  expect_equal(clean_ids[2], "771000000")
+  expect_equal(clean_ids[3], "5010454023")
+  expect_equal(clean_ids[4], "10000000000")
+
+  clean_phs <- as.character(res$clean_df[["Phone Number"]])
+  expect_equal(clean_phs[2], "771000000")
+})
+
+test_that("check_upload_hygiene detects broken Excel formulas and replaces them with blank", {
+  formula_df <- data.frame(
+    "Full Name" = c("Ahmed Ali", "#REF!", "Khaled Salem"),
+    "National ID" = c("5010454023", "1020304050", "#VALUE!"),
+    "Phone" = c("#N/A", "771234567", "779876543"),
+    check.names = FALSE,
+    stringsAsFactors = FALSE
+  )
+
+  res <- check_upload_hygiene(formula_df)
+  expect_equal(res$checks$formula_errors$status, "warn")
+  expect_true(grepl("Errors", res$checks$formula_errors$badge))
+
+  # Verify broken formula tokens are cleaned in clean_df
+  expect_equal(as.character(res$clean_df[["Full Name"]][2]), "")
+  expect_equal(as.character(res$clean_df[["National ID"]][3]), "")
+  expect_equal(as.character(res$clean_df[["Phone"]][1]), "")
+})
+
+test_that("check_upload_hygiene detects Excel-level scientific formatted cells and sanitizes whitespace", {
+  # 1. Whitespace sanitization
+  space_df <- data.frame(
+    "Full Name" = c("Ahmed\u00A0Ali", "Khaled\tSalem", "Mona Hassan"),
+    "National ID" = c("5010454023", "1020304050", "11010250302"),
+    "Phone Number" = c("771234567", "771234568", "779876543"),
+    check.names = FALSE,
+    stringsAsFactors = FALSE
+  )
+  res_space <- check_upload_hygiene(space_df)
+  expect_false(grepl("\u00A0", as.character(res_space$clean_df[["Full Name"]][1])))
+  expect_false(grepl("\t", as.character(res_space$clean_df[["Full Name"]][2])))
+
+  # 2. XLSX scientific formatted cells inspection
+  tmp_xlsx <- tempfile(fileext = ".xlsx")
+  wb <- openxlsx::createWorkbook()
+  openxlsx::addWorksheet(wb, "Sheet1")
+  openxlsx::writeData(wb, "Sheet1", data.frame(
+    Name = c("Ali", "Fatima"),
+    `National ID` = c(10200000000, 5010454023),
+    check.names = FALSE
+  ))
+  sci_style <- openxlsx::createStyle(numFmt = "0.00E+00")
+  openxlsx::addStyle(wb, "Sheet1", style = sci_style, rows = 2:3, cols = 2, gridExpand = TRUE)
+  openxlsx::saveWorkbook(wb, tmp_xlsx, overwrite = TRUE)
+
+  df_xlsx <- as.data.frame(readxl::read_excel(tmp_xlsx))
+  res_xlsx <- check_upload_hygiene(df_xlsx, file_path = tmp_xlsx)
+  expect_equal(res_xlsx$checks$sci_notation$status, "warn")
+  expect_true(grepl("Formatted", res_xlsx$checks$sci_notation$badge))
+  expect_true(grepl("National ID", res_xlsx$checks$sci_notation$detail))
+  unlink(tmp_xlsx)
 })
 

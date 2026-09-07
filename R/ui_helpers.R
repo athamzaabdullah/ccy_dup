@@ -74,9 +74,22 @@ upload_step_ui <- function(can_fetch_master = TRUE) {
           if (isTRUE(can_fetch_master)) actionButton("fetch_master", "Fetch master database", class = "btn-ghost") else NULL,
           if (isTRUE(can_fetch_master)) uiOutput("cancel_fetch_button") else NULL
         ),
-                uiOutput("fetch_feedback_ui"),
-                uiOutput("fetch_log_ui"),
-        actionButton("confirm_upload", "Confirm upload & continue", class = "btn-primary mt-3")
+        uiOutput("fetch_feedback_ui"),
+        uiOutput("fetch_log_ui"),
+        tags$div(
+          id = "confirm_upload_btn_container",
+          class = "shiny-html-output d-block mt-3",
+          tags$button(
+            id = "confirm_upload",
+            type = "button",
+            class = "btn btn-primary disabled",
+            disabled = "disabled",
+            style = "cursor: not-allowed; opacity: 0.65; pointer-events: none;",
+            title = "Upload a valid spreadsheet to continue",
+            `aria-disabled` = "true",
+            "Confirm upload & continue"
+          )
+        )
       )
     ),
     card(
@@ -89,6 +102,160 @@ upload_step_ui <- function(can_fetch_master = TRUE) {
         uiOutput("upload_data_health_and_preview_ui")
       )
     )
+  )
+}
+
+data_health_skeleton <- function() {
+  tags$div(
+    class = "data-health-skeleton-container",
+    # 1. Accessible status banner
+    tags$div(
+      class = "mapping-skeleton-banner mb-3",
+      role = "status",
+      `aria-live` = "polite",
+      `aria-busy` = "true",
+      tags$span(class = "spinner-border spinner-border-sm text-success flex-shrink-0", role = "status", `aria-hidden` = "true"),
+      tags$div(
+        tags$span(class = "banner-title", "Verifying Data Health: "),
+        tags$span(class = "banner-text", "Reading file rows, verifying column structures, and running automated pre-upload quality audits. Please wait...")
+      )
+    ),
+    # 2. Skeleton File Summary Bar
+    tags$div(
+      class = "d-flex justify-content-between align-items-center p-2 mb-3 border rounded",
+      style = "background: #F8FAFC; border-color: var(--app-border);",
+      tags$div(
+        class = "d-flex align-items-center gap-2",
+        tags$div(class = "skeleton-shimmer", style = "width: 180px; height: 18px; border-radius: 4px;"),
+        tags$div(class = "skeleton-shimmer", style = "width: 120px; height: 14px; border-radius: 4px;")
+      ),
+      tags$div(class = "skeleton-shimmer", style = "width: 90px; height: 22px; border-radius: 12px;")
+    ),
+    # 3. Skeleton KPI Grid (4 chips)
+    tags$div(
+      class = "health-kpi-grid mb-3",
+      lapply(1:4, function(i) {
+        tags$div(
+          class = "health-kpi-chip",
+          tags$div(class = "skeleton-shimmer", style = "width: 70px; height: 10px; margin-bottom: 6px; border-radius: 3px;"),
+          tags$div(class = "skeleton-shimmer", style = "width: 50px; height: 24px; border-radius: 4px;")
+        )
+      })
+    ),
+    # 4. Skeleton Hygiene Box
+    tags$div(
+      class = "hygiene-box mb-3",
+      tags$div(
+        class = "hygiene-header",
+        tags$div(class = "skeleton-shimmer", style = "width: 220px; height: 16px; border-radius: 4px;"),
+        tags$div(class = "skeleton-shimmer", style = "width: 140px; height: 20px; border-radius: 10px;")
+      ),
+      tags$div(
+        class = "hygiene-grid",
+        lapply(1:5, function(i) {
+          tags$div(
+            class = "hygiene-card",
+            tags$div(
+              class = "hygiene-card-header",
+              tags$div(class = "skeleton-shimmer", style = "width: 100px; height: 14px; border-radius: 3px;"),
+              tags$div(class = "skeleton-shimmer", style = "width: 50px; height: 16px; border-radius: 8px;")
+            ),
+            tags$div(class = "skeleton-shimmer mb-1", style = "width: 130px; height: 12px; border-radius: 3px;"),
+            tags$div(class = "skeleton-shimmer", style = "width: 160px; height: 10px; border-radius: 3px;")
+          )
+        })
+      )
+    ),
+    # 5. Skeleton Proceed Button
+    tags$div(
+      style = "display: flex; justify-content: flex-end; margin-top: 16px;",
+      tags$button(
+        type = "button",
+        class = "btn btn-primary disabled",
+        disabled = "disabled",
+        style = "cursor: not-allowed; opacity: 0.65; pointer-events: none;",
+        `aria-disabled` = "true",
+        `aria-busy` = "true",
+        tags$span(class = "spinner-border spinner-border-sm me-2", role = "status", `aria-hidden` = "true"),
+        "Verifying Spreadsheet Health..."
+      )
+    )
+  )
+}
+
+mapping_workbench_skeleton <- function() {
+  render_skeleton_row <- function() {
+    tags$div(
+      class = "mapping-skeleton-row",
+      # 1. Target Column Skeleton
+      tags$div(
+        class = "mapping-col-target",
+        tags$div(class = "skeleton-shimmer skeleton-pill"),
+        tags$div(class = "skeleton-shimmer skeleton-title"),
+        tags$div(class = "skeleton-shimmer skeleton-desc")
+      ),
+      # 2. Flow Arrow Skeleton
+      tags$div(
+        class = "mapping-col-flow skeleton-arrow",
+        tags$span("⟵", `aria-hidden` = "true")
+      ),
+      # 3. Source Dropdown Skeleton
+      tags$div(
+        class = "mapping-col-source",
+        tags$div(class = "skeleton-shimmer skeleton-input")
+      ),
+      # 4. Preview / Chip Skeleton
+      tags$div(
+        class = "mapping-col-preview",
+        tags$div(class = "skeleton-shimmer skeleton-badge")
+      )
+    )
+  }
+
+  groups <- list(
+    list(title = "👤 Personal Identity & Demographics", title_ar = "الهوية والبيانات الديموغرافية", rows = 3),
+    list(title = "📞 Contact Information", title_ar = "بيانات التواصل", rows = 2),
+    list(title = "📍 Geographic Hierarchy", title_ar = "الموقع الجغرافي", rows = 2),
+    list(title = "🏛️ Administrative & Project Metadata", title_ar = "البيانات الإدارية والمشروع", rows = 2)
+  )
+
+  tags$div(
+    class = "mapping-skeleton-container",
+    tags$div(
+      class = "mapping-skeleton-banner",
+      role = "status",
+      `aria-live` = "polite",
+      `aria-busy` = "true",
+      tags$span(class = "spinner-border spinner-border-sm text-success flex-shrink-0", role = "status", `aria-hidden` = "true"),
+      tags$div(
+        tags$span(class = "banner-title", "Initializing Column Alignment Workbench: "),
+        tags$span(class = "banner-text", "Analyzing spreadsheet headers and auto-aligning standard CCY fields. Please wait...")
+      )
+    ),
+    tags$div(
+      class = "mapping-matrix-header d-none d-md-grid",
+      tags$div(class = "header-target", tags$strong("Target CCY Master Field (الحقل المعياري)")),
+      tags$div(class = "header-flow text-center", tags$strong("")),
+      tags$div(class = "header-source", tags$strong("Source Uploaded Column (العمود المرفوع)")),
+      tags$div(class = "header-preview", tags$strong("Alignment Status & Live Sample (المعاينة الحية)"))
+    ),
+    lapply(groups, function(grp) {
+      tags$div(
+        class = "mapping-category-group mb-3",
+        tags$div(
+          class = "mapping-category-header",
+          tags$div(
+            class = "d-flex align-items-center gap-2",
+            tags$span(paste0(grp$title, " (", grp$title_ar, ")"))
+          ),
+          tags$span(class = "category-badge-chip", "Loading...")
+        ),
+        tags$div(
+          class = "mapping-category-body",
+          lapply(seq_len(grp$rows), function(i) render_skeleton_row())
+        )
+      )
+    })
   )
 }
 
@@ -259,18 +426,47 @@ mapping_step_ui <- function() {
           ),
           div(
             class = "d-flex align-items-center gap-2 flex-wrap",
-            actionButton("auto_map_btn", "⚡ Auto-Detect Best Matches", class = "btn-secondary btn-sm", style = "padding: 6px 12px; font-size: 0.825rem; font-weight: 600; color: var(--app-forest); border-color: rgba(46, 125, 50, 0.3);"),
+            uiOutput("auto_map_btn_container", inline = TRUE),
             actionButton("clear_mapping_btn", "↺ Clear All", class = "btn-ghost btn-sm", style = "padding: 6px 10px; font-size: 0.8rem;")
           )
         ),
-        uiOutput("mapping_ui"),
+        uiOutput("auto_map_status_banner"),
+        tags$div(
+          id = "mapping_ui",
+          class = "shiny-html-output",
+          `aria-live` = "polite",
+          `aria-busy` = "true",
+          mapping_workbench_skeleton()
+        ),
         div(
           class = "mapping-footer-bar mt-4 pt-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-3",
           actionButton("back_to_upload_btn", "← Back to Upload", class = "btn-secondary"),
           div(
             class = "d-flex align-items-center gap-3 flex-wrap",
-            uiOutput("mapping_validation_hint"),
-            actionButton("confirm_mapping", "Confirm Mapping & Continue ➔", class = "btn-primary")
+            tags$div(
+              id = "mapping_validation_hint",
+              class = "shiny-html-output",
+              tags$div(
+                class = "mapping-hint-text text-muted d-flex align-items-center gap-1",
+                tags$span(class = "spinner-grow spinner-grow-sm text-primary", role = "status", `aria-hidden` = "true"),
+                tags$span("Aligning spreadsheet headers and checking criteria...")
+              )
+            ),
+            tags$div(
+              id = "confirm_mapping_btn_container",
+              class = "shiny-html-output d-inline-block",
+              tags$button(
+                id = "confirm_mapping",
+                type = "button",
+                class = "btn btn-primary disabled",
+                disabled = "disabled",
+                style = "cursor: not-allowed; opacity: 0.65; pointer-events: none;",
+                `aria-disabled` = "true",
+                `aria-busy` = "true",
+                tags$span(class = "spinner-border spinner-border-sm me-2", role = "status", `aria-hidden` = "true"),
+                "Loading Column Alignment..."
+              )
+            )
           )
         )
       )
