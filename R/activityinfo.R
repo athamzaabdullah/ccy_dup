@@ -231,16 +231,26 @@ save_master_snapshot <- function(df, snap_dir = config$paths$master_snap_dir) {
   path <- file.path(snap_dir, paste0("master_snapshot_", ts, ".rds"))
   saveRDS(df, path)
 
+  # Also write Apache Arrow Parquet for full master snapshot
+  full_parquet_path <- file.path(snap_dir, paste0("master_snapshot_", ts, ".parquet"))
+  tryCatch({
+    if (requireNamespace("arrow", quietly = TRUE)) {
+      arrow::write_parquet(df, full_parquet_path)
+    }
+  }, error = function(pe) NULL)
+
   # Companion Lean Master Index for fast low-memory matching
   tryCatch({
     lean_df <- extract_lean_master(df)
     lean_path <- file.path(snap_dir, paste0("master_lean_", ts, ".rds"))
     saveRDS(lean_df, lean_path)
     
-    # Also write Apache Arrow Parquet for high-speed projection & low memory
+    # Write Apache Arrow Parquet for high-speed projection & low memory
     parquet_path <- file.path(snap_dir, paste0("master_lean_", ts, ".parquet"))
     tryCatch({
-      arrow::write_parquet(lean_df, parquet_path)
+      if (requireNamespace("arrow", quietly = TRUE)) {
+        arrow::write_parquet(lean_df, parquet_path)
+      }
     }, error = function(pe) NULL)
   }, error = function(e) {
     warning("Could not write lean master snapshot: ", conditionMessage(e))
@@ -259,8 +269,35 @@ load_master_lean <- function(path, columns = NULL) {
   }
   
   parquet_path <- gsub("\\.rds$", ".parquet", lean_path)
+  if (!file.exists(parquet_path) && grepl("master_lean_", parquet_path)) {
+    alt_parquet <- gsub("master_lean_", "master_snapshot_", parquet_path)
+    if (file.exists(alt_parquet)) parquet_path <- alt_parquet
+  }
   
-  if (file.exists(parquet_path)) {
+  # 1. Zero-copy memory mapped query via DuckDB
+  if (file.exists(parquet_path) && requireNamespace("duckdb", quietly = TRUE) && requireNamespace("DBI", quietly = TRUE)) {
+    out <- tryCatch({
+      con <- DBI::dbConnect(duckdb::duckdb(shared_home = FALSE))
+      on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+      escaped_path <- gsub("\\\\", "/", normalizePath(parquet_path, winslash = "/", mustWork = FALSE))
+      
+      if (!is.null(columns) && length(columns) > 0) {
+        cols_info <- DBI::dbGetQuery(con, sprintf("DESCRIBE SELECT * FROM read_parquet('%s')", escaped_path))
+        avail <- intersect(columns, cols_info$column_name)
+        if (length(avail) > 0) {
+          col_sql <- paste(vapply(avail, function(c) paste0('"', c, '"'), character(1)), collapse = ", ")
+          res <- DBI::dbGetQuery(con, sprintf("SELECT %s FROM read_parquet('%s')", col_sql, escaped_path))
+          return(as.data.frame(res))
+        }
+      }
+      res <- DBI::dbGetQuery(con, sprintf("SELECT * FROM read_parquet('%s')", escaped_path))
+      as.data.frame(res)
+    }, error = function(e) NULL)
+    if (!is.null(out) && nrow(out) > 0) return(out)
+  }
+
+  # 2. High-speed projection via Apache Arrow
+  if (file.exists(parquet_path) && requireNamespace("arrow", quietly = TRUE)) {
     out <- tryCatch({
       if (!is.null(columns) && length(columns) > 0) {
         schema_names <- arrow::read_parquet(parquet_path, as_data_frame = FALSE)$schema$names
@@ -274,6 +311,7 @@ load_master_lean <- function(path, columns = NULL) {
     if (!is.null(out)) return(out)
   }
   
+  # 3. Fallback to RDS
   if (file.exists(lean_path)) {
     return(readRDS(lean_path))
   }
@@ -281,6 +319,32 @@ load_master_lean <- function(path, columns = NULL) {
     return(readRDS(path))
   }
   NULL
+}
+
+query_master_duckdb <- function(parquet_path, sql = NULL, columns = NULL, where_clause = NULL) {
+  if (!file.exists(parquet_path)) return(NULL)
+  if (!requireNamespace("duckdb", quietly = TRUE) || !requireNamespace("DBI", quietly = TRUE)) {
+    return(NULL)
+  }
+  con <- DBI::dbConnect(duckdb::duckdb(shared_home = FALSE))
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+  escaped_path <- gsub("\\\\", "/", normalizePath(parquet_path, winslash = "/", mustWork = FALSE))
+  
+  if (!is.null(sql) && nzchar(trimws(sql))) {
+    full_sql <- gsub("\\{table\\}|\\{parquet\\}", sprintf("read_parquet('%s')", escaped_path), sql)
+    return(as.data.frame(DBI::dbGetQuery(con, full_sql)))
+  }
+  
+  cols_sql <- if (!is.null(columns) && length(columns) > 0) {
+    paste(vapply(columns, function(c) paste0('"', c, '"'), character(1)), collapse = ", ")
+  } else {
+    "*"
+  }
+  query <- sprintf("SELECT %s FROM read_parquet('%s')", cols_sql, escaped_path)
+  if (!is.null(where_clause) && nzchar(trimws(where_clause))) {
+    query <- paste(query, "WHERE", where_clause)
+  }
+  as.data.frame(DBI::dbGetQuery(con, query))
 }
 
 activityinfo_find_id_col <- function(df) {

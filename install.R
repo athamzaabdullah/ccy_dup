@@ -1,7 +1,8 @@
 packages <- c(
   "shiny", "bslib", "DT", "readxl", "openxlsx", "dplyr", "tidyr",
   "purrr", "stringi", "stringdist", "fuzzyjoin", "data.table", "httr2", "jsonlite",
-  "promises", "future", "progressr", "bcrypt", "remotes", "testthat"
+  "promises", "future", "progressr", "bcrypt", "remotes", "testthat",
+  "duckdb", "DBI", "arrow"
 )
 
 installed <- rownames(installed.packages())

@@ -10,7 +10,9 @@ library(shiny)
 library(promises)
 library(future)
 
-plan(multisession)
+cores <- parallel::detectCores()
+worker_count <- if (is.na(cores) || cores <= 1) 1L else max(1L, min(as.integer(cores - 1L), 4L))
+future::plan(future::multisession, workers = worker_count)
 
 # Log Shiny server errors to tmp/shiny_error.log for diagnostics
 if (!dir.exists("tmp")) dir.create("tmp", recursive = TRUE)
@@ -209,6 +211,24 @@ server <- function(input, output, session) {
   # Automated TTL data retention cleanup on startup (Pillar 3.1)
   tryCatch(cleanup_expired_payloads(max_age_days = 14), error = function(e) NULL)
 
+  # Session-scoped directory for temporary data & PII isolation
+  session_id <- if (!is.null(session$token) && nzchar(session$token)) {
+    session$token
+  } else {
+    paste0("sess_", format(Sys.time(), "%Y%m%d%H%M%S_"), sample(10000:99999, 1))
+  }
+  session_dir <- file.path("tmp", "sessions", session_id)
+  if (!dir.exists(session_dir)) {
+    dir.create(session_dir, recursive = TRUE, showWarnings = FALSE)
+  }
+
+  # Register onSessionEnded to purge uploaded PII and prevent disk leaks
+  session$onSessionEnded(function() {
+    if (dir.exists(session_dir)) {
+      unlink(session_dir, recursive = TRUE, force = TRUE)
+    }
+  })
+
   current_step <- reactiveVal("upload")
   master_fetch_status <- reactiveVal("Not fetched yet.")
   last_master_snapshot <- reactiveVal(NULL)
@@ -230,6 +250,12 @@ server <- function(input, output, session) {
   max_candidates <- reactiveVal(config$max_candidates)
   filter_recent_mpca <- reactiveVal(FALSE)
   mpca_window_months <- reactiveVal(6)
+
+  # Debounce high-frequency MPCA recency slider input to prevent recomputing metrics on every tick
+  debounced_mpca_window_months <- shiny::debounce(
+    reactive(as.numeric(input$mpca_window_months %||% 6)),
+    250
+  )
   match_fields <- reactiveVal(c(
     "partner",
     "hoh_ID_number",
@@ -253,12 +279,13 @@ server <- function(input, output, session) {
   }
 
   # Helper: safe wrapper around DT::datatable to prevent crashes when DT internals fail
-  safe_datatable <- function(df, opts = list(pageLength = 5), selection = "none", ...) {
+  safe_datatable <- function(df, opts = list(pageLength = 10), selection = "none", ...) {
     tryCatch({
-      # For large data, enable client-side performance helpers (deferRender) instead of server flag
+      if (is.null(opts$pageLength)) opts$pageLength <- 10
+      # For large data, enable client-side performance helpers (deferRender)
       is_large <- !is.null(df) && is.data.frame(df) && nrow(df) > 500
       if (is_large) {
-        opts <- modifyList(opts, list(pageLength = 10, deferRender = TRUE))
+        opts <- modifyList(opts, list(deferRender = TRUE))
       }
       DT::datatable(df, options = opts, rownames = FALSE, selection = selection, ...)
     }, error = function(e) {
@@ -1195,7 +1222,7 @@ server <- function(input, output, session) {
     updateSelectInput(session, "admin_selected_user", selected = selected_email)
   })
 
-  output$admin_users_table <- renderDT({
+  output$admin_users_table <- DT::renderDT({
     req(can_open_admin_workspace())
     users <- manageable_users()
     if (nrow(users) == 0) {
@@ -1205,8 +1232,8 @@ server <- function(input, output, session) {
     show_df$role <- vapply(show_df$role, role_label, character(1))
     show_df$active <- ifelse(show_df$active, "✓ Active", "✕ Inactive")
     names(show_df) <- c("Email", "Role", "Partner", "Status", "Last Updated")
-    safe_datatable(show_df, opts = list(pageLength = 8, scrollX = TRUE), selection = "single")
-  })
+    safe_datatable(show_df, opts = list(pageLength = 10, scrollX = TRUE), selection = "single")
+  }, server = TRUE)
 
   output$partner_registry_ui <- renderUI({
     if (!isTRUE(is_ccy_master())) return(NULL)
@@ -1351,7 +1378,7 @@ server <- function(input, output, session) {
     )
   })
 
-  output$admin_audit_log_table <- renderDT({
+  output$admin_audit_log_table <- DT::renderDT({
     req(can_open_admin_workspace())
     log_df <- get_export_audit_log()
     if (nrow(log_df) == 0) {
@@ -1361,8 +1388,8 @@ server <- function(input, output, session) {
     show_log$user_role <- vapply(show_log$user_role, role_label, character(1))
     show_log$pii_masked <- ifelse(isTRUE(show_log$pii_masked) | show_log$pii_masked == "TRUE", "🔒 Masked", "🔓 Full PII")
     names(show_log) <- c("Timestamp", "User Email", "Role", "Partner", "Records", "PII Status", "File Name")
-    safe_datatable(show_log, opts = list(pageLength = 8, scrollX = TRUE), selection = "none")
-  })
+    safe_datatable(show_log, opts = list(pageLength = 10, scrollX = TRUE), selection = "none")
+  }, server = TRUE)
 
 
   observeEvent(selected_manageable_user(), {
@@ -3185,7 +3212,7 @@ server <- function(input, output, session) {
 
   output$mpca_window_simulator_ui <- renderUI({
     is_filtered <- isTRUE(input$filter_recent_mpca)
-    months <- as.numeric(input$mpca_window_months %||% 6)
+    months <- debounced_mpca_window_months()
 
     if (!is_filtered) {
       return(tags$div(
@@ -4132,16 +4159,16 @@ server <- function(input, output, session) {
     )
   })
 
-  output$results_summary_dt <- renderDT({
+  output$results_summary_dt <- DT::renderDT({
     res <- results_data()
     req(res)
     if (is.list(res) && !is.null(res$summary)) {
-      return(safe_datatable(res$summary, opts = list(pageLength = 8)))
+      return(safe_datatable(res$summary, opts = list(pageLength = 10)))
     }
     safe_datatable(data.frame())
-  })
+  }, server = TRUE)
 
-  output$results_high_dt <- renderDT({
+  output$results_high_dt <- DT::renderDT({
     df <- high_conf_raw()
     triage_update_trigger()
     if (nrow(df) == 0) {
@@ -4170,8 +4197,8 @@ server <- function(input, output, session) {
       check.names = FALSE,
       stringsAsFactors = FALSE
     )
-    safe_datatable(display, opts = list(pageLength = 8, scrollX = TRUE), selection = "single")
-  })
+    safe_datatable(display, opts = list(pageLength = 15, scrollX = TRUE), selection = "single")
+  }, server = TRUE)
 
   observeEvent(input$results_high_dt_rows_selected, {
     idx <- input$results_high_dt_rows_selected
@@ -4181,7 +4208,7 @@ server <- function(input, output, session) {
     show_candidate_diff_modal(df[idx, , drop = FALSE], is_internal = FALSE)
   })
 
-  output$results_medium_dt <- renderDT({
+  output$results_medium_dt <- DT::renderDT({
     df <- medium_conf_raw()
     triage_update_trigger()
     if (nrow(df) == 0) {
@@ -4210,8 +4237,8 @@ server <- function(input, output, session) {
       check.names = FALSE,
       stringsAsFactors = FALSE
     )
-    safe_datatable(display, opts = list(pageLength = 8, scrollX = TRUE), selection = "single")
-  })
+    safe_datatable(display, opts = list(pageLength = 15, scrollX = TRUE), selection = "single")
+  }, server = TRUE)
 
   observeEvent(input$results_medium_dt_rows_selected, {
     idx <- input$results_medium_dt_rows_selected
@@ -4221,7 +4248,7 @@ server <- function(input, output, session) {
     show_candidate_diff_modal(df[idx, , drop = FALSE], is_internal = FALSE)
   })
 
-  output$results_internal_dt <- renderDT({
+  output$results_internal_dt <- DT::renderDT({
     df <- internal_dups_raw()
     triage_update_trigger()
     if (nrow(df) == 0) {
@@ -4246,8 +4273,8 @@ server <- function(input, output, session) {
       check.names = FALSE,
       stringsAsFactors = FALSE
     )
-    safe_datatable(display, opts = list(pageLength = 8, scrollX = TRUE), selection = "single")
-  })
+    safe_datatable(display, opts = list(pageLength = 15, scrollX = TRUE), selection = "single")
+  }, server = TRUE)
 
   observeEvent(input$results_internal_dt_rows_selected, {
     idx <- input$results_internal_dt_rows_selected
