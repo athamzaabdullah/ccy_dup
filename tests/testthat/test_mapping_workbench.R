@@ -288,4 +288,44 @@ test_that("custom.css guarantees unrestricted viewport scrolling and modal scrol
   expect_true(grepl("modal-open", app_r_content))
 })
 
+test_that("button dimensions, spinner animations, and reset handlers prevent UI shrinkage and freezes", {
+  css_path <- file.path("..", "..", "www", "custom.css")
+  expect_true(file.exists(css_path))
+  css_content <- paste(readLines(css_path, warn = FALSE), collapse = "\n")
+
+  # 1. Global button dimension hardening to prevent collapsed pills
+  expect_true(grepl("\\.btn\\s*\\{[^}]*min-height:\\s*38px\\s*!important", css_content))
+  expect_true(grepl("\\.btn\\s*\\{[^}]*min-width:\\s*max-content", css_content))
+  expect_true(grepl("\\.btn\\s*\\{[^}]*white-space:\\s*nowrap\\s*!important", css_content))
+  expect_true(grepl("\\.btn\\s*\\{[^}]*flex-shrink:\\s*0\\s*!important", css_content))
+  expect_true(grepl("\\.btn\\s*\\{[^}]*box-sizing:\\s*border-box\\s*!important", css_content))
+
+  # 2. Button size variants (sm/lg) have guaranteed minimum heights
+  expect_true(grepl("\\.btn-sm\\s*\\{[^}]*min-height:\\s*32px\\s*!important", css_content))
+  expect_true(grepl("\\.btn-lg\\s*\\{[^}]*min-height:\\s*44px\\s*!important", css_content))
+
+  # 3. Spinner border dimensions, flex protection, and high-contrast color preservation
+  expect_true(grepl("\\.spinner-border\\s*\\{[^}]*display:\\s*inline-block\\s*!important", css_content))
+  expect_true(grepl("\\.spinner-border\\s*\\{[^}]*flex-shrink:\\s*0\\s*!important", css_content))
+  expect_true(grepl("\\.spinner-border\\s*\\{[^}]*box-sizing:\\s*border-box\\s*!important", css_content))
+  expect_true(grepl("\\.btn-primary\\s+\\.spinner-border[^}]*border-color:\\s*#FFFFFF\\s*!important", css_content))
+
+  # 4. Reusable button reset message handler registered in Shiny JS
+  app_r_path <- file.path("..", "..", "app.R")
+  expect_true(file.exists(app_r_path))
+  app_r_content <- paste(readLines(app_r_path, encoding = "UTF-8", warn = FALSE), collapse = "\n")
+  expect_true(grepl('Shiny\\.addCustomMessageHandler\\("reset_button"', app_r_content))
+
+  # 5. Asynchronous graceful timer for upload_verifying in app.R
+  expect_true(grepl("upload_verifying\\(\\)", app_r_content))
+  expect_true(grepl("upload_verify_time\\(\\)", app_r_content))
+  expect_true(grepl("invalidateLater", app_r_content))
+
+  # 6. Button reset dispatched on validation early-exits
+  expect_true(grepl('reset_button".*confirm_upload_health_btn', app_r_content))
+  expect_true(grepl('reset_button".*confirm_mapping', app_r_content))
+  expect_true(grepl('reset_button".*confirm_strategy', app_r_content))
+})
+
+
 

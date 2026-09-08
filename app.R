@@ -73,111 +73,124 @@ ui <- fluidPage(
     tags$title("CCY Deduplication Platform"),
     includeCSS("www/custom.css")
   ),
-  tags$script(HTML("
+  tags$script(HTML(r"---(
     // Allow Enter to submit the login modal but ensure inputs are committed to Shiny first.
-    $(document).on('keydown', function(e) {
-      if (e.key !== 'Enter') return;
-      if ($('.modal:visible').length === 0) return;
-      // only target the login submit when visible
-      var loginBtn = $('#login_submit:visible');
+    $(document).on("keydown", function(e) {
+      if (e.key !== "Enter") return;
+      if ($(".modal:visible").length === 0) return;
+      var loginBtn = $("#login_submit:visible");
       if (loginBtn.length) {
-        // delay to allow browser to update input focus/values before clicking
         setTimeout(function() { loginBtn.click(); }, 120);
       }
     });
+
     // Adjust DataTables columns when changing tabs to prevent header misalignment
-    $(document).on('shown.bs.tab', 'a[data-bs-toggle=\"tab\"]', function (e) {
+    $(document).on("shown.bs.tab", "a[data-bs-toggle=\"tab\"]", function (e) {
       if ($.fn.dataTable) {
         $.fn.dataTable.tables({ visible: true, api: true }).columns.adjust();
       }
     });
-    Shiny.addCustomMessageHandler('export_ready', function(message) {
-      var btn = $('#export_results');
+
+    Shiny.addCustomMessageHandler("export_ready", function(message) {
+      var btn = $("#export_results");
       if (btn.length) {
-        btn.prop('disabled', false).removeClass('disabled');
+        btn.prop("disabled", false).removeClass("disabled");
+      }
+    });
+
+    Shiny.addCustomMessageHandler("reset_button", function(msg) {
+      var btn = $("#" + msg.id);
+      if (btn.length) {
+        btn.prop("disabled", false).removeClass("disabled").html(msg.html);
       }
     });
 
     // Instant feedback for file upload: immediately display animated shimmer skeleton
-    $(document).on('change', '#upload_file', function() {
+    $(document).on("change", "#upload_file, #upload_file input[type=\"file\"], input.shiny-input-file", function() {
       if (this.files && this.files.length > 0) {
-        var skel = $('#data_health_skeleton_holder').html();
+        var skel = $("#data_health_skeleton_holder").html();
         if (skel) {
-          $('#upload_data_health_and_preview_ui').html(skel);
+          $("#upload_data_health_and_preview_ui").html(skel);
         }
-        $('#confirm_upload_btn_container').html(
-          '<button class=\'btn btn-primary disabled mt-3\' disabled=\'disabled\' style=\'cursor:not-allowed;opacity:0.75;\' aria-busy=\'true\'>' +
-          '<span class=\'spinner-border spinner-border-sm me-2\' role=\'status\' aria-hidden=\'true\'></span>Reading & Verifying Spreadsheet…</button>'
+        $("#confirm_upload_btn_container").html(
+          '<button class="btn btn-primary disabled mt-3" disabled="disabled" style="cursor:not-allowed;opacity:0.75;" aria-busy="true">' +
+          '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Reading &amp; Verifying Spreadsheet…</button>'
         );
       }
     });
 
     // Instant feedback for Auto-Detect Best Matches in Column Alignment Workbench
-    $(document).on('click', '#auto_map_btn', function() {
-      var skel = $('#mapping_skeleton_holder').html();
+    $(document).on("click", "#auto_map_btn", function() {
+      var skel = $("#mapping_skeleton_holder").html();
       if (skel) {
-        $('#mapping_ui').html(skel);
+        $("#mapping_ui").html(skel);
       }
-      $('#auto_map_btn_container').html(
-        '<button class=\'btn btn-secondary btn-sm disabled\' disabled=\'disabled\' style=\'padding:6px 12px;font-size:0.825rem;font-weight:600;color:var(--app-forest);border-color:rgba(46,125,50,0.3);opacity:0.85;\' aria-busy=\'true\'>' +
-        '<span class=\'spinner-border spinner-border-sm me-2 text-success\' role=\'status\' aria-hidden=\'true\'></span>Analyzing Columns & Mapping…</button>'
+      $("#auto_map_btn_container").html(
+        '<button class="btn btn-secondary btn-sm disabled" disabled="disabled" style="padding:6px 12px;font-size:0.825rem;font-weight:600;color:var(--app-forest);border-color:rgba(46,125,50,0.3);opacity:0.85;" aria-busy="true">' +
+        '<span class="spinner-border spinner-border-sm me-2 text-success" role="status" aria-hidden="true"></span>Analyzing Columns &amp; Mapping…</button>'
       );
-      $('#auto_map_status_banner').html(
-        '<div class=\'health-alert health-alert-info mb-3 d-flex align-items-center gap-3\' role=\'status\' aria-live=\'polite\' aria-busy=\'true\' style=\'border-left:4px solid var(--app-forest);background:rgba(82,179,45,0.08);padding:10px 14px;border-radius:6px;\'>' +
-        '<span class=\'spinner-border spinner-border-sm text-success flex-shrink-0\' role=\'status\' aria-hidden=\'true\'></span>' +
-        '<div><strong style=\'color:var(--app-forest);\'>Scanning Uploaded Column Headers: </strong>' +
-        '<span style=\'font-size:0.85rem;color:#334155;\'>Cross-referencing spreadsheet fields with the CCY humanitarian standard dictionary, canonical forms, and aliases…</span>' +
+      $("#auto_map_status_banner").html(
+        '<div class="health-alert health-alert-info mb-3 d-flex align-items-center gap-3" role="status" aria-live="polite" aria-busy="true" style="border-left:4px solid var(--app-forest);background:rgba(82,179,45,0.08);padding:10px 14px;border-radius:6px;">' +
+        '<span class="spinner-border spinner-border-sm text-success flex-shrink-0" role="status" aria-hidden="true"></span>' +
+        '<div><strong style="color:var(--app-forest);">Scanning Uploaded Column Headers: </strong>' +
+        '<span style="font-size:0.85rem;color:#334155;">Cross-referencing spreadsheet fields with the CCY humanitarian standard dictionary, canonical forms, and aliases…</span>' +
         '</div></div>'
       );
     });
 
     // Instant button feedback when confirming upload to proceed to mapping
-    $(document).on('click', '#confirm_upload, #confirm_upload_health_btn', function() {
+    $(document).on("click", "#confirm_upload, #confirm_upload_health_btn", function() {
       var btn = $(this);
-      btn.html('<span class=\'spinner-border spinner-border-sm me-2\' role=\'status\' aria-hidden=\'true\'></span>Loading Column Alignment…');
+      btn.addClass("disabled");
+      btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Loading Column Alignment…');
     });
 
     // Instant button feedback when confirming mapping
-    $(document).on('click', '#confirm_mapping', function() {
+    $(document).on("click", "#confirm_mapping", function() {
       var btn = $(this);
-      btn.html('<span class=\'spinner-border spinner-border-sm me-2\' role=\'status\' aria-hidden=\'true\'></span>Verifying Mappings…');
+      btn.addClass("disabled");
+      btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Verifying Mappings…');
     });
 
     // Instant button feedback when confirming strategy
-    $(document).on('click', '#confirm_strategy', function() {
+    $(document).on("click", "#confirm_strategy", function() {
       var btn = $(this);
-      btn.html('<span class=\'spinner-border spinner-border-sm me-2\' role=\'status\' aria-hidden=\'true\'></span>Preparing Matching Parameters…');
+      btn.addClass("disabled");
+      btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Preparing Matching Parameters…');
     });
 
     // Instant button feedback when running matching
-    $(document).on('click', '#run_match', function() {
+    $(document).on("click", "#run_match", function() {
       var btn = $(this);
-      btn.html('<span class=\'spinner-border spinner-border-sm me-2\' role=\'status\' aria-hidden=\'true\'></span>Initializing Matching Engine…');
+      btn.addClass("disabled");
+      btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Initializing Matching Engine…');
     });
 
     // Instant button feedback when fetching master database
-    $(document).on('click', '#fetch_master', function() {
+    $(document).on("click", "#fetch_master", function() {
       var btn = $(this);
-      btn.html('<span class=\'spinner-border spinner-border-sm me-2\' role=\'status\' aria-hidden=\'true\'></span>Contacting Master Database…');
+      btn.addClass("disabled");
+      btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Contacting Master Database…');
     });
 
     // Instant button feedback when restarting deduplication
-    $(document).on('click', '#restart_dedup_btn', function() {
+    $(document).on("click", "#restart_dedup_btn", function() {
       var btn = $(this);
-      btn.html('<span class=\'spinner-border spinner-border-sm me-2\' role=\'status\' aria-hidden=\'true\'></span>Resetting Session…');
+      btn.addClass("disabled");
+      btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Resetting Session…');
     });
 
     // Safety guard: ensure document and body scrolling is restored whenever modals are dismissed
-    $(document).on('hidden.bs.modal', function () {
-      $('body').removeClass('modal-open').css({'overflow': '', 'overflow-y': '', 'padding-right': ''});
-      $('html').css({'overflow': '', 'overflow-y': ''});
+    $(document).on("hidden.bs.modal", function () {
+      $("body").removeClass("modal-open").css({"overflow": "", "overflow-y": "", "padding-right": ""});
+      $("html").css({"overflow": "", "overflow-y": ""});
     });
     setInterval(function() {
-      if ($('.modal:visible').length === 0 && $('body').hasClass('modal-open')) {
-        $('body').removeClass('modal-open').css({'overflow': '', 'overflow-y': '', 'padding-right': ''});
+      if ($(".modal:visible").length === 0 && $("body").hasClass("modal-open")) {
+        $("body").removeClass("modal-open").css({"overflow": "", "overflow-y": "", "padding-right": ""});
       }
     }, 500);
-  ")),
+  )---")),
   div(
     class = "app-shell",
     uiOutput("app_ui")
@@ -192,6 +205,7 @@ server <- function(input, output, session) {
   upload_warnings <- reactiveVal(character(0))
   upload_hygiene_checks <- reactiveVal(NULL)
   upload_verifying <- reactiveVal(FALSE)
+  upload_verify_time <- reactiveVal(NULL)
   mapping_loading <- reactiveVal(FALSE)
   mapping_load_time <- reactiveVal(NULL)
   mapping_render_trigger <- reactiveVal(0)
@@ -1684,12 +1698,13 @@ server <- function(input, output, session) {
   observeEvent(input$upload_file, {
     req(input$upload_file)
     upload_verifying(TRUE)
-    on.exit(upload_verifying(FALSE), add = TRUE)
+    upload_verify_time(Sys.time())
     file_info <- input$upload_file
 
     # Enforce max file size (25 MB)
     max_bytes <- 25 * 1024^2
     if (is.null(file_info$size) || file_info$size > max_bytes) {
+      upload_verifying(FALSE)
       upload_error("Upload rejected: file exceeds maximum allowed size of 25 MB.")
       upload_df(NULL)
       return()
@@ -1700,6 +1715,7 @@ server <- function(input, output, session) {
     ext <- tolower(tools::file_ext(fname))
     allowed_exts <- c("xlsx", "xls", "csv")
     if (!(ext %in% allowed_exts)) {
+      upload_verifying(FALSE)
       upload_error(paste0("Upload rejected: unsupported file format '.", ext, "'. Accepted formats are .xlsx, .xls, and .csv."))
       upload_df(NULL)
       return()
@@ -1723,6 +1739,7 @@ server <- function(input, output, session) {
     })
 
     if (!is.null(read_error) || is.null(df)) {
+      upload_verifying(FALSE)
       upload_error(ifelse(is.null(read_error), "Uploaded spreadsheet could not be read or is empty.", read_error))
       upload_df(NULL)
       return()
@@ -1731,6 +1748,7 @@ server <- function(input, output, session) {
     # Validate column names: must be non-empty
     cn <- names(df)
     if (is.null(cn) || length(cn) == 0 || any(is.na(cn)) || any(!nzchar(trimws(as.character(cn))))) {
+      upload_verifying(FALSE)
       upload_error("Upload rejected: spreadsheet contains missing or blank column headers. Please ensure every column has a header title.")
       upload_df(NULL)
       return()
@@ -1740,11 +1758,13 @@ server <- function(input, output, session) {
     ncols <- ncol(df)
     nrows <- nrow(df)
     if (ncols < 2) {
+      upload_verifying(FALSE)
       upload_error(paste0("Upload rejected: spreadsheet contains only ", ncols, " column. Deduplication requires at least 2 columns (e.g., Name, Phone, ID)."))
       upload_df(NULL)
       return()
     }
     if (nrows < 1) {
+      upload_verifying(FALSE)
       upload_error("Upload rejected: spreadsheet contains column headers but zero data rows.")
       upload_df(NULL)
       return()
@@ -1755,9 +1775,6 @@ server <- function(input, output, session) {
     clean_df <- diag$clean_df
     upload_warnings(diag$warnings)
     upload_hygiene_checks(diag$checks)
-
-    # Pacing so user clearly perceives the animated shimmer skeleton during verification
-    Sys.sleep(0.4)
 
     upload_error(NULL)
     upload_df(clean_df)
@@ -2341,14 +2358,17 @@ server <- function(input, output, session) {
 
   observeEvent(input$confirm_upload, {
     if (isTRUE(upload_verifying())) {
+      session$sendCustomMessage("reset_button", list(id = "confirm_upload", html = "Confirm upload & continue →"))
       showNotification("Please wait for spreadsheet verification to finish.", type = "warning")
       return()
     }
     if (is.null(upload_df())) {
+      session$sendCustomMessage("reset_button", list(id = "confirm_upload", html = "Confirm upload & continue →"))
       showNotification("Upload a file before continuing.", type = "error")
       return()
     }
     if (!master_ready()) {
+      session$sendCustomMessage("reset_button", list(id = "confirm_upload", html = "Confirm upload & continue →"))
       showNotification(master_block_message(), type = "error", duration = 8)
       return()
     }
@@ -2359,20 +2379,39 @@ server <- function(input, output, session) {
 
   observeEvent(input$confirm_upload_health_btn, {
     if (isTRUE(upload_verifying())) {
+      session$sendCustomMessage("reset_button", list(id = "confirm_upload_health_btn", html = "Confirm Mapping & Continue →"))
       showNotification("Please wait for spreadsheet verification to finish.", type = "warning")
       return()
     }
     if (is.null(upload_df())) {
+      session$sendCustomMessage("reset_button", list(id = "confirm_upload_health_btn", html = "Confirm Mapping & Continue →"))
       showNotification("Upload a file before continuing.", type = "error")
       return()
     }
     if (!master_ready()) {
+      session$sendCustomMessage("reset_button", list(id = "confirm_upload_health_btn", html = "Confirm Mapping & Continue →"))
       showNotification(master_block_message(), type = "error", duration = 8)
       return()
     }
     mapping_loading(TRUE)
     mapping_load_time(Sys.time())
     current_step("mapping")
+  })
+
+  # Graceful timer to ensure Data Health & Verification skeleton is visible and smooth
+  observe({
+    req(isTRUE(upload_verifying()))
+    t0 <- upload_verify_time()
+    if (is.null(t0)) {
+      upload_verifying(FALSE)
+      return()
+    }
+    elapsed <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
+    if (elapsed < 0.42) {
+      invalidateLater(as.integer((0.42 - elapsed) * 1000) + 10, session)
+    } else {
+      upload_verifying(FALSE)
+    }
   })
 
   # Graceful timer to ensure Column Alignment skeleton is visible and smooth
@@ -2875,10 +2914,12 @@ server <- function(input, output, session) {
     req(upload_df())
     selected <- input$match_fields
     if (is.null(selected) || length(selected) == 0) {
+      session$sendCustomMessage("reset_button", list(id = "confirm_mapping", html = "Confirm Mapping & Continue →"))
       showNotification("Select at least one field to match.", type = "error")
       return()
     }
     if (!any(c("hoh_ID_number", "phone_number", "hoh_arabic_name", "geography") %in% selected)) {
+      session$sendCustomMessage("reset_button", list(id = "confirm_mapping", html = "Confirm Mapping & Continue →"))
       showNotification("Select ID, phone, name, or geography for blocking.", type = "error")
       return()
     }
@@ -2888,6 +2929,7 @@ server <- function(input, output, session) {
       input_id <- paste0("map_", req_col)
       selected <- input[[input_id]]
       if (!req_col %in% names(upload_df()) && (is.null(selected) || selected == "")) {
+        session$sendCustomMessage("reset_button", list(id = "confirm_mapping", html = "Confirm Mapping & Continue →"))
         showNotification(paste0("Missing required column: ", req_col), type = "error")
         return()
       }
@@ -2901,14 +2943,17 @@ server <- function(input, output, session) {
     mapping <- list()
     selected <- input$match_fields
     if (is.null(selected) || length(selected) == 0) {
+      session$sendCustomMessage("reset_button", list(id = "run_match", html = "Proceed to Deduplication Launch →"))
       showNotification("Select at least one field to match.", type = "error")
       return()
     }
     if (!any(c("hoh_ID_number", "phone_number", "hoh_arabic_name", "geography") %in% selected)) {
+      session$sendCustomMessage("reset_button", list(id = "run_match", html = "Proceed to Deduplication Launch →"))
       showNotification("Select ID, phone, name, or geography for blocking.", type = "error")
       return()
     }
     if (!master_ready()) {
+      session$sendCustomMessage("reset_button", list(id = "run_match", html = "Proceed to Deduplication Launch →"))
       showNotification(master_block_message(), type = "error", duration = 8)
       return()
     }
@@ -2917,6 +2962,7 @@ server <- function(input, output, session) {
       input_id <- paste0("map_", req_col)
       selected_val <- input[[input_id]]
       if (!req_col %in% names(upload_df()) && (is.null(selected_val) || selected_val == "")) {
+        session$sendCustomMessage("reset_button", list(id = "run_match", html = "Proceed to Deduplication Launch →"))
         showNotification(paste0("Missing required column mapping: ", req_col), type = "error")
         return()
       }
@@ -2925,6 +2971,7 @@ server <- function(input, output, session) {
 
     snapshot_path <- last_master_snapshot()
     if (is.null(snapshot_path) || !file.exists(snapshot_path)) {
+      session$sendCustomMessage("reset_button", list(id = "run_match", html = "Proceed to Deduplication Launch →"))
       showNotification("No cached master snapshot found. Please fetch the master database first.", type = "error", duration = 8)
       return()
     }
@@ -3050,6 +3097,7 @@ server <- function(input, output, session) {
       max_candidates = input$max_candidates
     )
     if (!isTRUE(strat_check$valid)) {
+      session$sendCustomMessage("reset_button", list(id = "confirm_strategy", html = "Confirm Matching Strategy →"))
       showNotification(strat_check$message, type = "error")
       return()
     }
