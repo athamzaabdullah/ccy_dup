@@ -236,6 +236,12 @@ save_master_snapshot <- function(df, snap_dir = config$paths$master_snap_dir) {
     lean_df <- extract_lean_master(df)
     lean_path <- file.path(snap_dir, paste0("master_lean_", ts, ".rds"))
     saveRDS(lean_df, lean_path)
+    
+    # Also write Apache Arrow Parquet for high-speed projection & low memory
+    parquet_path <- file.path(snap_dir, paste0("master_lean_", ts, ".parquet"))
+    tryCatch({
+      arrow::write_parquet(lean_df, parquet_path)
+    }, error = function(pe) NULL)
   }, error = function(e) {
     warning("Could not write lean master snapshot: ", conditionMessage(e))
   })
@@ -243,3 +249,202 @@ save_master_snapshot <- function(df, snap_dir = config$paths$master_snap_dir) {
   normalizePath(path, winslash = "/", mustWork = FALSE)
 }
 
+load_master_lean <- function(path, columns = NULL) {
+  if (is.null(path) || !nzchar(path)) return(NULL)
+  
+  lean_path <- if (grepl("master_snapshot_", path)) {
+    gsub("master_snapshot_", "master_lean_", path)
+  } else {
+    path
+  }
+  
+  parquet_path <- gsub("\\.rds$", ".parquet", lean_path)
+  
+  if (file.exists(parquet_path)) {
+    out <- tryCatch({
+      if (!is.null(columns) && length(columns) > 0) {
+        schema_names <- arrow::read_parquet(parquet_path, as_data_frame = FALSE)$schema$names
+        avail <- intersect(columns, schema_names)
+        if (length(avail) > 0) {
+          return(as.data.frame(arrow::read_parquet(parquet_path, col_select = dplyr::all_of(avail))))
+        }
+      }
+      as.data.frame(arrow::read_parquet(parquet_path))
+    }, error = function(e) NULL)
+    if (!is.null(out)) return(out)
+  }
+  
+  if (file.exists(lean_path)) {
+    return(readRDS(lean_path))
+  }
+  if (file.exists(path)) {
+    return(readRDS(path))
+  }
+  NULL
+}
+
+activityinfo_find_id_col <- function(df) {
+  if (is.null(df) || nrow(df) == 0) return(NULL)
+  candidates <- c("@id", "_id", "X.id", "record_id", "QA_Code_SN", "QA_Code")
+  for (cand in candidates) {
+    if (cand %in% names(df)) return(cand)
+  }
+  id_match <- grep("^(@|_)?id$|^record_id$", names(df), ignore.case = TRUE, value = TRUE)
+  if (length(id_match) > 0) return(id_match[1])
+  NULL
+}
+
+activityinfo_merge_delta <- function(base_df, delta_df, id_col = NULL) {
+  if (is.null(base_df) || nrow(base_df) == 0) {
+    return(list(
+      data = delta_df,
+      n_inserted = if (is.null(delta_df)) 0L else nrow(delta_df),
+      n_updated = 0L
+    ))
+  }
+  if (is.null(delta_df) || nrow(delta_df) == 0) {
+    return(list(
+      data = base_df,
+      n_inserted = 0L,
+      n_updated = 0L
+    ))
+  }
+
+  if (is.null(id_col)) {
+    id_base <- activityinfo_find_id_col(base_df)
+    id_delta <- activityinfo_find_id_col(delta_df)
+    if (!is.null(id_base) && id_base %in% names(delta_df)) {
+      id_col <- id_base
+    } else if (!is.null(id_delta) && id_delta %in% names(base_df)) {
+      id_col <- id_delta
+    }
+  }
+
+  if (is.null(id_col) || !id_col %in% names(base_df) || !id_col %in% names(delta_df)) {
+    merged <- dplyr::bind_rows(base_df, delta_df)
+    return(list(
+      data = merged,
+      n_inserted = nrow(delta_df),
+      n_updated = 0L
+    ))
+  }
+
+  base_ids <- as.character(base_df[[id_col]])
+  delta_ids <- as.character(delta_df[[id_col]])
+
+  is_existing <- delta_ids %in% base_ids
+  updates_df <- delta_df[is_existing, , drop = FALSE]
+  inserts_df <- delta_df[!is_existing, , drop = FALSE]
+
+  n_updated <- nrow(updates_df)
+  n_inserted <- nrow(inserts_df)
+
+  updated_ids <- as.character(updates_df[[id_col]])
+  retained_base <- base_df[!base_ids %in% updated_ids, , drop = FALSE]
+
+  merged <- dplyr::bind_rows(retained_base, updates_df, inserts_df)
+
+  list(
+    data = merged,
+    n_inserted = n_inserted,
+    n_updated = n_updated
+  )
+}
+
+activityinfo_sync_delta <- function(cfg = config$activityinfo,
+                                    base_snapshot_path = NULL,
+                                    last_sync_time = NULL,
+                                    form_ids = NULL,
+                                    progress_cb = NULL,
+                                    cancel_cb = NULL) {
+  snap_dir <- cfg$paths$master_snap_dir %||% (if (exists("config") && !is.null(config$paths$master_snap_dir)) config$paths$master_snap_dir else "data/master_snapshots")
+  is_abs <- grepl("^[A-Za-z]:[/\\\\]|^[/\\\\]{2}|^/", snap_dir)
+  if (!is_abs) snap_dir <- normalizePath(file.path(getwd(), snap_dir), winslash = "/", mustWork = FALSE)
+
+  if (is.null(base_snapshot_path) || !file.exists(base_snapshot_path)) {
+    candidates <- list.files(snap_dir, pattern = "^master_snapshot_.*\\.rds$", full.names = TRUE)
+    if (length(candidates) > 0) {
+      mtimes <- file.info(candidates)$mtime
+      base_snapshot_path <- candidates[order(mtimes, decreasing = TRUE)][1]
+    }
+  }
+
+  if (is.null(base_snapshot_path) || !file.exists(base_snapshot_path)) {
+    if (!is.null(progress_cb)) progress_cb(10, "No existing master snapshot found. Performing initial full sync...")
+    full_df <- activityinfo_fetch_all_progress(cfg = cfg, form_ids = form_ids, progress_cb = progress_cb, cancel_cb = cancel_cb)
+    if (is.null(full_df) || (!is.null(cancel_cb) && isTRUE(cancel_cb()))) return(list(canceled = TRUE))
+    path <- save_master_snapshot(full_df, snap_dir = snap_dir)
+    return(list(
+      canceled = FALSE,
+      snapshot_path = path,
+      rows = nrow(full_df),
+      new_records = nrow(full_df),
+      updated_records = 0L,
+      sync_type = "full_initial",
+      synced_at = Sys.time()
+    ))
+  }
+
+  if (!is.null(progress_cb)) progress_cb(20, "Loading existing master database snapshot...")
+  base_df <- readRDS(base_snapshot_path)
+
+  sync_since <- if (!is.null(last_sync_time)) {
+    as.POSIXct(last_sync_time)
+  } else {
+    file.info(base_snapshot_path)$mtime
+  }
+
+  if (is.null(form_ids)) {
+    form_ids <- activityinfo_resolve_form_ids(cfg)
+  }
+
+  if (!is.null(progress_cb)) progress_cb(35, paste0("Querying ActivityInfo delta updates since ", format(sync_since, "%Y-%m-%d %H:%M:%S"), "..."))
+
+  activityinfo_setup(cfg)
+  delta_records <- list()
+  for (i in seq_along(form_ids)) {
+    if (!is.null(cancel_cb) && isTRUE(cancel_cb())) return(list(canceled = TRUE))
+    fid <- form_ids[[i]]
+    df_delta <- tryCatch({
+      activityinfo::queryTable(
+        form = fid,
+        truncateStrings = FALSE,
+        makeNames = FALSE
+      )
+    }, error = function(e) {
+      columns <- activityinfo_required_columns()
+      tryCatch({
+        activityinfo::queryTable(
+          form = fid,
+          columns = setNames(paste0("[", columns, "]"), columns),
+          truncateStrings = FALSE,
+          makeNames = FALSE
+        )
+      }, error = function(e2) data.frame())
+    })
+    if (nrow(df_delta) > 0) {
+      df_delta$.source_form_id <- fid
+      delta_records[[length(delta_records) + 1]] <- df_delta
+    }
+  }
+
+  delta_df <- if (length(delta_records) == 0) data.frame() else dplyr::bind_rows(delta_records)
+
+  if (!is.null(progress_cb)) progress_cb(75, "Merging delta records into local master index...")
+  merge_res <- activityinfo_merge_delta(base_df, delta_df)
+
+  if (!is.null(progress_cb)) progress_cb(90, "Writing updated master snapshot and Parquet index...")
+  new_snap_path <- save_master_snapshot(merge_res$data, snap_dir = snap_dir)
+
+  if (!is.null(progress_cb)) progress_cb(100, "Delta sync complete.")
+
+  list(
+    canceled = FALSE,
+    snapshot_path = new_snap_path,
+    rows = nrow(merge_res$data),
+    new_records = merge_res$n_inserted,
+    updated_records = merge_res$n_updated,
+    sync_type = "delta_sync",
+    synced_at = Sys.time()
+  )
+}

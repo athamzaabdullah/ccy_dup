@@ -58,12 +58,10 @@ detect_xlsx_scientific_cells <- function(xlsx_path, df_colnames = NULL) {
   }
   
   sheet_file <- grep("^xl/worksheets/sheet[0-9]+\\.xml$", files, value = TRUE)[1]
-  utils::unzip(xlsx_path, files = c("xl/styles.xml", sheet_file), exdir = td)
+  utils::unzip(xlsx_path, files = "xl/styles.xml", exdir = td)
   
   styles_path <- file.path(td, "xl", "styles.xml")
-  sheet_path <- file.path(td, sheet_file)
-  
-  if (!file.exists(styles_path) || !file.exists(sheet_path)) {
+  if (!file.exists(styles_path)) {
     return(list(has_sci = FALSE, sci_cols = character(0), count = 0L))
   }
   
@@ -102,6 +100,12 @@ detect_xlsx_scientific_cells <- function(xlsx_path, df_colnames = NULL) {
   }
   
   if (length(sci_xf_indices) == 0) {
+    return(list(has_sci = FALSE, sci_cols = character(0), count = 0L))
+  }
+  
+  utils::unzip(xlsx_path, files = sheet_file, exdir = td)
+  sheet_path <- file.path(td, sheet_file)
+  if (!file.exists(sheet_path)) {
     return(list(has_sci = FALSE, sci_cols = character(0), count = 0L))
   }
   
@@ -169,9 +173,9 @@ check_upload_hygiene <- function(df, file_path = NULL) {
   }
 
   # 2. Detect and auto-prune completely empty rows
-  is_row_empty <- apply(clean_df, 1, function(row) {
-    all(is.na(row) | !nzchar(trimws(as.character(row))))
-  })
+  mat <- as.matrix(clean_df)
+  has_val <- !is.na(mat) & trimws(mat) != ""
+  is_row_empty <- rowSums(matrix(has_val, nrow = nrow(clean_df), ncol = ncol(clean_df))) == 0
   empty_count <- sum(is_row_empty)
   if (empty_count > 0) {
     clean_df <- clean_df[!is_row_empty, , drop = FALSE]

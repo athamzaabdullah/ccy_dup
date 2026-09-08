@@ -31,6 +31,65 @@ normalize_digits <- function(x) {
   x
 }
 
+bond_arabic_compounds <- function(x) {
+  if (is.null(x) || length(x) == 0) return(character(0))
+  x <- safe_char(x)
+  
+  # 1. Bond Abd + [God Name/Attribute] (عبد الله, عبد الرحمن, عبد العزيز, etc.)
+  x <- stringi::stri_replace_all_regex(x, "\\b\u0639\u0628\u062F\\s+([\u0621-\u064A]+)", "\u0639\u0628\u062F$1")
+  
+  # 2. Bond Amat / Amah + [God Name/Attribute] (أمة/امه الرحمن, أمة الله, etc.)
+  x <- stringi::stri_replace_all_regex(x, "\\b(\u0627\u0645\u0647|\u0627\u0645\u0629)\\s+([\u0621-\u064A]+)", "$1$2")
+  
+  # 3. Bond Compound ... al-Din (... الدين)
+  din_prefixes <- "\u0633\u064A\u0641|\u0634\u0645\u0633|\u0628\u062F\u0631|\u0646\u0648\u0631|\u062A\u0627\u062C|\u0639\u0645\u0627\u062F|\u0643\u0645\u0627\u0644|\u062C\u0645\u0627\u0644|\u0635\u0644\u0627\u062D|\u0646\u0627\u0635\u0631|\u062D\u0633\u0627\u0645|\u0639\u0644\u0627\u0621|\u0646\u062C\u0645|\u0636\u064A\u0627\u0621|\u0645\u062D\u064A\u064A|\u0634\u0631\u0641|\u062A\u0642\u064A|\u0632\u064A\u0646|\u0639\u0632|\u0641\u062E\u0631|\u0639\u0644\u0645|\u0633\u0631\u0627\u062C"
+  x <- stringi::stri_replace_all_regex(x, paste0("\\b(", din_prefixes, ")\\s+\u0627\u0644\u062F\u064A\u0646\\b"), "$1\u0627\u0644\u062F\u064A\u0646")
+  
+  # 4. Bond Compound ... Allah (... الله)
+  allah_prefixes <- "\u062C\u0627\u0631|\u0641\u0636\u0644|\u0639\u0637\u0627|\u0641\u062A\u062D|\u0646\u0635\u0631|\u062E\u064A\u0631|\u0647\u0628\u0647|\u0644\u0637\u0641|\u0642\u062F\u0631|\u0631\u062D\u0645\u0647|\u0646\u0639\u0645\u0647|\u0628\u0631\u0643\u0647|\u0627\u064A\u0627\u062A"
+  x <- stringi::stri_replace_all_regex(x, paste0("\\b(", allah_prefixes, ")\\s+\u0627\u0644\u0644\u0647\\b"), "$1\u0627\u0644\u0644\u0647")
+  
+  stringi::stri_trim_both(x)
+}
+
+strip_tribal_prefixes <- function(x) {
+  if (is.null(x) || length(x) == 0) return(character(0))
+  x <- safe_char(x)
+  
+  vapply(x, function(s) {
+    if (is.na(s) || !nzchar(s)) return("")
+    toks <- unlist(strsplit(s, "\\s+"))
+    toks <- toks[nzchar(toks)]
+    if (length(toks) == 0) return("")
+    
+    clean_toks <- character(0)
+    i <- 1L
+    n_toks <- length(toks)
+    
+    while (i <= n_toks) {
+      tok <- toks[i]
+      
+      # If token is "بن" or "ابن" or "آل" / "ال" preceding a last name (not the very first personal name)
+      if (i > 1L && tok %in% c("\u0628\u0646", "\u0627\u0628\u0646", "\u0627\u0644", "\u0622\u0644") && i < n_toks) {
+        i <- i + 1L
+        next
+      }
+      
+      # Strip leading "ال" (Al-) if token has at least 4 Arabic characters (e.g. الشرعبي -> شرعبي, but not اله, الى, الم)
+      if (nchar(tok) >= 4L && grepl("^\u0627\u0644[\u0621-\u064A]", tok)) {
+        sub_tok <- substr(tok, 3, nchar(tok))
+        if (nchar(sub_tok) >= 2L) {
+          tok <- sub_tok
+        }
+      }
+      
+      clean_toks <- c(clean_toks, tok)
+      i <- i + 1L
+    }
+    paste(clean_toks, collapse = " ")
+  }, character(1), USE.NAMES = FALSE)
+}
+
 normalize_arabic <- function(x) {
   x <- safe_char(x)
   x <- normalize_digits(x)
@@ -51,7 +110,8 @@ normalize_arabic <- function(x) {
   x <- stringi::stri_replace_all_fixed(x, "\u0629", "\u0647", vectorize_all = FALSE)
   x <- stringi::stri_replace_all_regex(x, "[^\\p{Arabic}\\p{Latin}\\p{Nd}\\s]", " ")
   x <- stringi::stri_replace_all_regex(x, "\\s+", " ")
-  stringi::stri_trim_both(x)
+  x <- stringi::stri_trim_both(x)
+  bond_arabic_compounds(x)
 }
 
 is_generic_or_invalid_id <- function(x) {
@@ -595,6 +655,8 @@ prepare_frame <- function(df) {
       marital_status_n = normalize_marital_status(marital_status),
       hoh_arabic_name_n = normalize_arabic(hoh_arabic_name),
       hoh_spouse_name_n = normalize_arabic(hoh_spouse_name),
+      hoh_name_stem_n = strip_tribal_prefixes(hoh_arabic_name_n),
+      hoh_spouse_stem_n = strip_tribal_prefixes(hoh_spouse_name_n),
       age_n = normalize_age(age),
       household_size_n = normalize_household_size(household_size),
       sex_n = normalize_sex(sex),

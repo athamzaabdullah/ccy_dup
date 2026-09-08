@@ -1,8 +1,52 @@
+icon_svg <- function(name, size = 16, class = "") {
+  paths <- list(
+    "file" = '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>',
+    "file-text" = '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>',
+    "shield-check" = '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/>',
+    "zap" = '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+    "lock" = '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+    "alert-triangle" = '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+    "microscope" = '<path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 1 0-7-7h1"/><path d="M9 14h2"/><path d="M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z"/><path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3"/>',
+    "layers" = '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>',
+    "broom" = '<path d="M18 3l3 3-10 10-4-1 1-4 10-10z"/><path d="M14 7l3 3"/><path d="M2 22l6-2-4-4z"/>',
+    "key" = '<path d="M21 2l-2 2m-1.5 1.5L14 9l-3-3L2 15l4 4 9-9 3.5-3.5M16 5l3 3"/>',
+    "phone" = '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>',
+    "user" = '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+    "users" = '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+    "map-pin" = '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',
+    "building" = '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/>',
+    "sliders" = '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>',
+    "clipboard-check" = '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><polyline points="9 14 11 16 15 12"/>',
+    "calendar" = '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+    "save" = '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>',
+    "refresh" = '<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>',
+    "trash" = '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+    "plus" = '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
+    "check" = '<polyline points="20 6 9 17 4 12"/>',
+    "check-circle" = '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+    "info" = '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>',
+    "chart" = '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>',
+    "search" = '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+    "x" = '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+    "menu" = '<line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>',
+    "more-vertical" = '<circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="19" r="1.5"/>',
+    "chevron-left" = '<polyline points="15 18 9 12 15 6"/>',
+    "chevron-right" = '<polyline points="9 18 15 12 9 6"/>'
+  )
+  inner <- if (!is.null(paths[[name]])) paths[[name]] else paths[["file"]]
+  cls <- if (nzchar(class)) paste("app-svg-icon", class) else "app-svg-icon"
+  htmltools::HTML(sprintf(
+    '<svg class="%s" width="%d" height="%d" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">%s</svg>',
+    cls, as.integer(size), as.integer(size), inner
+  ))
+}
+
 login_ui <- function(app_name) {
   div(
     class = "login-screen",
     div(
       class = "hero app-card p-4",
+      tags$img(src = "ccy_logo.png", alt = "Cash Consortium of Yemen", class = "login-logo"),
       h1(app_name),
       p(
         class = "hero-sub",
@@ -36,13 +80,42 @@ login_ui <- function(app_name) {
 
 main_ui <- function(app_name, show_admin = FALSE, admin_label = "Admin", show_settings = TRUE) {
   tagList(
-    div(
+    tags$header(
       class = "app-topbar",
-      div(class = "app-title", uiOutput("app_title")),
-      div(class = "app-topbar-center", uiOutput("master_freshness_pill")),
+      role = "banner",
       div(
+        class = "app-brand",
+        tags$img(
+          src = "ccy_logo.png",
+          alt = "Cash Consortium of Yemen - Deduplication Platform",
+          class = "app-logo"
+        )
+      ),
+      div(
+        class = "app-topbar-center",
+        role = "status",
+        `aria-live` = "polite",
+        uiOutput("master_freshness_pill")
+      ),
+      tags$nav(
         class = "app-actions",
-        uiOutput("topbar_actions")
+        `aria-label` = "User account and navigation controls",
+        div(
+          class = "desktop-actions",
+          uiOutput("topbar_user_badge"),
+          uiOutput("topbar_actions")
+        ),
+        div(
+          class = "mobile-actions",
+          actionButton(
+            "open_mobile_menu",
+            label = NULL,
+            icon = icon_svg("menu", size = 18),
+            class = "btn-ghost mobile-menu-btn",
+            `aria-label` = "Open navigation and account menu",
+            title = "Account & Navigation"
+          )
+        )
       )
     ),
     uiOutput("stepper_container_ui"),
@@ -177,7 +250,7 @@ data_health_skeleton <- function() {
         `aria-disabled` = "true",
         `aria-busy` = "true",
         tags$span(class = "spinner-border spinner-border-sm me-2", role = "status", `aria-hidden` = "true"),
-        "Verifying Spreadsheet Health..."
+        "Verifying Spreadsheet Health…"
       )
     )
   )
@@ -213,10 +286,10 @@ mapping_workbench_skeleton <- function() {
   }
 
   groups <- list(
-    list(title = "👤 Personal Identity & Demographics", title_ar = "الهوية والبيانات الديموغرافية", rows = 3),
-    list(title = "📞 Contact Information", title_ar = "بيانات التواصل", rows = 2),
-    list(title = "📍 Geographic Hierarchy", title_ar = "الموقع الجغرافي", rows = 2),
-    list(title = "🏛️ Administrative & Project Metadata", title_ar = "البيانات الإدارية والمشروع", rows = 2)
+    list(title = "Personal Identity & Demographics", title_ar = "الهوية والبيانات الديموغرافية", rows = 3),
+    list(title = "Contact Information", title_ar = "بيانات التواصل", rows = 2),
+    list(title = "Geographic Hierarchy", title_ar = "الموقع الجغرافي", rows = 2),
+    list(title = "Administrative & Project Metadata", title_ar = "البيانات الإدارية والمشروع", rows = 2)
   )
 
   tags$div(
@@ -229,7 +302,7 @@ mapping_workbench_skeleton <- function() {
       tags$span(class = "spinner-border spinner-border-sm text-success flex-shrink-0", role = "status", `aria-hidden` = "true"),
       tags$div(
         tags$span(class = "banner-title", "Initializing Column Alignment Workbench: "),
-        tags$span(class = "banner-text", "Analyzing spreadsheet headers and auto-aligning standard CCY fields. Please wait...")
+        tags$span(class = "banner-text", "Analyzing spreadsheet headers and auto-aligning standard CCY fields. Please wait…")
       )
     ),
     tags$div(
@@ -248,7 +321,7 @@ mapping_workbench_skeleton <- function() {
             class = "d-flex align-items-center gap-2",
             tags$span(paste0(grp$title, " (", grp$title_ar, ")"))
           ),
-          tags$span(class = "category-badge-chip", "Loading...")
+          tags$span(class = "category-badge-chip", "Loading…")
         ),
         tags$div(
           class = "mapping-category-body",
@@ -272,8 +345,8 @@ mapping_step_ui <- function() {
             class = "section-header-content",
             tags$h4(
               class = "section-header-title",
-              tags$span(class = "section-header-icon", "🎯"),
-              "1. Match Engine Scope & Criteria Configuration"
+              icon_svg("sliders", size = 18, class = "me-2 text-success"),
+              "Match Engine Scope & Criteria Configuration"
             ),
             tags$p(
               class = "section-header-desc",
@@ -301,7 +374,7 @@ mapping_step_ui <- function() {
                   class = "match-field-header",
                   div(
                     class = "match-field-title-group",
-                    tags$span(class = "match-field-icon", "🔑"),
+                    tags$span(class = "match-field-icon", icon_svg("key", size = 15, class = "text-success me-1")),
                     tags$strong(class = "match-field-title", "National ID Number")
                   ),
                   tags$span(class = "badge-role-primary", "Primary Blocking")
@@ -314,7 +387,7 @@ mapping_step_ui <- function() {
                   class = "match-field-header",
                   div(
                     class = "match-field-title-group",
-                    tags$span(class = "match-field-icon", "📱"),
+                    tags$span(class = "match-field-icon", icon_svg("phone", size = 15, class = "text-success me-1")),
                     tags$strong(class = "match-field-title", "Phone Number")
                   ),
                   tags$span(class = "badge-role-primary", "Primary Blocking")
@@ -327,7 +400,7 @@ mapping_step_ui <- function() {
                   class = "match-field-header",
                   div(
                     class = "match-field-title-group",
-                    tags$span(class = "match-field-icon", "👤"),
+                    tags$span(class = "match-field-icon", icon_svg("user", size = 15, class = "text-success me-1")),
                     tags$strong(class = "match-field-title", "Head of Household Name")
                   ),
                   tags$span(class = "badge-role-fuzzy", "Fuzzy / Token Anchor")
@@ -340,7 +413,7 @@ mapping_step_ui <- function() {
                   class = "match-field-header",
                   div(
                     class = "match-field-title-group",
-                    tags$span(class = "match-field-icon", "👥"),
+                    tags$span(class = "match-field-icon", icon_svg("users", size = 15, class = "text-success me-1")),
                     tags$strong(class = "match-field-title", "Spouse Name")
                   ),
                   tags$span(class = "badge-role-secondary", "Secondary Verification")
@@ -353,7 +426,7 @@ mapping_step_ui <- function() {
                   class = "match-field-header",
                   div(
                     class = "match-field-title-group",
-                    tags$span(class = "match-field-icon", "📍"),
+                    tags$span(class = "match-field-icon", icon_svg("map-pin", size = 15, class = "text-success me-1")),
                     tags$strong(class = "match-field-title", "Geographic Hierarchy")
                   ),
                   tags$span(class = "badge-role-geo", "Spatial Blocking")
@@ -366,7 +439,7 @@ mapping_step_ui <- function() {
                   class = "match-field-header",
                   div(
                     class = "match-field-title-group",
-                    tags$span(class = "match-field-icon", "🏛️"),
+                    tags$span(class = "match-field-icon", icon_svg("building", size = 15, class = "text-success me-1")),
                     tags$strong(class = "match-field-title", "Partner Organization")
                   ),
                   tags$span(class = "badge-role-meta", "Metadata Scope")
@@ -405,8 +478,8 @@ mapping_step_ui <- function() {
             class = "section-header-content",
             tags$h4(
               class = "section-header-title",
-              tags$span(class = "section-header-icon", "📋"),
-              "2. Column Alignment Workbench"
+              icon_svg("clipboard-check", size = 18, class = "me-2 text-success"),
+              "Column Alignment Workbench"
             ),
             tags$p(
               class = "section-header-desc",
@@ -422,12 +495,12 @@ mapping_step_ui <- function() {
           div(
             class = "d-flex align-items-center gap-2 flex-wrap",
             uiOutput("load_preset_ui"),
-            actionButton("save_preset", "💾 Save Preset", class = "btn-secondary btn-sm", style = "padding: 6px 12px; font-size: 0.825rem;")
+            actionButton("save_preset", tagList(icon_svg("save", size = 13, class = "me-1"), "Save Preset"), class = "btn-secondary btn-sm btn-compact")
           ),
           div(
             class = "d-flex align-items-center gap-2 flex-wrap",
             uiOutput("auto_map_btn_container", inline = TRUE),
-            actionButton("clear_mapping_btn", "↺ Clear All", class = "btn-ghost btn-sm", style = "padding: 6px 10px; font-size: 0.8rem;")
+            actionButton("clear_mapping_btn", tagList(icon_svg("refresh", size = 13, class = "me-1"), "Clear All"), class = "btn-ghost btn-sm", style = "padding: 6px 10px; font-size: 0.8rem;")
           )
         ),
         uiOutput("auto_map_status_banner"),
@@ -464,7 +537,7 @@ mapping_step_ui <- function() {
                 `aria-disabled` = "true",
                 `aria-busy` = "true",
                 tags$span(class = "spinner-border spinner-border-sm me-2", role = "status", `aria-hidden` = "true"),
-                "Loading Column Alignment..."
+                "Loading Column Alignment…"
               )
             )
           )
@@ -502,11 +575,11 @@ strategy_step_ui <- function() {
 
         tags$div(
           class = "slider-group",
-          style = "background: #F8FAFC; border: 1px solid var(--app-border); border-radius: 6px; padding: 14px; margin-top: 16px; margin-bottom: 16px;",
+          style = "background: var(--app-sand); border: 1px solid var(--app-border); border-radius: var(--app-radius-sm); padding: 14px; margin-top: 16px; margin-bottom: 16px;",
           tags$div(
             style = "display: flex; justify-content: space-between; align-items: center;",
-            tags$strong(style = "color: var(--app-forest); font-size: 0.85rem;", "📅 MPCA Last Distribution Date Filter (تصفية تاريخ آخر توزيع)"),
-            tags$span(class = "category-badge-chip", style = "background: #E0E7FF; color: #3730A3;", "Dist_Date_Calc_New")
+            tags$strong(style = "color: var(--app-forest); font-size: 0.85rem;", tagList(icon_svg("calendar", size = 14, class = "me-1 text-success"), "MPCA Last Distribution Date Filter (تصفية تاريخ آخر توزيع)")),
+            tags$span(class = "badge-role-meta", "Dist_Date_Calc_New")
           ),
           tags$div(
             style = "margin-top: 8px;",
@@ -517,8 +590,7 @@ strategy_step_ui <- function() {
             )
           ),
           tags$p(
-            class = "slider-helper-text",
-            style = "margin: 4px 0 0 0; font-size: 0.78rem; color: #64748B;",
+            class = "slider-helper-text text-help-muted",
             "When checked, the engine filters the central master database to only match against beneficiaries whose last MPCA distribution date (Dist_Date_Calc_New) was received within the last 6 months (180 days). Beneficiaries assisted earlier are excluded from the check."
           ),
           conditionalPanel(
@@ -546,9 +618,11 @@ strategy_step_ui <- function() {
       class = "app-card",
       card_header(
         div(class = "step-title"),
-        tags$h4("Strategy & Deduplication Guide")
+        tags$h4("Strategy & MPCA Assistance Recency Simulator")
       ),
       card_body(
+        uiOutput("mpca_window_simulator_ui"),
+        tags$hr(style = "margin: 16px 0; border-color: var(--app-border);"),
         tags$div(
           class = "health-alert health-alert-info mb-3",
           tags$strong("CCY Consortium Matching SOPs:"),
@@ -622,7 +696,7 @@ results_step_ui <- function() {
         div(
           style = "margin-top: 16px; display: flex; flex-direction: column; gap: 8px;",
           uiOutput("export_button"),
-          actionButton("restart_dedup_btn", "🔄 Start New Deduplication Run", class = "btn-secondary")
+          actionButton("restart_dedup_btn", tagList(icon_svg("refresh", size = 14, class = "me-1"), "Start New Deduplication Run"), class = "btn-secondary")
         ),
         uiOutput("export_status_ui"),
         tags$hr(style = "margin: 20px 0; border-color: var(--app-border);"),
@@ -640,7 +714,7 @@ settings_step_ui <- function(can_edit_token = FALSE, can_edit_form_id = FALSE) {
       card_header(tags$h4("Settings")),
       card_body(
         textInput("settings_username", "Signed-in email"),
-        if (isTRUE(can_edit_token)) passwordInput("settings_token", "ActivityInfo token") else p(style = "color:#6b7280;", "Token changes are restricted for your role."),
+        if (isTRUE(can_edit_token)) passwordInput("settings_token", "ActivityInfo token") else p(class = "text-help-muted", "Token changes are restricted for your role."),
         if (isTRUE(can_edit_form_id)) textInput("settings_form_id", "ActivityInfo table (form) ID") else NULL,
         div(style = "display:flex; gap:12px; margin-top:24px; flex-wrap:wrap;",
           actionButton("save_settings", "Save settings", class = "btn-primary"),
@@ -659,7 +733,7 @@ admin_step_ui <- function() {
       class = "admin-header-bar",
       div(
         class = "admin-header-title",
-        tags$h3(tags$span(style = "color: var(--app-forest);", "⚙️"), "System Administration & Control Center"),
+        tags$h3(icon_svg("sliders", size = 20, class = "me-2 text-success"), "System Administration & Control Center"),
         tags$p("Manage authorized user accounts, partner directories, compliance audit trails, and system backups.")
       ),
       div(
