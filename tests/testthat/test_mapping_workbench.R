@@ -187,7 +187,7 @@ test_that("data_health_skeleton renders accessible loading skeleton with KPI and
   expect_true(grepl("Verifying Spreadsheet Health[…\\.]", skel_html))
 })
 
-test_that("upload_step_ui initializes with disabled confirm upload button container", {
+test_that("upload_step_ui initializes with disabled confirm upload button container and skeleton holder", {
   library(shiny)
   library(bslib)
   source(file.path("..", "..", "R", "ui_helpers.R"))
@@ -200,5 +200,35 @@ test_that("upload_step_ui initializes with disabled confirm upload button contai
   expect_true(grepl('aria-disabled="true"', step_html))
   expect_true(grepl("Confirm upload &amp; continue", step_html))
   expect_true(grepl('id="upload_data_health_and_preview_ui"', step_html))
+  expect_true(grepl('id="data_health_skeleton_holder"', step_html))
+  expect_true(grepl('display: none;', step_html))
+})
+
+test_that("mapping_step_ui contains mapping_skeleton_holder for instant client-side transitions", {
+  library(shiny)
+  library(bslib)
+  source(file.path("..", "..", "R", "ui_helpers.R"))
+
+  step_html <- as.character(mapping_step_ui())
+  expect_true(grepl('id="mapping_skeleton_holder"', step_html))
+  expect_true(grepl('display: none;', step_html))
+})
+
+test_that("results_dossier_skeleton renders accessible loading skeleton with KPI and table placeholders", {
+  library(shiny)
+  library(bslib)
+  source(file.path("..", "..", "R", "ui_helpers.R"))
+
+  skeleton <- results_dossier_skeleton()
+  skel_html <- as.character(skeleton)
+
+  expect_true(grepl("results-skeleton-container", skel_html))
+  expect_true(grepl("mapping-skeleton-banner", skel_html))
+  expect_true(grepl('role="status"', skel_html))
+  expect_true(grepl('aria-live="polite"', skel_html))
+  expect_true(grepl('aria-busy="true"', skel_html))
+  expect_true(grepl("Compiling Deduplication Dossier", skel_html))
+  expect_true(grepl("health-kpi-grid", skel_html))
+  expect_true(grepl("skeleton-shimmer", skel_html))
 })
 

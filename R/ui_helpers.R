@@ -172,6 +172,11 @@ upload_step_ui <- function(can_fetch_master = TRUE) {
         tags$h4("Data Health & Verification")
       ),
       card_body(
+        tags$div(
+          id = "data_health_skeleton_holder",
+          style = "display: none;",
+          data_health_skeleton()
+        ),
         uiOutput("upload_data_health_and_preview_ui")
       )
     )
@@ -329,6 +334,57 @@ mapping_workbench_skeleton <- function() {
         )
       )
     })
+  )
+}
+
+results_dossier_skeleton <- function() {
+  tags$div(
+    class = "results-skeleton-container",
+    tags$div(
+      class = "mapping-skeleton-banner mb-3",
+      role = "status",
+      `aria-live` = "polite",
+      `aria-busy` = "true",
+      tags$span(class = "spinner-border spinner-border-sm text-success flex-shrink-0", role = "status", `aria-hidden` = "true"),
+      tags$div(
+        tags$span(class = "banner-title", "Compiling Deduplication Dossier: "),
+        tags$span(class = "banner-text", "Cross-referencing high and medium confidence matches, calculating deduplication rates, and preparing interactive triage tables. Please wait…")
+      )
+    ),
+    # Skeleton KPI Grid (5 chips)
+    tags$div(
+      class = "health-kpi-grid mb-3",
+      lapply(1:5, function(i) {
+        tags$div(
+          class = "health-kpi-chip",
+          tags$div(class = "skeleton-shimmer", style = "width: 90px; height: 11px; margin-bottom: 8px; border-radius: 3px;"),
+          tags$div(class = "skeleton-shimmer", style = "width: 65px; height: 26px; border-radius: 4px;")
+        )
+      })
+    ),
+    # Skeleton Table Card
+    tags$div(
+      class = "p-3 border rounded",
+      style = "background: #FFFFFF; border-color: var(--app-border);",
+      tags$div(
+        class = "d-flex justify-content-between align-items-center mb-3",
+        tags$div(class = "skeleton-shimmer", style = "width: 180px; height: 20px; border-radius: 4px;"),
+        tags$div(class = "skeleton-shimmer", style = "width: 140px; height: 32px; border-radius: 6px;")
+      ),
+      tags$div(
+        class = "d-flex flex-column gap-2",
+        lapply(1:6, function(i) {
+          tags$div(
+            class = "d-flex align-items-center gap-3 py-2 border-bottom",
+            tags$div(class = "skeleton-shimmer", style = "width: 80px; height: 16px; border-radius: 4px;"),
+            tags$div(class = "skeleton-shimmer", style = "width: 160px; height: 16px; border-radius: 4px;"),
+            tags$div(class = "skeleton-shimmer", style = "width: 120px; height: 16px; border-radius: 4px;"),
+            tags$div(class = "skeleton-shimmer", style = "width: 100px; height: 16px; border-radius: 4px;"),
+            tags$div(class = "skeleton-shimmer ms-auto", style = "width: 70px; height: 22px; border-radius: 12px;")
+          )
+        })
+      )
+    )
   )
 }
 
@@ -504,6 +560,11 @@ mapping_step_ui <- function() {
           )
         ),
         uiOutput("auto_map_status_banner"),
+        tags$div(
+          id = "mapping_skeleton_holder",
+          style = "display: none;",
+          mapping_workbench_skeleton()
+        ),
         tags$div(
           id = "mapping_ui",
           class = "shiny-html-output",
