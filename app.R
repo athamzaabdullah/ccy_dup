@@ -142,6 +142,41 @@ ui <- fluidPage(
       var btn = $(this);
       btn.html('<span class=\'spinner-border spinner-border-sm me-2\' role=\'status\' aria-hidden=\'true\'></span>Verifying Mappings…');
     });
+
+    // Instant button feedback when confirming strategy
+    $(document).on('click', '#confirm_strategy', function() {
+      var btn = $(this);
+      btn.html('<span class=\'spinner-border spinner-border-sm me-2\' role=\'status\' aria-hidden=\'true\'></span>Preparing Matching Parameters…');
+    });
+
+    // Instant button feedback when running matching
+    $(document).on('click', '#run_match', function() {
+      var btn = $(this);
+      btn.html('<span class=\'spinner-border spinner-border-sm me-2\' role=\'status\' aria-hidden=\'true\'></span>Initializing Matching Engine…');
+    });
+
+    // Instant button feedback when fetching master database
+    $(document).on('click', '#fetch_master', function() {
+      var btn = $(this);
+      btn.html('<span class=\'spinner-border spinner-border-sm me-2\' role=\'status\' aria-hidden=\'true\'></span>Contacting Master Database…');
+    });
+
+    // Instant button feedback when restarting deduplication
+    $(document).on('click', '#restart_dedup_btn', function() {
+      var btn = $(this);
+      btn.html('<span class=\'spinner-border spinner-border-sm me-2\' role=\'status\' aria-hidden=\'true\'></span>Resetting Session…');
+    });
+
+    // Safety guard: ensure document and body scrolling is restored whenever modals are dismissed
+    $(document).on('hidden.bs.modal', function () {
+      $('body').removeClass('modal-open').css({'overflow': '', 'overflow-y': '', 'padding-right': ''});
+      $('html').css({'overflow': '', 'overflow-y': ''});
+    });
+    setInterval(function() {
+      if ($('.modal:visible').length === 0 && $('body').hasClass('modal-open')) {
+        $('body').removeClass('modal-open').css({'overflow': '', 'overflow-y': '', 'padding-right': ''});
+      }
+    }, 500);
   ")),
   div(
     class = "app-shell",
