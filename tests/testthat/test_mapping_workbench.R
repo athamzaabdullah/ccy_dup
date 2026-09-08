@@ -263,4 +263,29 @@ test_that("custom.css guarantees continuous revolving button spinners and GPU-co
   expect_true(grepl("not\\(\\.skeleton-shimmer\\)", rm_block))
 })
 
+test_that("custom.css guarantees unrestricted viewport scrolling and modal scroll recovery", {
+  css_path <- file.path("..", "..", "www", "custom.css")
+  expect_true(file.exists(css_path))
+  css_content <- paste(readLines(css_path, warn = FALSE), collapse = "\n")
+
+  # 1. Root html and body scrolling rules
+  expect_true(grepl("html\\s*\\{[^}]*overflow-y:\\s*auto\\s*!important", css_content))
+  expect_true(grepl("body\\s*\\{[^}]*overflow-y:\\s*visible\\s*!important", css_content))
+  expect_true(grepl("body:not\\(\\.modal-open\\)\\s*\\{[^}]*overflow-y:\\s*visible\\s*!important", css_content))
+
+  # 2. Main containers allow unconstrained overflow
+  expect_true(grepl("\\.container-fluid\\s*\\{[^}]*overflow:\\s*visible\\s*!important", css_content))
+  expect_true(grepl("\\.app-shell\\s*\\{[^}]*overflow:\\s*visible\\s*!important", css_content))
+
+  # 3. Mapping cards do not clip dropdowns or scroll
+  expect_true(grepl("\\.mapping-workbench-card\\s*\\{[^}]*overflow:\\s*visible\\s*!important", css_content))
+
+  # 4. Modal scroll watchdog and cleanup are present in app.R
+  app_r_path <- file.path("..", "..", "app.R")
+  expect_true(file.exists(app_r_path))
+  app_r_content <- paste(readLines(app_r_path, warn = FALSE), collapse = "\n")
+  expect_true(grepl("hidden\\.bs\\.modal", app_r_content))
+  expect_true(grepl("modal-open", app_r_content))
+})
+
 

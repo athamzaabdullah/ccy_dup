@@ -100,8 +100,19 @@
   }
 }
 
-/* 1. Base Styles & Typography */
+/* 1. Root & Viewport Scrolling Architecture (WCAG 2.1 Reflow & Scroll Standard) */
+html {
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto !important;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
 body {
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
   font-family: var(--font-body) !important;
   background-color: var(--app-sand);
   color: var(--app-text);
@@ -109,6 +120,17 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  overflow-y: visible !important;
+  position: relative;
+}
+
+/* Modal Open / Scroll Protection Layer */
+body:not(.modal-open) {
+  overflow-y: visible !important;
+}
+
+body.modal-open {
+  overflow: hidden !important;
 }
 
 h1, h2, h3, h4, h5, h6,
@@ -116,11 +138,19 @@ h1, h2, h3, h4, h5, h6,
   font-family: var(--font-display) !important;
 }
 
+/* Ensure outer Shiny wrappers never constrain or trap page vertical scroll */
+.container-fluid {
+  padding: 0 !important;
+  min-height: 100%;
+  overflow: visible !important;
+}
+
 .app-shell {
-  min-height: 100vh;
+  min-height: 100%;
   max-width: 1240px;
   margin: 0 auto;
   padding: 28px 24px 64px;
+  overflow: visible !important;
 }
 
 /* 2. Topbar Navigation & Brand */
@@ -1437,7 +1467,7 @@ h1, h2, h3, h4, h5, h6,
   box-shadow: var(--app-shadow-sm);
   border-radius: var(--app-radius-md);
   border: 1px solid var(--app-border);
-  overflow: hidden;
+  overflow: visible !important;
   background: var(--app-card-bg);
 }
 
