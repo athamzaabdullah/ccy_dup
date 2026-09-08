@@ -1951,24 +1951,6 @@ server <- function(input, output, session) {
     unique(cols)
   })
 
-  observeEvent(list(upload_df(), match_fields(), last_master_snapshot()), {
-    req(upload_df())
-    # Suggestions used to pre-fill mapping (required fields -> upload columns)
-    cols <- required_columns()
-
-    # Suggestions table should show master <-> upload column similarity only
-    snap <- last_master_snapshot()
-    if (!is.null(snap) && file.exists(snap)) {
-      master_df <- tryCatch(readRDS(snap), error = function(e) NULL)
-      if (!is.null(master_df)) {
-        master_cols <- names(master_df)
-        # map_suggestions(upload_cols, required_cols) -> required_column will be master column here
-        } else {
-        }
-    } else {
-    }
-  })
-
   output$upload_data_health_and_preview_ui <- renderUI({
     if (isTRUE(upload_verifying())) {
       return(data_health_skeleton())
@@ -2521,17 +2503,27 @@ server <- function(input, output, session) {
     actionButton("confirm_mapping", "Confirm Mapping & Continue →", class = "btn-primary")
   })
 
+  # Debounced mapping state to prevent reactive cascading storms across select inputs
+  mapping_state <- reactive({
+    req_cols <- required_columns()
+    df <- upload_df()
+    if (is.null(req_cols) || length(req_cols) == 0 || is.null(df)) return(NULL)
+    vapply(req_cols, function(rc) {
+      val <- input[[paste0("map_", rc)]]
+      if (!is.null(val) && nzchar(trimws(val)) && val %in% names(df)) val else ""
+    }, character(1))
+  })
+  debounced_mapping_state <- debounce(mapping_state, 120)
+
   # Real-time mapping progress indicator pill
   output$mapping_progress_pill <- renderUI({
     req_cols <- required_columns()
     df <- upload_df()
-    if (is.null(req_cols) || length(req_cols) == 0 || is.null(df)) return(NULL)
+    m_state <- debounced_mapping_state()
+    if (is.null(req_cols) || length(req_cols) == 0 || is.null(df) || is.null(m_state)) return(NULL)
 
     total <- length(req_cols)
-    mapped_count <- sum(vapply(req_cols, function(rc) {
-      val <- input[[paste0("map_", rc)]]
-      !is.null(val) && nzchar(trimws(val)) && val %in% names(df)
-    }, logical(1)))
+    mapped_count <- sum(nzchar(m_state))
 
     if (mapped_count == total) {
       tags$div(
@@ -2561,12 +2553,10 @@ server <- function(input, output, session) {
   output$mapping_validation_hint <- renderUI({
     req_cols <- required_columns()
     df <- upload_df()
-    if (is.null(req_cols) || length(req_cols) == 0 || is.null(df)) return(NULL)
+    m_state <- debounced_mapping_state()
+    if (is.null(req_cols) || length(req_cols) == 0 || is.null(df) || is.null(m_state)) return(NULL)
 
-    unmapped <- req_cols[!vapply(req_cols, function(rc) {
-      val <- input[[paste0("map_", rc)]]
-      !is.null(val) && nzchar(trimws(val)) && val %in% names(df)
-    }, logical(1))]
+    unmapped <- req_cols[!nzchar(m_state)]
 
     if (length(unmapped) == 0) {
       tags$div(
@@ -2583,39 +2573,41 @@ server <- function(input, output, session) {
     }
   })
 
-  # Dynamic sample value preview chips (reactively linked to dropdown changes)
-  observe({
-    req_cols <- required_columns()
-    df <- upload_df()
-    req(df)
-
-    for (rc in req_cols) {
-      local({
-        col_id <- rc
-        output[[paste0("sample_preview_", col_id)]] <- renderUI({
-          sel <- input[[paste0("map_", col_id)]]
-          if (is.null(sel) || !nzchar(trimws(sel)) || !sel %in% names(df)) {
+  # Statically registered sample value preview chips (efficient, zero observer churn)
+  all_mapping_cols <- c(
+    "hoh_arabic_name", "hoh_spouse_name", "hoh_ID_number", "id_type", "sex", "age", "marital_status", "household_size",
+    "phone_number", "secondary_phone_number",
+    "governorate", "district", "subdistrict", "village",
+    "partner", "record_id", "qa_code_sn", "system_date", "interviewer", "main_ref", "beneficiary_status", "dist_type", "dist_date_calc_new"
+  )
+  for (rc in all_mapping_cols) {
+    local({
+      col_id <- rc
+      output[[paste0("sample_preview_", col_id)]] <- renderUI({
+        df <- upload_df()
+        req(df)
+        sel <- input[[paste0("map_", col_id)]]
+        if (is.null(sel) || !nzchar(trimws(sel)) || !sel %in% names(df)) {
+          tags$div(
+            class = "mapping-preview-wrap status-unmapped",
+            tags$span(class = "badge-status-unmapped", tagList(icon_svg("alert-triangle", size = 12, class = "me-1"), "Unmapped")),
+            tags$span(class = "preview-note text-muted", "Select a column")
+          )
+        } else {
+          sample_val <- get_sample_preview_value(df, sel)
+          tags$div(
+            class = "mapping-preview-wrap status-mapped",
+            tags$span(class = "badge-status-mapped", tagList(icon_svg("check", size = 12, class = "me-1"), "Mapped")),
             tags$div(
-              class = "mapping-preview-wrap status-unmapped",
-              tags$span(class = "badge-status-unmapped", tagList(icon_svg("alert-triangle", size = 12, class = "me-1"), "Unmapped")),
-              tags$span(class = "preview-note text-muted", "Select a column")
+              class = "mapping-sample-chip",
+              tags$span(class = "chip-prefix", "Sample:"),
+              tags$span(class = "chip-value", title = sample_val, sample_val)
             )
-          } else {
-            sample_val <- get_sample_preview_value(df, sel)
-            tags$div(
-              class = "mapping-preview-wrap status-mapped",
-              tags$span(class = "badge-status-mapped", tagList(icon_svg("check", size = 12, class = "me-1"), "Mapped")),
-              tags$div(
-                class = "mapping-sample-chip",
-                tags$span(class = "chip-prefix", "Sample:"),
-                tags$span(class = "chip-value", title = sample_val, sample_val)
-              )
-            )
-          }
-        })
+          )
+        }
       })
-    }
-  })
+    })
+  }
 
   # Main Mapping Workbench UI
   output$mapping_ui <- renderUI({
