@@ -97,6 +97,51 @@ ui <- fluidPage(
         btn.prop('disabled', false).removeClass('disabled');
       }
     });
+
+    // Instant feedback for file upload: immediately display animated shimmer skeleton
+    $(document).on('change', '#upload_file', function() {
+      if (this.files && this.files.length > 0) {
+        var skel = $('#data_health_skeleton_holder').html();
+        if (skel) {
+          $('#upload_data_health_and_preview_ui').html(skel);
+        }
+        $('#confirm_upload_btn_container').html(
+          '<button class=\'btn btn-primary disabled mt-3\' disabled=\'disabled\' style=\'cursor:not-allowed;opacity:0.75;\' aria-busy=\'true\'>' +
+          '<span class=\'spinner-border spinner-border-sm me-2\' role=\'status\' aria-hidden=\'true\'></span>Reading & Verifying Spreadsheet…</button>'
+        );
+      }
+    });
+
+    // Instant feedback for Auto-Detect Best Matches in Column Alignment Workbench
+    $(document).on('click', '#auto_map_btn', function() {
+      var skel = $('#mapping_skeleton_holder').html();
+      if (skel) {
+        $('#mapping_ui').html(skel);
+      }
+      $('#auto_map_btn_container').html(
+        '<button class=\'btn btn-secondary btn-sm disabled\' disabled=\'disabled\' style=\'padding:6px 12px;font-size:0.825rem;font-weight:600;color:var(--app-forest);border-color:rgba(46,125,50,0.3);opacity:0.85;\' aria-busy=\'true\'>' +
+        '<span class=\'spinner-border spinner-border-sm me-2 text-success\' role=\'status\' aria-hidden=\'true\'></span>Analyzing Columns & Mapping…</button>'
+      );
+      $('#auto_map_status_banner').html(
+        '<div class=\'health-alert health-alert-info mb-3 d-flex align-items-center gap-3\' role=\'status\' aria-live=\'polite\' aria-busy=\'true\' style=\'border-left:4px solid var(--app-forest);background:rgba(82,179,45,0.08);padding:10px 14px;border-radius:6px;\'>' +
+        '<span class=\'spinner-border spinner-border-sm text-success flex-shrink-0\' role=\'status\' aria-hidden=\'true\'></span>' +
+        '<div><strong style=\'color:var(--app-forest);\'>Scanning Uploaded Column Headers: </strong>' +
+        '<span style=\'font-size:0.85rem;color:#334155;\'>Cross-referencing spreadsheet fields with the CCY humanitarian standard dictionary, canonical forms, and aliases…</span>' +
+        '</div></div>'
+      );
+    });
+
+    // Instant button feedback when confirming upload to proceed to mapping
+    $(document).on('click', '#confirm_upload, #confirm_upload_health_btn', function() {
+      var btn = $(this);
+      btn.html('<span class=\'spinner-border spinner-border-sm me-2\' role=\'status\' aria-hidden=\'true\'></span>Loading Column Alignment…');
+    });
+
+    // Instant button feedback when confirming mapping
+    $(document).on('click', '#confirm_mapping', function() {
+      var btn = $(this);
+      btn.html('<span class=\'spinner-border spinner-border-sm me-2\' role=\'status\' aria-hidden=\'true\'></span>Verifying Mappings…');
+    });
   ")),
   div(
     class = "app-shell",
@@ -112,6 +157,10 @@ server <- function(input, output, session) {
   upload_warnings <- reactiveVal(character(0))
   upload_hygiene_checks <- reactiveVal(NULL)
   upload_verifying <- reactiveVal(FALSE)
+  mapping_loading <- reactiveVal(FALSE)
+  mapping_load_time <- reactiveVal(NULL)
+  mapping_render_trigger <- reactiveVal(0)
+  auto_map_overrides <- reactiveVal(list())
   current_job <- reactiveVal(NULL)
 
   # Automated TTL data retention cleanup on startup (Pillar 3.1)
@@ -1672,6 +1721,9 @@ server <- function(input, output, session) {
     upload_warnings(diag$warnings)
     upload_hygiene_checks(diag$checks)
 
+    # Pacing so user clearly perceives the animated shimmer skeleton during verification
+    Sys.sleep(0.4)
+
     upload_error(NULL)
     upload_df(clean_df)
     if (diag$issue_count > 0) {
@@ -2265,6 +2317,8 @@ server <- function(input, output, session) {
       showNotification(master_block_message(), type = "error", duration = 8)
       return()
     }
+    mapping_loading(TRUE)
+    mapping_load_time(Sys.time())
     current_step("mapping")
   })
 
@@ -2281,7 +2335,25 @@ server <- function(input, output, session) {
       showNotification(master_block_message(), type = "error", duration = 8)
       return()
     }
+    mapping_loading(TRUE)
+    mapping_load_time(Sys.time())
     current_step("mapping")
+  })
+
+  # Graceful timer to ensure Column Alignment skeleton is visible and smooth
+  observe({
+    req(isTRUE(mapping_loading()))
+    t0 <- mapping_load_time()
+    if (is.null(t0)) {
+      mapping_loading(FALSE)
+      return()
+    }
+    elapsed <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
+    if (elapsed < 0.38) {
+      invalidateLater(as.integer((0.38 - elapsed) * 1000) + 10, session)
+    } else {
+      mapping_loading(FALSE)
+    }
   })
 
   # Mapping Presets Logic
@@ -2457,18 +2529,27 @@ server <- function(input, output, session) {
     req_cols <- required_columns()
     total_req <- length(req_cols)
     matched_count <- 0
+    new_overrides <- list()
 
-    withProgress(message = "Auto-detecting best column matches...", min = 0, max = total_req, {
-      for (i in seq_along(req_cols)) {
-        rc <- req_cols[i]
-        incProgress(1, detail = paste("Analyzing field", i, "of", total_req))
-        best <- detect_best_column_match(rc, cols)
-        if (!is.null(best) && nzchar(best)) {
-          updateSelectInput(session, paste0("map_", rc), selected = best)
-          matched_count <- matched_count + 1
-        }
+    for (i in seq_along(req_cols)) {
+      rc <- req_cols[i]
+      best <- detect_best_column_match(rc, cols)
+      if (!is.null(best) && nzchar(best)) {
+        new_overrides[[rc]] <- best
+        matched_count <- matched_count + 1
       }
-    })
+    }
+
+    # Smooth visual pacing so user clearly sees the animated shimmer wave
+    Sys.sleep(0.4)
+
+    auto_map_overrides(new_overrides)
+    mapping_render_trigger(mapping_render_trigger() + 1)
+
+    for (rc in req_cols) {
+      val <- if (rc %in% names(new_overrides)) new_overrides[[rc]] else ""
+      updateSelectInput(session, paste0("map_", rc), selected = val)
+    }
 
     auto_map_state$active <- FALSE
     auto_map_state$matched <- matched_count
@@ -2492,6 +2573,9 @@ server <- function(input, output, session) {
   observeEvent(input$clear_mapping_btn, {
     auto_map_state$show_summary <- FALSE
     req_cols <- required_columns()
+    cleared <- setNames(as.list(rep("", length(req_cols))), req_cols)
+    auto_map_overrides(cleared)
+    mapping_render_trigger(mapping_render_trigger() + 1)
     for (rc in req_cols) {
       updateSelectInput(session, paste0("map_", rc), selected = "")
     }
@@ -2612,6 +2696,10 @@ server <- function(input, output, session) {
   # Main Mapping Workbench UI
   output$mapping_ui <- renderUI({
     req(upload_df())
+    mapping_render_trigger()
+    if (isTRUE(mapping_loading())) {
+      return(mapping_workbench_skeleton())
+    }
     cols <- names(upload_df())
     default_map <- list()
 
@@ -2625,9 +2713,12 @@ server <- function(input, output, session) {
     render_mapping_row <- function(req_col) {
       meta <- get_field_meta(req_col)
 
-      # Preserve existing user selection or fall back to preset or auto-detect
+      # Preserve explicit overrides or existing user selection or fall back to preset or auto-detect
+      overrides <- auto_map_overrides()
       current_val <- isolate(input[[paste0("map_", req_col)]])
-      if (!is.null(current_val) && nzchar(current_val) && current_val %in% cols) {
+      if (req_col %in% names(overrides)) {
+        sel_val <- overrides[[req_col]]
+      } else if (!is.null(current_val) && nzchar(current_val) && current_val %in% cols) {
         sel_val <- current_val
       } else if (!is.null(default_map) && length(default_map) > 0 && req_col %in% names(default_map) && default_map[[req_col]] %in% cols) {
         sel_val <- default_map[[req_col]]
@@ -3177,6 +3268,8 @@ server <- function(input, output, session) {
       showNotification("Cannot navigate while matching is running.", type = "message")
       return()
     }
+    mapping_loading(TRUE)
+    mapping_load_time(Sys.time())
     current_step("mapping")
   })
 
@@ -3706,6 +3799,9 @@ server <- function(input, output, session) {
 
   output$results_dossier_ui <- renderUI({
     job <- job_status()
+    if (!is.null(job) && job$status %in% c("queued", "running")) {
+      return(results_dossier_skeleton())
+    }
     if (is.null(job) || job$status != "completed") {
       return(
         tags$div(
