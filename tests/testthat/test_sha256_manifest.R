@@ -26,12 +26,20 @@ test_that("compute_data_sha256 produces deterministic hash for data frames", {
   expect_equal(nchar(h1), 64)
 })
 
-test_that("build_audit_manifest_sheet populates expected fields", {
+test_that("build_audit_manifest_sheet populates expected fields and has no duplicates", {
   res <- list(
+    summary = data.frame(
+      metric = c("Total Records Examined", "Master Record Count"),
+      value = c("100", "500"),
+      stringsAsFactors = FALSE
+    ),
     same_list_high = data.frame(x = 1),
+    same_list_exact = data.frame(x = 1),
     list_vs_master_high = data.frame(x = 1:2),
+    list_vs_master_exact = data.frame(x = 1:2),
     same_list_medium = data.frame(),
-    list_vs_master_medium = data.frame(x = 1)
+    list_vs_master_medium = data.frame(x = 1),
+    list_vs_master_fuzzy = data.frame(x = 1)
   )
   meta <- list(
     upload_sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -45,6 +53,7 @@ test_that("build_audit_manifest_sheet populates expected fields", {
   manifest <- build_audit_manifest_sheet(res, meta)
   expect_true(is.data.frame(manifest))
   expect_equal(names(manifest), c("Property", "Value"))
+  expect_equal(anyDuplicated(manifest$Property), 0)
   
   prop_map <- stats::setNames(manifest$Value, manifest$Property)
   expect_equal(prop_map[["Audit Manifest ID"]], "CCY-TEST-MANIFEST-101")
@@ -53,14 +62,24 @@ test_that("build_audit_manifest_sheet populates expected fields", {
   expect_equal(prop_map[["Executed By (User)"]], "architect@ccyemen.org")
   expect_equal(prop_map[["Security Role"]], "ccy_master")
   expect_equal(prop_map[["Partner Organization"]], "DRC")
+  expect_equal(prop_map[["Upload Records Examined"]], "100")
+  expect_equal(prop_map[["Master Records Evaluated"]], "500")
   expect_equal(prop_map[["Total High Confidence Duplicates"]], "3")
   expect_equal(prop_map[["Total Medium Review Duplicates"]], "1")
+  expect_true(grepl("1 \\(1.00%\\)", prop_map[["Same List Exact Matches"]]))
+  expect_true(grepl("4.00%", prop_map[["Overall Deduplication Rate"]]))
 })
 
-test_that("write_dedup_workbook writes Audit_Manifest sheet", {
+test_that("write_dedup_workbook writes Audit_Manifest sheet and omits Summary sheet", {
   res <- list(
     info = data.frame(Field = "Test", Value = "Value"),
+    summary = data.frame(
+      metric = c("Total Records Examined", "Master Record Count"),
+      value = c("50", "200"),
+      stringsAsFactors = FALSE
+    ),
     same_list_high = data.frame(id = 1, hoh_name = "Test", confidence = "HIGH"),
+    same_list_exact = data.frame(id = 1, hoh_name = "Test"),
     same_list_medium = data.frame(),
     list_vs_master_high = data.frame(),
     list_vs_master_medium = data.frame()
@@ -79,10 +98,15 @@ test_that("write_dedup_workbook writes Audit_Manifest sheet", {
   
   sheets <- openxlsx::getSheetNames(tmp_xlsx)
   expect_true("Audit_Manifest" %in% sheets)
+  expect_false("Summary" %in% sheets)
   
   manifest_read <- openxlsx::read.xlsx(tmp_xlsx, sheet = "Audit_Manifest")
-  expect_true(nrow(manifest_read) >= 10)
+  expect_true(nrow(manifest_read) >= 15)
+  expect_equal(anyDuplicated(manifest_read$Property), 0)
   expect_true("Upload Dataset SHA-256 Digest" %in% manifest_read$Property)
+  expect_true("Upload Records Examined" %in% manifest_read$Property)
+  expect_true("Same List Exact Matches" %in% manifest_read$Property)
+  expect_true("Overall Deduplication Rate" %in% manifest_read$Property)
 })
 
 test_that("log_export_audit logs sha256 and manifest metadata", {
