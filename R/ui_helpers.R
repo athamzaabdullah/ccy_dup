@@ -745,8 +745,7 @@ matching_step_ui <- function() {
         ),
         tags$div(
           id = "matching_cancel_btn_container",
-          class = "shiny-html-output d-inline-block",
-          uiOutput("cancel_button")
+          class = "shiny-html-output d-inline-block"
         ),
         tags$div(id = "matching_feedback_status", class = "matching-instant-feedback")
       ),

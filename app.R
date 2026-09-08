@@ -166,6 +166,13 @@ ui <- fluidPage(
       btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Resetting Session…');
     });
 
+    // Delegated click handler to ensure instant response when interrupting matching
+    $(document).on("click", "#cancel_job", function(e) {
+      if (window.Shiny && window.Shiny.setInputValue) {
+        Shiny.setInputValue("cancel_job", new Date().getTime(), {priority: "event"});
+      }
+    });
+
     // Safety guard: ensure document and body scrolling is restored whenever modals are dismissed
     $(document).on("hidden.bs.modal", function () {
       $("body").removeClass("modal-open").css({"overflow": "", "overflow-y": "", "padding-right": ""});
@@ -197,6 +204,7 @@ server <- function(input, output, session) {
   mapping_render_trigger <- reactiveVal(0)
   auto_map_overrides <- reactiveVal(list())
   current_job <- reactiveVal(NULL)
+  matching_is_running <- reactiveVal(FALSE)
 
   # Automated TTL data retention cleanup on startup (Pillar 3.1)
   tryCatch(cleanup_expired_payloads(max_age_days = 14), error = function(e) NULL)
@@ -943,7 +951,8 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$cancel_job, {
-    job <- job_status()
+    id <- current_job()
+    job <- if (!is.null(id)) get_job(id) else NULL
     if (!is.null(job) && job$status %in% c("queued", "running")) {
       showModal(modalDialog(
         title = tags$div(
@@ -967,6 +976,7 @@ server <- function(input, output, session) {
       ))
       return()
     }
+    matching_is_running(FALSE)
     current_job(NULL)
     match_trigger(match_trigger() + 1)
     current_step("strategy")
@@ -978,6 +988,7 @@ server <- function(input, output, session) {
     if (!is.null(id)) {
       set_job_canceled(id, "Matching halted by user to adjust setup")
     }
+    matching_is_running(FALSE)
     current_job(NULL)
     match_trigger(match_trigger() + 1)
     session$sendCustomMessage("reset_button", list(id = "run_match", html = "Run matching"))
@@ -991,6 +1002,7 @@ server <- function(input, output, session) {
     if (!is.null(id)) {
       set_job_canceled(id, "Matching stopped and session reset")
     }
+    matching_is_running(FALSE)
     current_job(NULL)
     upload_df(NULL)
     match_trigger(match_trigger() + 1)
@@ -3146,6 +3158,7 @@ server <- function(input, output, session) {
       user_role = auth$role
     )
     current_job(job_id)
+    matching_is_running(TRUE)
     current_step("matching")
     match_trigger(match_trigger() + 1)
   })
@@ -3285,8 +3298,7 @@ server <- function(input, output, session) {
       results = list(title = "Results", desc = "Review & Export")
     )
     cur <- current_step()
-    job <- job_status()
-    running <- !is.null(job) && job$status %in% c("queued", "running")
+    running <- isTRUE(matching_is_running())
     cur_idx <- match(cur, names(steps))
 
     # If in admin, suppress stepper navigation entirely — the Admin Control Center has its own dedicated header
@@ -3605,9 +3617,10 @@ server <- function(input, output, session) {
   })
 
   render_matching_action_button <- function() {
-    job <- job_status()
-    running <- !is.null(job) && job$status %in% c("queued", "running")
-    completed <- !is.null(job) && job$status == "completed"
+    running <- isTRUE(matching_is_running())
+    id <- current_job()
+    job <- if (!running && !is.null(id)) get_job(id) else NULL
+    completed <- !is.null(job) && identical(job$status, "completed")
 
     if (running) {
       tags$button(
@@ -3639,18 +3652,14 @@ server <- function(input, output, session) {
     render_matching_action_button()
   })
 
-  output$run_match_button_ui <- renderUI({
-    render_matching_action_button()
-  })
-
   render_matching_cancel_button <- function() {
-    job <- job_status()
-    running <- !is.null(job) && job$status %in% c("queued", "running")
+    running <- isTRUE(matching_is_running())
     if (!running) return(NULL)
     actionButton(
       "cancel_job",
       tagList(icon_svg("x-circle", size = 14, class = "me-1"), "Stop & start over"),
-      class = "btn-danger btn-sm"
+      class = "btn-danger btn-sm",
+      `aria-label` = "Stop deduplication run"
     )
   }
 
@@ -4362,15 +4371,24 @@ server <- function(input, output, session) {
 
   observeEvent(job_status(), {
     job <- job_status()
-    if (is.null(job)) return()
+    if (is.null(job)) {
+      if (isTRUE(matching_is_running())) matching_is_running(FALSE)
+      return()
+    }
+    if (job$status %in% c("queued", "running")) {
+      if (!isTRUE(matching_is_running())) matching_is_running(TRUE)
+    }
     if (job$status == "completed") {
+      matching_is_running(FALSE)
       session$sendCustomMessage("reset_button", list(id = "run_match", html = "Re-run matching"))
       current_step("results")
     }
     if (job$status == "canceled") {
+      matching_is_running(FALSE)
       session$sendCustomMessage("reset_button", list(id = "run_match", html = "Run matching"))
     }
     if (job$status == "failed") {
+      matching_is_running(FALSE)
       session$sendCustomMessage("reset_button", list(id = "run_match", html = "Run matching"))
       if (!identical(last_job_notify(), job$id)) {
         showNotification(job$message, type = "error")

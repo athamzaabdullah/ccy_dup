@@ -108,3 +108,37 @@ test_that("normalization handles malformed values", {
   expect_true("phone_number_n" %in% names(out))
   expect_true(nrow(out) == 2)
 })
+
+test_that("run_dedup cooperatively halts and returns NULL when is_canceled is TRUE", {
+  u <- build_upload()
+  m <- build_master()
+
+  # When canceled immediately
+  res_canceled <- run_dedup(
+    upload_df = u,
+    master_df = m,
+    is_canceled = function() TRUE
+  )
+  expect_null(res_canceled)
+
+  # When canceled after call starts
+  calls <- 0
+  res_step_canceled <- run_dedup(
+    upload_df = u,
+    master_df = m,
+    is_canceled = function() {
+      calls <<- calls + 1
+      calls >= 2
+    }
+  )
+  expect_null(res_step_canceled)
+
+  # When not canceled
+  res_active <- run_dedup(
+    upload_df = u,
+    master_df = m,
+    is_canceled = function() FALSE
+  )
+  expect_false(is.null(res_active))
+  expect_true(is.data.frame(res_active$summary))
+})

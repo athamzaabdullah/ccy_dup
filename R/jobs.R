@@ -236,10 +236,11 @@ enqueue_match_job <- function(upload_df, snapshot_path, mapping = NULL,
           filter_recent_mpca = filter_recent_mpca,
           mpca_window_months = mpca_window_months,
           partner_org = partner_org,
-          user_role = user_role
+          user_role = user_role,
+          is_canceled = function() job_is_canceled(id)
         )
 
-        if (job_is_canceled(id)) return(NULL)
+        if (job_is_canceled(id) || is.null(result)) return(NULL)
         set_job_progress(id, 90, "Finalizing")
         set_job_result(id, result)
       }, error = function(e) {

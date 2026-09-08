@@ -455,8 +455,16 @@ run_dedup <- function(upload_df,
                       mpca_reference_date = Sys.Date(),
                       partner_org = NULL,
                       user_role = NULL,
+                      is_canceled = NULL,
                       ...) {
   
+  check_canceled <- function() {
+    if (is.function(is_canceled) && isTRUE(is_canceled())) return(TRUE)
+    FALSE
+  }
+
+  if (check_canceled()) return(NULL)
+
   # MPCA Assistance Date Filtering (< 6 months window)
   if (isTRUE(filter_recent_mpca) && !is.null(master_df) && nrow(master_df) > 0) {
     date_col <- NULL
@@ -526,10 +534,12 @@ run_dedup <- function(upload_df,
   orig_cols <- names(upload_df)
   
   # 2. Internal Matching (Same List)
+  if (check_canceled()) return(NULL)
   same_cand <- build_self_candidates(u_prep, limit = max_candidates)
   out_sl <- data.table::data.table(match_score = numeric(0))
   
   if (nrow(same_cand) > 0) {
+    if (check_canceled()) return(NULL)
     # Join with features
     same_cand <- merge(same_cand, u_prep, by.x = "row_a", by.y = "row_id")
     same_cand <- merge(same_cand, u_prep, by.x = "row_b", by.y = "row_id", suffixes = c("_a", "_b"))
@@ -642,10 +652,12 @@ run_dedup <- function(upload_df,
   }
   
   # 3. External Matching (List vs Master)
+  if (check_canceled()) return(NULL)
   cross_cand <- build_cross_candidates(u_prep, m_prep, limit = max_candidates)
   out_lm <- data.table::data.table(match_score = numeric(0))
   
   if (nrow(cross_cand) > 0) {
+    if (check_canceled()) return(NULL)
     cross_cand <- merge(cross_cand, u_prep, by.x = "upload_row_id", by.y = "row_id")
     cross_cand <- merge(cross_cand, m_prep, by.x = "master_row_id", by.y = "row_id", suffixes = c("_u", "_m"))
     
@@ -838,6 +850,8 @@ run_dedup <- function(upload_df,
     possible_threshold = fuzzy_medium_threshold
   )
   
+  if (check_canceled()) return(NULL)
+
   list(
     info = info,
     summary = summary_df,
