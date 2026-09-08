@@ -232,3 +232,35 @@ test_that("results_dossier_skeleton renders accessible loading skeleton with KPI
   expect_true(grepl("skeleton-shimmer", skel_html))
 })
 
+test_that("custom.css guarantees continuous revolving button spinners and GPU-composited skeleton shimmer", {
+  css_path <- file.path("..", "..", "www", "custom.css")
+  expect_true(file.exists(css_path))
+  css_content <- paste(readLines(css_path, warn = FALSE), collapse = "\n")
+
+  # 1. Spinner rotation animation and keyframes exist
+  expect_true(grepl("\\.spinner-border", css_content))
+  expect_true(grepl("spinner-border-rotate", css_content))
+  expect_true(grepl("@keyframes spinner-border-rotate", css_content))
+  expect_true(grepl("@-webkit-keyframes spinner-border-rotate", css_content))
+  expect_true(grepl("rotate\\(360deg\\)", css_content))
+  expect_true(grepl("infinite", css_content))
+
+  # 2. Disabled buttons preserve spinner rotation
+  expect_true(grepl("\\.btn:disabled \\.spinner-border", css_content))
+  expect_true(grepl("button\\[disabled\\] \\.spinner-border", css_content))
+
+  # 3. Skeleton shimmer sweep keyframes exist with GPU compositing
+  expect_true(grepl("@keyframes skeleton-shimmer-sweep", css_content))
+  expect_true(grepl("translateX\\(100%\\)", css_content))
+  expect_true(grepl("will-change: transform", css_content))
+
+  # 4. Reduced motion layer does NOT hide skeletons or freeze spinners
+  reduced_motion_match <- regmatches(css_content, regexpr("@media \\(prefers-reduced-motion: reduce\\)[^}]+}[^}]+}", css_content))
+  expect_true(length(reduced_motion_match) > 0)
+  rm_block <- reduced_motion_match[1]
+  expect_false(grepl("\\.skeleton-shimmer::after\\s*\\{[^}]*display:\\s*none", rm_block))
+  expect_true(grepl("not\\(\\.spinner-border\\)", rm_block))
+  expect_true(grepl("not\\(\\.skeleton-shimmer\\)", rm_block))
+})
+
+
