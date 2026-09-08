@@ -166,13 +166,6 @@ ui <- fluidPage(
       btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Initializing Matching Engine…');
     });
 
-    // Instant button feedback when fetching master database
-    $(document).on("click", "#fetch_master", function() {
-      var btn = $(this);
-      btn.addClass("disabled");
-      btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Contacting Master Database…');
-    });
-
     // Instant button feedback when restarting deduplication
     $(document).on("click", "#restart_dedup_btn", function() {
       var btn = $(this);
@@ -225,6 +218,7 @@ server <- function(input, output, session) {
   settings_username <- reactiveVal("")
   settings_token <- reactiveVal("")
   master_job <- reactiveVal(NULL)
+  master_trigger <- reactiveVal(0)
   admin_form_id <- reactiveVal("")
   admin_user_refresh <- reactiveVal(0)
   admin_backup_refresh <- reactiveVal(0)
@@ -1808,8 +1802,32 @@ server <- function(input, output, session) {
     ))
   })
 
+  output$fetch_master_btn_container <- renderUI({
+    job <- master_job_status()
+    running <- !is.null(job) && job$status %in% c("queued", "running")
+    if (running) {
+      tags$button(
+        id = "fetch_master",
+        type = "button",
+        class = "btn btn-ghost disabled",
+        disabled = "disabled",
+        style = "cursor: not-allowed; opacity: 0.75;",
+        `aria-busy` = "true",
+        tags$span(class = "spinner-border spinner-border-sm me-2", role = "status", `aria-hidden` = "true"),
+        "Fetching master database…"
+      )
+    } else {
+      actionButton(
+        "fetch_master",
+        tagList(icon_svg("database", size = 14, class = "me-1"), "Fetch master database"),
+        class = "btn-ghost"
+      )
+    }
+  })
+
   observeEvent(input$cancel_fetch_master, {
     removeModal()
+    session$sendCustomMessage("reset_button", list(id = "fetch_master", html = "Fetch master database"))
   })
 
   observeEvent(input$confirm_fetch_master, {
@@ -1820,6 +1838,9 @@ server <- function(input, output, session) {
     }
     removeModal()
     token <- settings_token()
+    if (is.null(token) || !isTRUE(nzchar(token))) {
+      token <- config$activityinfo$token %||% Sys.getenv("ACTIVITYINFO_TOKEN", "")
+    }
     if (is.null(token) || !isTRUE(nzchar(token))) {
       master_fetch_status("Fetch failed: ActivityInfo token not set. Add it in Settings.")
       showNotification("ActivityInfo token not set. Add it in Settings.", type = "error")
@@ -1832,6 +1853,7 @@ server <- function(input, output, session) {
     master_fetch_status(paste0("Fetching master database in chunks of ", fetch_chunk_size, " rows..."))
     job_id <- enqueue_master_fetch_job(cfg)
     master_job(job_id)
+    master_trigger(master_trigger() + 1)
   })
 
   output$fetch_feedback_ui <- renderUI({
@@ -1933,8 +1955,12 @@ server <- function(input, output, session) {
   output$cancel_fetch_button <- renderUI({
     job <- master_job_status()
     running <- !is.null(job) && job$status %in% c("queued", "running")
-    class <- if (running) "btn-danger" else "btn-danger disabled"
-    actionButton("cancel_fetch", "Stop fetch", class = class, disabled = !running)
+    if (!running) return(NULL)
+    actionButton(
+      "cancel_fetch",
+      tagList(icon_svg("x-circle", size = 14, class = "me-1"), "Stop fetch"),
+      class = "btn-danger btn-sm"
+    )
   })
 
   observeEvent(input$cancel_fetch, {
@@ -1960,6 +1986,9 @@ server <- function(input, output, session) {
     if (!is.null(id)) {
       set_job_canceled(id, "Master fetch canceled")
       master_fetch_status("Fetch canceled.")
+      master_trigger(master_trigger() + 1)
+      showNotification("Master database fetch was stopped.", type = "warning", duration = 5)
+      session$sendCustomMessage("reset_button", list(id = "fetch_master", html = "Fetch master database"))
     }
   })
 
@@ -1967,6 +1996,7 @@ server <- function(input, output, session) {
 
   master_timer <- reactiveTimer(1000)
   master_job_status <- reactive({
+    master_trigger()
     id <- master_job()
     if (is.null(id)) return(NULL)
     job <- get_job(id)
@@ -1994,6 +2024,7 @@ server <- function(input, output, session) {
       master_fetch_status(job$message)
     }
     if (job$status == "completed") {
+      session$sendCustomMessage("reset_button", list(id = "fetch_master", html = "Fetch master database"))
       res <- get_job_result(job)
       if (!is.null(res$snapshot_path)) last_master_snapshot(res$snapshot_path)
       if (!is.null(res$snapshot_path)) last_master_mtime(file.info(res$snapshot_path)$mtime)
@@ -2006,6 +2037,7 @@ server <- function(input, output, session) {
       }
     }
     if (job$status == "failed") {
+      session$sendCustomMessage("reset_button", list(id = "fetch_master", html = "Fetch master database"))
       master_fetch_status(paste("Fetch failed:", job$message))
       if (!identical(last_master_notify(), job$id)) {
         showNotification(job$message, type = "error")
@@ -2013,6 +2045,7 @@ server <- function(input, output, session) {
       }
     }
     if (job$status == "canceled") {
+      session$sendCustomMessage("reset_button", list(id = "fetch_master", html = "Fetch master database"))
       master_fetch_status("Fetch canceled.")
       if (!identical(last_master_notify(), job$id)) {
         last_master_notify(job$id)

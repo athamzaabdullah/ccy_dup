@@ -255,68 +255,72 @@ enqueue_master_fetch_job <- function(cfg) {
   id <- init_job()
   set_job_progress(id, 5, "Starting master fetch")
 
-  future::future({
-    tryCatch({
-      set_job_progress(id, 6, "Worker started")
-      if (job_is_canceled(id)) return(NULL)
-      set_job_progress(id, 8, "Connecting to ActivityInfo")
-      activityinfo_list_databases(cfg = cfg)
-      set_job_progress(id, 12, "Connection confirmed")
-
-      if (job_is_canceled(id)) return(NULL)
-      set_job_progress(id, 15, "Resolving ActivityInfo forms")
-      form_ids <- activityinfo_resolve_form_ids(cfg)
-      batch_size <- if (!is.null(cfg$batch_size)) as.integer(cfg$batch_size) else 2000L
-      set_job_progress(id, 18, paste0("Found ", length(form_ids), " forms to fetch (chunk size ", batch_size, ")"))
-
-      progress_cb <- function(i, total, msg) {
+  tryCatch({
+    future::future({
+      tryCatch({
+        set_job_progress(id, 6, "Worker started")
         if (job_is_canceled(id)) return(NULL)
-        chunk_index <- 0L
-        rows_fetched <- 0L
-        m_chunk <- regexec("chunk ([0-9]+)", msg)
-        hit_chunk_list <- regmatches(msg, m_chunk)
-        hit_chunk <- character(0)
-        if (length(hit_chunk_list) >= 1 && length(hit_chunk_list[[1]]) >= 1) hit_chunk <- hit_chunk_list[[1]] else hit_chunk <- character(0)
-        if (length(hit_chunk) >= 2) chunk_index <- as.integer(hit_chunk[2])
-        m_rows <- regexec("rows fetched ([0-9]+)", msg)
-        hit_rows_list <- regmatches(msg, m_rows)
-        hit_rows <- character(0)
-        if (length(hit_rows_list) >= 1 && length(hit_rows_list[[1]]) >= 1) hit_rows <- hit_rows_list[[1]] else hit_rows <- character(0)
-        if (length(hit_rows) >= 2) rows_fetched <- as.integer(hit_rows[2])
+        set_job_progress(id, 8, "Connecting to ActivityInfo")
+        activityinfo_list_databases(cfg = cfg)
+        set_job_progress(id, 12, "Connection confirmed")
 
-        # Advance progress inside each form so large forms don't appear stuck.
-        within_form <- if (chunk_index <= 0) 0 else min(0.95, 1 - exp(-chunk_index / 4))
-        frac <- ((i - 1) + within_form) / total
-        pct <- 18 + round(frac * 70)
-        pct <- max(18, min(88, pct))
+        if (job_is_canceled(id)) return(NULL)
+        set_job_progress(id, 15, "Resolving ActivityInfo forms")
+        form_ids <- activityinfo_resolve_form_ids(cfg)
+        batch_size <- if (!is.null(cfg$batch_size)) as.integer(cfg$batch_size) else 2000L
+        set_job_progress(id, 18, paste0("Found ", length(form_ids), " forms to fetch (chunk size ", batch_size, ")"))
 
-        set_job_progress(
-          id,
-          pct,
-          paste0(
-            "Fetching form ", i, " of ", total, " (",
-            msg, ", chunk size ", batch_size, ")"
+        progress_cb <- function(i, total, msg) {
+          if (job_is_canceled(id)) return(NULL)
+          chunk_index <- 0L
+          rows_fetched <- 0L
+          m_chunk <- regexec("chunk ([0-9]+)", msg)
+          hit_chunk_list <- regmatches(msg, m_chunk)
+          hit_chunk <- character(0)
+          if (length(hit_chunk_list) >= 1 && length(hit_chunk_list[[1]]) >= 1) hit_chunk <- hit_chunk_list[[1]] else hit_chunk <- character(0)
+          if (length(hit_chunk) >= 2) chunk_index <- as.integer(hit_chunk[2])
+          m_rows <- regexec("rows fetched ([0-9]+)", msg)
+          hit_rows_list <- regmatches(msg, m_rows)
+          hit_rows <- character(0)
+          if (length(hit_rows_list) >= 1 && length(hit_rows_list[[1]]) >= 1) hit_rows <- hit_rows_list[[1]] else hit_rows <- character(0)
+          if (length(hit_rows) >= 2) rows_fetched <- as.integer(hit_rows[2])
+
+          # Advance progress inside each form so large forms don't appear stuck.
+          within_form <- if (chunk_index <= 0) 0 else min(0.95, 1 - exp(-chunk_index / 4))
+          frac <- ((i - 1) + within_form) / total
+          pct <- 18 + round(frac * 70)
+          pct <- max(18, min(88, pct))
+
+          set_job_progress(
+            id,
+            pct,
+            paste0(
+              "Fetching form ", i, " of ", total, " (",
+              msg, ", chunk size ", batch_size, ")"
+            )
           )
+        }
+        cancel_cb <- function() job_is_canceled(id)
+
+        df <- activityinfo_fetch_all_progress(
+          cfg = cfg,
+          form_ids = form_ids,
+          progress_cb = progress_cb,
+          cancel_cb = cancel_cb
         )
-      }
-      cancel_cb <- function() job_is_canceled(id)
+        if (is.null(df) || job_is_canceled(id)) return(NULL)
 
-      df <- activityinfo_fetch_all_progress(
-        cfg = cfg,
-        form_ids = form_ids,
-        progress_cb = progress_cb,
-        cancel_cb = cancel_cb
-      )
-      if (job_is_canceled(id)) return(NULL)
+        set_job_progress(id, 90, "Saving snapshot")
+        path <- save_master_snapshot(df)
 
-      set_job_progress(id, 90, "Saving snapshot")
-      path <- save_master_snapshot(df)
-
-      set_job_progress(id, 98, "Finalizing")
-      set_job_result(id, list(snapshot_path = path, rows = nrow(df)))
-    }, error = function(e) {
-      set_job_error(id, format_job_error(e))
+        set_job_progress(id, 98, "Finalizing")
+        set_job_result(id, list(snapshot_path = path, rows = nrow(df)))
+      }, error = function(e) {
+        set_job_error(id, format_job_error(e))
+      })
     })
+  }, error = function(fe) {
+    set_job_error(id, paste0("Failed to initialize background worker: ", format_job_error(fe)))
   })
 
   id

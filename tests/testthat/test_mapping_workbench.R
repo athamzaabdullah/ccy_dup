@@ -327,5 +327,49 @@ test_that("button dimensions, spinner animations, and reset handlers prevent UI 
   expect_true(grepl('reset_button".*confirm_strategy', app_r_content))
 })
 
+test_that("master database fetch UI and reactive cancellation prevent UI freezes and hung states", {
+  source(file.path("..", "..", "R", "ui_helpers.R"))
+
+  # 1. New SVG icons are present and valid
+  db_svg <- icon_svg("database")
+  expect_true(grepl("<svg", as.character(db_svg)))
+  expect_true(grepl("ellipse", as.character(db_svg)))
+
+  xc_svg <- icon_svg("x-circle")
+  expect_true(grepl("<svg", as.character(xc_svg)))
+  expect_true(grepl("line", as.character(xc_svg)))
+
+  ac_svg <- icon_svg("alert-circle")
+  expect_true(grepl("<svg", as.character(ac_svg)))
+
+  # 2. upload_step_ui wraps fetch_master in fetch_master_btn_container
+  ui_html <- as.character(upload_step_ui(can_fetch_master = TRUE))
+  expect_true(grepl('id="fetch_master_btn_container"', ui_html))
+  expect_true(grepl('id="fetch_master"', ui_html))
+  expect_true(grepl('id="cancel_fetch_button"', ui_html))
+
+  # 3. app.R inspection: no rogue click mutation on #fetch_master
+  app_r_path <- file.path("..", "..", "app.R")
+  expect_true(file.exists(app_r_path))
+  app_r_content <- paste(readLines(app_r_path, encoding = "UTF-8", warn = FALSE), collapse = "\n")
+
+  # Ensure rogue jQuery click handler is deleted
+  expect_false(grepl('\\$\\(document\\)\\.on\\("click",\\s*"#fetch_master"', app_r_content))
+
+  # Ensure output$fetch_master_btn_container is defined
+  expect_true(grepl('output\\$fetch_master_btn_container\\s*<-\\s*renderUI', app_r_content))
+
+  # Ensure master_trigger is used for instant UI updates on cancel and enqueue
+  expect_true(grepl('master_trigger\\s*<-\\s*reactiveVal\\(0\\)', app_r_content))
+  expect_true(grepl('master_trigger\\(master_trigger\\(\\)\\s*\\+\\s*1\\)', app_r_content))
+
+  # Ensure token fallback to config or Sys.getenv is present
+  expect_true(grepl('config\\$activityinfo\\$token\\s*%\\|\\|%\\s*Sys\\.getenv\\("ACTIVITYINFO_TOKEN"', app_r_content))
+
+  # Ensure reset_button custom message is dispatched to reset fetch button
+  expect_true(grepl('session\\$sendCustomMessage\\("reset_button",\\s*list\\(id\\s*=\\s*"fetch_master"', app_r_content))
+})
+
+
 
 

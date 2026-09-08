@@ -31,7 +31,10 @@ icon_svg <- function(name, size = 16, class = "") {
     "menu" = '<line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>',
     "more-vertical" = '<circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="19" r="1.5"/>',
     "chevron-left" = '<polyline points="15 18 9 12 15 6"/>',
-    "chevron-right" = '<polyline points="9 18 15 12 9 6"/>'
+    "chevron-right" = '<polyline points="9 18 15 12 9 6"/>',
+    "database" = '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>',
+    "x-circle" = '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>',
+    "alert-circle" = '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>'
   )
   inner <- if (!is.null(paths[[name]])) paths[[name]] else paths[["file"]]
   cls <- if (nzchar(class)) paste("app-svg-icon", class) else "app-svg-icon"
@@ -143,8 +146,18 @@ upload_step_ui <- function(can_fetch_master = TRUE) {
         uiOutput("upload_validation"),
 
         div(
-          class = "mt-3",
-          if (isTRUE(can_fetch_master)) actionButton("fetch_master", "Fetch master database", class = "btn-ghost") else NULL,
+          class = "mt-3 d-flex flex-wrap align-items-center gap-2",
+          if (isTRUE(can_fetch_master)) {
+            tags$div(
+              id = "fetch_master_btn_container",
+              class = "shiny-html-output d-inline-block",
+              actionButton(
+                "fetch_master",
+                tagList(icon_svg("database", size = 14, class = "me-1"), "Fetch master database"),
+                class = "btn-ghost"
+              )
+            )
+          } else NULL,
           if (isTRUE(can_fetch_master)) uiOutput("cancel_fetch_button") else NULL
         ),
         uiOutput("fetch_feedback_ui"),
