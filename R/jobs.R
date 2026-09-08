@@ -184,9 +184,12 @@ enqueue_match_job <- function(upload_df, snapshot_path, mapping = NULL,
       }
 
       set_job_progress(id, 10, "Loading local master snapshot")
-      lean_path <- gsub("master_snapshot_", "master_lean_", snapshot_path)
-      load_path <- if (file.exists(lean_path)) lean_path else snapshot_path
-      master_df <- readRDS(load_path)
+      master_df <- load_master_lean(snapshot_path)
+      if (is.null(master_df)) {
+        lean_path <- gsub("master_snapshot_", "master_lean_", snapshot_path)
+        load_path <- if (file.exists(lean_path)) lean_path else snapshot_path
+        master_df <- readRDS(load_path)
+      }
 
       # Self-healing: verify master_df contains an ID number column.
       # If an older/stale lean snapshot lacked the ID field, re-extract from the full snapshot.
@@ -353,3 +356,50 @@ run_master_fetch_sync <- function(cfg, progress_cb = NULL, cancel_cb = NULL) {
   if (!is.null(progress_cb)) progress_cb(98, "Finalizing")
   list(canceled = FALSE, snapshot_path = path, rows = nrow(df))
 }
+
+run_master_delta_sync_sync <- function(cfg, base_snapshot_path = NULL, last_sync_time = NULL,
+                                       progress_cb = NULL, cancel_cb = NULL) {
+  activityinfo_sync_delta(
+    cfg = cfg,
+    base_snapshot_path = base_snapshot_path,
+    last_sync_time = last_sync_time,
+    progress_cb = progress_cb,
+    cancel_cb = cancel_cb
+  )
+}
+
+enqueue_master_delta_sync_job <- function(cfg = config$activityinfo,
+                                          base_snapshot_path = NULL,
+                                          last_sync_time = NULL) {
+  id <- new_job_id()
+  set_job_status(id, "queued", "Delta sync queued")
+
+  future::future({
+    tryCatch({
+      set_job_status(id, "running", "Connecting to ActivityInfo")
+      set_job_progress(id, 10, "Connecting to ActivityInfo")
+
+      progress_cb <- function(pct, msg) {
+        set_job_progress(id, pct, msg)
+      }
+      cancel_cb <- function() job_is_canceled(id)
+
+      res <- activityinfo_sync_delta(
+        cfg = cfg,
+        base_snapshot_path = base_snapshot_path,
+        last_sync_time = last_sync_time,
+        progress_cb = progress_cb,
+        cancel_cb = cancel_cb
+      )
+      if (job_is_canceled(id) || isTRUE(res$canceled)) return(NULL)
+
+      set_job_progress(id, 100, "Delta sync complete")
+      set_job_result(id, res)
+    }, error = function(e) {
+      set_job_error(id, format_job_error(e))
+    })
+  })
+
+  id
+}
+

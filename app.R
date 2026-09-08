@@ -1,7 +1,6 @@
 rm(list = ls())
 
-## install.packages(c("shiny", "dplyr", "DT", "readxl", "openxlsx", "promises", "future", "blastula", "sendmailR", "otp"), dependencies = TRUE)
-
+## install.packages
 library(dplyr)
 library(bslib)
 library(DT)
@@ -10,9 +9,6 @@ library(openxlsx)
 library(shiny)
 library(promises)
 library(future)
-
-# setwd is not needed in Shiny apps and breaks cloud deployment
-# setwd("D:/OneDrive - Danish Refugee Council/02. Projects/06_deduplication_app_R/shiny/")
 
 plan(multisession)
 
@@ -53,6 +49,9 @@ source("R/ui_helpers.R")
 source("R/ttl.R")
 source("R/audit.R")
 source("R/diagnostics.R")
+source("R/modules/mod_upload.R")
+source("R/modules/mod_strategy.R")
+source("R/modules/mod_results.R")
 
 theme <- bs_theme(
   version = 5,
@@ -67,6 +66,11 @@ theme <- bs_theme(
 ui <- fluidPage(
   theme = theme,
   tags$head(
+    tags$link(rel = "icon", type = "image/x-icon", href = "ccy.ico?v=2"),
+    tags$link(rel = "shortcut icon", type = "image/x-icon", href = "ccy.ico?v=2"),
+    tags$link(rel = "icon", type = "image/png", sizes = "32x32", href = "ccy_icon_32.png?v=2"),
+    tags$link(rel = "apple-touch-icon", sizes = "192x192", href = "ccy_icon_192.png?v=2"),
+    tags$title("CCY Deduplication Platform"),
     includeCSS("www/custom.css")
   ),
   tags$script(HTML("
@@ -91,25 +95,6 @@ ui <- fluidPage(
       var btn = $('#export_results');
       if (btn.length) {
         btn.prop('disabled', false).removeClass('disabled');
-      }
-    });
-    $(document).on('click', '#export_results', function() {
-      var btn = $(this);
-      if (btn.prop('disabled')) return;
-      btn.prop('disabled', true).addClass('disabled');
-    });
-    // Immediate visual feedback when Proceed is clicked in the confirmation modal
-    $(document).on('click', '#confirm_start_matching_btn', function() {
-      var $btn = $(this);
-      if ($btn.hasClass('disabled') || $btn.prop('disabled')) return;
-      $btn.addClass('disabled btn-matching-running').prop('disabled', true);
-      $btn.html('<span class=\"spinner-border spinner-border-sm me-2\" role=\"status\" aria-hidden=\"true\"></span>Starting deduplication...');
-      $('#matching_feedback_status').html('<span class=\"matching-pulse-hint\"><span class=\"spinner-grow spinner-grow-sm\" role=\"status\" aria-hidden=\"true\"></span> Deduplication job initialized in background...</span>');
-    });
-    // Immediate visual feedback when a file is selected for upload
-    $(document).on('change', '#upload_file', function() {
-      if (this.files && this.files.length > 0) {
-        Shiny.setInputValue('file_upload_started', new Date().getTime());
       }
     });
   ")),
@@ -268,9 +253,19 @@ server <- function(input, output, session) {
   })
 
   output$app_title <- renderUI({
+    NULL
+  })
+
+  output$topbar_user_badge <- renderUI({
     name <- settings_username()
-    if (is.null(name) || !isTRUE(nzchar(name))) return(tags$span(config$app_name))
-    tags$span(paste0(config$app_name, " - ", name))
+    if (is.null(name) || !isTRUE(nzchar(name))) return(NULL)
+    tags$div(
+      class = "app-user-pill",
+      title = paste("Signed in as:", name),
+      `aria-label` = paste("Signed in as:", name),
+      icon_svg("user", size = 12, class = "app-user-icon"),
+      tags$span(class = "app-user-name", name)
+    )
   })
 
   output$master_freshness_pill <- renderUI({
@@ -281,14 +276,19 @@ server <- function(input, output, session) {
       time_txt <- if (diff_hrs < 0.1) "Just now" else if (diff_hrs < 1) paste(round(diff_hrs * 60), "m ago") else if (diff_hrs < 24) paste(diff_hrs, "h ago") else paste(round(diff_hrs / 24, 1), "d ago")
       tags$div(
         class = "status-pill status-pill-ready",
-        title = paste("Master snapshot cached on disk:", format(fi$mtime, "%Y-%m-%d %H:%M:%S")),
-        tags$span(paste0("🟢 Master DB Synced: ", time_txt, " (Offline Ready)"))
+        role = "status",
+        title = paste("Master database cached locally:", format(fi$mtime, "%Y-%m-%d %H:%M:%S"), "— Offline ready"),
+        tags$span(class = "status-dot dot-success", `aria-hidden` = "true"),
+        tags$span(class = "status-pill-text", paste0("Master DB Synced: ", time_txt)),
+        tags$span(class = "status-pill-sub", "Offline Ready")
       )
     } else {
       tags$div(
         class = "status-pill status-pill-warn",
+        role = "status",
         title = "No master database snapshot is cached on this server.",
-        tags$span("🟡 Master DB: Snapshot Needed")
+        tags$span(class = "status-dot dot-warning", `aria-hidden` = "true"),
+        tags$span(class = "status-pill-text", "Master DB: Snapshot Needed")
       )
     }
   })
@@ -314,6 +314,131 @@ server <- function(input, output, session) {
 
   observeEvent(input$topbar_back_workflow, {
     current_step("upload") # Or whatever the logic is to go back to workflow. Wait, we should restore previous step if possible.
+  })
+
+  observeEvent(input$open_mobile_menu, {
+    user_name <- settings_username()
+    if (is.null(user_name) || !nzchar(user_name)) user_name <- "Signed In User"
+    user_role <- normalize_role(auth$role)
+    step <- current_step()
+    is_settings_or_admin <- step %in% c("settings", "admin")
+    show_settings <- !identical(user_role, "partner_deduplicator")
+    show_admin <- isTRUE(can_open_admin_workspace())
+    
+    snap <- last_master_snapshot()
+    master_is_ready <- !is.null(snap) && file.exists(snap)
+    master_text <- if (master_is_ready) {
+      fi <- file.info(snap)
+      diff_hrs <- round(as.numeric(difftime(Sys.time(), fi$mtime, units = "hours")), 1)
+      time_txt <- if (diff_hrs < 0.1) "Just now" else if (diff_hrs < 1) paste(round(diff_hrs * 60), "m ago") else if (diff_hrs < 24) paste(diff_hrs, "h ago") else paste(round(diff_hrs / 24, 1), "d ago")
+      paste0("Master DB Synced: ", time_txt, " (Offline Ready)")
+    } else {
+      "Master DB: Snapshot Needed"
+    }
+
+    showModal(modalDialog(
+      title = div(
+        class = "d-flex align-items-center justify-content-between",
+        tags$span(style = "font-weight: 700; color: var(--app-forest); font-size: 1.05rem;", "Navigation & Account"),
+        tags$button(
+          type = "button",
+          class = "btn-close",
+          `data-bs-dismiss` = "modal",
+          `aria-label` = "Close"
+        )
+      ),
+      easyClose = TRUE,
+      footer = NULL,
+      div(
+        class = "mobile-menu-body",
+        div(
+          class = "mobile-menu-user-card mb-3",
+          div(
+            class = "d-flex align-items-center gap-2 mb-1",
+            icon_svg("user", size = 16, class = "text-success"),
+            tags$strong(style = "font-size: 0.9rem; color: var(--app-text); word-break: break-all;", user_name)
+          ),
+          div(
+            class = "text-help-muted",
+            style = "font-size: 0.78rem;",
+            paste("Role:", toupper(user_role))
+          )
+        ),
+        div(
+          class = paste("mobile-menu-status-card mb-3", if (master_is_ready) "status-ready" else "status-warn"),
+          div(
+            class = "d-flex align-items-center gap-2",
+            tags$span(class = paste("status-dot", if (master_is_ready) "dot-success" else "dot-warning"), `aria-hidden` = "true"),
+            tags$span(style = "font-size: 0.8rem; font-weight: 500;", master_text)
+          )
+        ),
+        tags$hr(style = "margin: 14px 0; border-color: var(--app-border);"),
+        div(
+          class = "d-grid gap-2",
+          if (is_settings_or_admin) {
+            actionButton("mobile_back_workflow", tagList(icon_svg("refresh", size = 14), " Back to Workflow"), class = "btn btn-secondary w-100 py-2")
+          } else {
+            tagList(
+              if (show_settings) actionButton("mobile_open_settings", tagList(icon_svg("sliders", size = 14), " Settings"), class = "btn btn-secondary w-100 py-2") else NULL,
+              if (show_admin) actionButton("mobile_open_admin", tagList(icon_svg("shield-check", size = 14), paste0(" ", admin_button_label())), class = "btn btn-secondary w-100 py-2") else NULL
+            )
+          },
+          actionButton("mobile_logout", tagList(icon_svg("x", size = 14), " Log out"), class = "btn btn-danger w-100 py-2 mt-2")
+        )
+      )
+    ))
+  })
+
+  observeEvent(input$mobile_back_workflow, {
+    removeModal()
+    current_step("upload")
+  })
+
+  observeEvent(input$mobile_open_settings, {
+    removeModal()
+    updateTextInput(session, "settings_username", value = settings_username())
+    if (isTRUE(can_edit_token())) {
+      updateTextInput(session, "settings_token", value = settings_token())
+    }
+    if (isTRUE(can_edit_form_id())) {
+      updateTextInput(session, "settings_form_id", value = admin_form_id())
+    }
+    current_step("settings")
+  })
+
+  observeEvent(input$mobile_open_admin, {
+    removeModal()
+    if (!isTRUE(can_open_admin_workspace())) {
+      showNotification("Your role cannot manage users.", type = "error")
+      return()
+    }
+    current_step("admin")
+  })
+
+  observeEvent(input$mobile_logout, {
+    removeModal()
+    job <- job_status()
+    fetch_job <- if (!is.null(master_job())) get_job(master_job()) else NULL
+    msg <- "Are you sure you want to log out?"
+    if (!is.null(job) && job$status %in% c("queued", "running")) {
+      msg <- "A deduplication job is still running. Logging out will cancel it."
+    } else if (!is.null(fetch_job) && fetch_job$status %in% c("queued", "running")) {
+      msg <- "Master data is still being fetched. Logging out will cancel it."
+    }
+    showModal(modalDialog(
+      size = "s",
+      div(
+        style = "padding: 16px;",
+        tags$h4("Confirm Log Out", style = "margin-top:0; margin-bottom:16px; color:var(--app-forest); font-weight:600;"),
+        p(msg, style = "margin-bottom: 0;")
+      ),
+      footer = div(
+        style = "display:flex; gap:8px; justify-content:flex-end;",
+        modalButton("Cancel"),
+        actionButton("logout_confirm_general", "Log out", class = "btn-danger")
+      ),
+      easyClose = TRUE
+    ))
   })
 
 
@@ -838,7 +963,7 @@ server <- function(input, output, session) {
     n_active <- sum(users$active, na.rm = TRUE)
 
     user_tab <- nav_panel(
-      title = tags$span("👥 User Management", tags$span(class = "badge bg-light text-dark ms-1", n_users)),
+      title = tags$span(tagList(icon_svg("users", size = 15, class = "me-1"), "User Management"), tags$span(class = "badge bg-light text-dark ms-1", n_users)),
       div(
         class = "pt-3",
         div(
@@ -849,13 +974,13 @@ server <- function(input, output, session) {
             style = "padding: 18px; border: 1px solid var(--app-border); border-radius: var(--app-radius-md); background: #FFFFFF; height: fit-content;",
             tags$div(
               style = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #F1F5F9;",
-              tags$strong(style = "color: var(--app-forest); font-size: 0.95rem;", "👤 Account Editor"),
+              tags$strong(style = "color: var(--app-forest); font-size: 0.95rem;", tagList(icon_svg("user", size = 15, class = "me-1 text-success"), "Account Editor")),
               tags$span(class = "badge bg-light text-muted", "Create / Update")
             ),
             selectInput(
               "admin_selected_user",
               "Select Existing User to Edit",
-              choices = c("➕ Create New User" = "", manageable_user_choices()),
+              choices = c("Create New User" = "", manageable_user_choices()),
               selected = "",
               selectize = FALSE
             ),
@@ -871,19 +996,19 @@ server <- function(input, output, session) {
             } else {
               tagList(
                 tags$label(class = "control-label", "Partner Organization"),
-                tags$p(style = "margin-bottom:12px; color:#475569; font-weight:600;", paste0("🏢 ", auth$partner_name))
+                tags$p(style = "margin-bottom:12px; color: var(--app-text); font-weight:600;", tagList(icon_svg("building", size = 14, class = "me-1 text-secondary"), auth$partner_name))
               )
             },
             tags$div(
               style = "margin-top: 8px; margin-bottom: 14px; padding: 8px 12px; background: #F8FAFC; border-radius: 6px; border: 1px solid #E2E8F0;",
               checkboxInput("admin_user_active", "Account Active & Permitted to Login", value = TRUE)
             ),
-            actionButton("admin_save_user", "💾 Save User Account", class = "btn-primary w-100 mb-2"),
+            actionButton("admin_save_user", tagList(icon_svg("save", size = 14, class = "me-1"), "Save User Account"), class = "btn-primary w-100 mb-2"),
             tags$div(
               style = "display: flex; gap: 6px;",
-              actionButton("admin_clear_user_form", "🔄 Reset", class = "btn-secondary flex-grow-1", style = "font-size: 0.8rem; padding: 6px 10px;"),
-              actionButton("admin_toggle_user", "⚡ Toggle", class = "btn-ghost flex-grow-1", style = "font-size: 0.8rem; padding: 6px 10px;"),
-              actionButton("admin_delete_user", "🗑️ Delete", class = "btn-danger flex-grow-1", style = "font-size: 0.8rem; padding: 6px 10px;")
+              actionButton("admin_clear_user_form", tagList(icon_svg("refresh", size = 13, class = "me-1"), "Reset"), class = "btn-secondary flex-grow-1", style = "font-size: 0.8rem; padding: 6px 10px;"),
+              actionButton("admin_toggle_user", tagList(icon_svg("zap", size = 13, class = "me-1"), "Toggle"), class = "btn-ghost flex-grow-1", style = "font-size: 0.8rem; padding: 6px 10px;"),
+              actionButton("admin_delete_user", tagList(icon_svg("trash", size = 13, class = "me-1"), "Delete"), class = "btn-danger flex-grow-1", style = "font-size: 0.8rem; padding: 6px 10px;")
             )
           ),
           # Right: Users Directory Table
@@ -892,10 +1017,10 @@ server <- function(input, output, session) {
             style = "padding: 18px; border: 1px solid var(--app-border); border-radius: var(--app-radius-md); background: #FFFFFF;",
             tags$div(
               style = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;",
-              tags$strong(style = "color: var(--app-forest); font-size: 0.95rem;", "👥 Authorized Users Directory"),
-              tags$span(style = "font-size: 0.8rem; color: #166534; font-weight: 600;", paste0("✓ ", n_active, " of ", n_users, " accounts active"))
+              tags$strong(style = "color: var(--app-forest); font-size: 0.95rem;", tagList(icon_svg("users", size = 15, class = "me-1 text-success"), "Authorized Users Directory")),
+              tags$span(style = "font-size: 0.8rem; color: var(--app-forest); font-weight: 600;", tagList(icon_svg("check", size = 12, class = "me-1 text-success"), paste0(n_active, " of ", n_users, " accounts active")))
             ),
-            tags$p(style = "color: #64748B; font-size: 0.82rem; margin-bottom: 14px;", "Click any user row in the table below to load their account details into the editor on the left."),
+            tags$p(class = "text-help-muted mb-3", "Click any user row in the table below to load their account details into the editor on the left."),
             DT::DTOutput("admin_users_table")
           )
         )
@@ -903,7 +1028,7 @@ server <- function(input, output, session) {
     )
 
     audit_tab <- nav_panel(
-      title = tags$span("📋 Download & PII Audit Trail"),
+      title = tags$span(tagList(icon_svg("clipboard-check", size = 15, class = "me-1"), "Download & PII Audit Trail")),
       div(
         class = "pt-3",
         uiOutput("admin_audit_log_ui")
@@ -914,14 +1039,14 @@ server <- function(input, output, session) {
 
     if (is_master) {
       partner_tab <- nav_panel(
-        title = tags$span("🏢 Partner Registry", tags$span(class = "badge bg-light text-dark ms-1", length(partner_names()))),
+        title = tags$span(tagList(icon_svg("building", size = 15, class = "me-1"), "Partner Registry"), tags$span(class = "badge bg-light text-dark ms-1", length(partner_names()))),
         div(
           class = "pt-3",
           uiOutput("partner_registry_ui")
         )
       )
       backup_tab <- nav_panel(
-        title = tags$span("💾 Backup & Recovery"),
+        title = tags$span(tagList(icon_svg("save", size = 15, class = "me-1"), "Backup & Recovery")),
         div(
           class = "pt-3",
           uiOutput("admin_backup_ui")
@@ -976,33 +1101,33 @@ server <- function(input, output, session) {
         tags$div(
           class = "app-card",
           style = "padding: 18px; border: 1px solid var(--app-border); border-radius: var(--app-radius-md); background: #FFFFFF;",
-          tags$strong(style = "font-size: 0.95rem; color: var(--app-forest);", "➕ Register New Partner Organization"),
-          tags$p(style = "color: #64748B; font-size: 0.82rem; margin-top: 4px; margin-bottom: 12px;",
+          tags$strong(style = "font-size: 0.95rem; color: var(--app-forest);", tagList(icon_svg("plus", size = 15, class = "me-1 text-success"), "Register New Partner Organization")),
+          tags$p(class = "text-help-muted mt-1 mb-2",
                  "Add a new consortium partner to allow agency-scoped user creation and automated column mapping presets."),
           textInput("partner_name_new", "Partner Organization Code / Acronym", placeholder = "e.g. ACF, DRC, NRC, SCI, CARE, BFD, YFCA", width = "100%"),
-          actionButton("partner_name_add", "➕ Add Partner to Registry", class = "btn-primary w-100 mt-2")
+          actionButton("partner_name_add", tagList(icon_svg("plus", size = 14, class = "me-1"), "Add Partner to Registry"), class = "btn-primary w-100 mt-2")
         ),
         tags$div(
           class = "app-card",
           style = "padding: 18px; border: 1px solid var(--app-border); border-radius: var(--app-radius-md); background: #FFFFFF;",
-          tags$strong(style = "font-size: 0.95rem; color: #DC2626;", "🗑️ Remove Existing Partner"),
-          tags$p(style = "color: #64748B; font-size: 0.82rem; margin-top: 4px; margin-bottom: 12px;",
+          tags$strong(style = "font-size: 0.95rem; color: #DC2626;", tagList(icon_svg("trash", size = 15, class = "me-1 text-danger"), "Remove Existing Partner")),
+          tags$p(class = "text-help-muted mt-1 mb-2",
                  "Removing an organization prevents assigning new accounts to it. Existing user records remain intact."),
           selectInput("partner_name_remove", "Select Partner to Remove", choices = partners, selected = if (length(partners) >= 1) partners[1] else character(0), selectize = FALSE, width = "100%"),
-          actionButton("partner_name_remove_btn", "🗑️ Remove Selected Partner", class = "btn-danger w-100 mt-2")
+          actionButton("partner_name_remove_btn", tagList(icon_svg("trash", size = 14, class = "me-1"), "Remove Selected Partner"), class = "btn-danger w-100 mt-2")
         )
       ),
       tags$div(
         class = "mt-3 p-3",
         style = "background: #F8FAFC; border: 1px solid var(--app-border); border-radius: var(--app-radius-sm);",
-        tags$strong(style = "color: var(--app-forest); font-size: 0.85rem;", "🏢 Active Consortium Partner Directory:"),
+        tags$strong(style = "color: var(--app-forest); font-size: 0.85rem;", tagList(icon_svg("building", size = 14, class = "me-1 text-success"), "Active Consortium Partner Directory:")),
         tags$div(
           style = "display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;",
           lapply(partners, function(p) {
             tags$span(
               class = "badge",
               style = "background: #FFFFFF; color: #1E293B; border: 1px solid #CBD5E1; padding: 6px 12px; font-size: 0.82rem; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.04);",
-              paste0("🏢 ", p)
+              tagList(icon_svg("building", size = 12, class = "me-1 text-secondary"), p)
             )
           })
         )
@@ -1032,19 +1157,19 @@ server <- function(input, output, session) {
         tags$div(
           class = "app-card",
           style = "padding: 18px; border: 1px solid var(--app-border); border-radius: var(--app-radius-md); background: #FFFFFF;",
-          tags$strong(style = "font-size: 0.95rem; color: var(--app-forest);", "💾 Create Instant System Backup"),
-          tags$p(style = "color: #64748B; font-size: 0.82rem; margin-top: 4px; margin-bottom: 14px;",
+          tags$strong(style = "font-size: 0.95rem; color: var(--app-forest);", tagList(icon_svg("save", size = 15, class = "me-1 text-success"), "Create Instant System Backup")),
+          tags$p(class = "text-help-muted mt-1 mb-3",
                  "Captures an immutable snapshot of all authorized users, scoped tokens, partner registries, and application configurations."),
-          actionButton("admin_create_backup", "💾 Create Backup Now", class = "btn-secondary w-100", style = "font-weight: 600; padding: 10px;")
+          actionButton("admin_create_backup", tagList(icon_svg("save", size = 14, class = "me-1"), "Create Backup Now"), class = "btn-secondary w-100", style = "font-weight: 600; padding: 10px;")
         ),
         tags$div(
           class = "app-card",
           style = "padding: 18px; border: 1px solid var(--app-border); border-radius: var(--app-radius-md); background: #FFFFFF;",
-          tags$strong(style = "font-size: 0.95rem; color: #DC2626;", "🔄 Restore System from Archive"),
-          tags$p(style = "color: #64748B; font-size: 0.82rem; margin-top: 4px; margin-bottom: 8px;",
+          tags$strong(style = "font-size: 0.95rem; color: #DC2626;", tagList(icon_svg("refresh", size = 15, class = "me-1 text-danger"), "Restore System from Archive")),
+          tags$p(class = "text-help-muted mt-1 mb-2",
                  "Select an archive to roll back users, tokens, and settings. Current configurations will be superseded."),
           selectInput("admin_restore_backup", "Available Historical Backups", choices = choices, selected = if (length(backups) >= 1) backups[1] else character(0), selectize = FALSE, width = "100%"),
-          actionButton("admin_restore_backup_btn", "⚠️ Restore Selected Archive", class = "btn-danger w-100", style = "font-weight: 600; padding: 10px;")
+          actionButton("admin_restore_backup_btn", tagList(icon_svg("alert-triangle", size = 14, class = "me-1"), "Restore Selected Archive"), class = "btn-danger w-100", style = "font-weight: 600; padding: 10px;")
         )
       )
     )
@@ -1091,10 +1216,10 @@ server <- function(input, output, session) {
         style = "padding: 18px; border: 1px solid var(--app-border); border-radius: var(--app-radius-md); background: #FFFFFF;",
         tags$div(
           style = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;",
-          tags$strong(style = "color: var(--app-forest); font-size: 0.95rem;", "📋 Tamper-Evident Download Audit Trail"),
-          tags$span(style = "font-size: 0.78rem; color: #64748B;", "CSV & RDS audit mirror active")
+          tags$strong(style = "color: var(--app-forest); font-size: 0.95rem;", tagList(icon_svg("clipboard-check", size = 15, class = "me-1 text-success"), "Tamper-Evident Download Audit Trail")),
+          tags$span(class = "text-help-muted", "CSV & RDS audit mirror active")
         ),
-        tags$p(style = "color: #64748B; font-size: 0.82rem; margin-bottom: 14px;",
+        tags$p(class = "text-help-muted mb-3",
                "Complies with CCY Yemen Data Protection Standard Operating Procedures. Every beneficiary dossier export is logged with operator identity and PII masking status."),
         DT::DTOutput("admin_audit_log_table")
       )
@@ -1472,10 +1597,6 @@ server <- function(input, output, session) {
     }
   )
 
-  observeEvent(input$file_upload_started, {
-    upload_verifying(TRUE)
-  })
-
   observeEvent(input$upload_file, {
     req(input$upload_file)
     upload_verifying(TRUE)
@@ -1553,11 +1674,13 @@ server <- function(input, output, session) {
 
     upload_error(NULL)
     upload_df(clean_df)
-    msg <- paste0("Spreadsheet verified: ", format(nrow(clean_df), big.mark = ","), " records loaded successfully.")
     if (diag$issue_count > 0) {
-      msg <- paste0(msg, " (", diag$issue_count, " quality notice(s) detected).")
+      showNotification(
+        paste0("Quality Notice: ", diag$issue_count, " formatting issue(s) detected. Review the Health Checklist."),
+        type = "warning",
+        duration = 6
+      )
     }
-    showNotification(msg, type = if (diag$issue_count > 0) "warning" else "message", duration = 5)
   })
 
   observeEvent(input$fetch_master, {
@@ -1857,14 +1980,14 @@ server <- function(input, output, session) {
         tags$div(
           class = "empty-state-card",
           style = "border: 2px dashed #EF4444; background: #FEF2F2; padding: 28px 20px;",
-          tags$div(class = "empty-state-icon", tags$span(style = "font-size: 2.6rem; color: #DC2626;", "⚠️")),
+          tags$div(class = "empty-state-icon", icon_svg("alert-triangle", size = 36, class = "text-danger")),
           tags$h5(style = "color: #991B1B; font-weight: 700; margin-top: 6px;", "Spreadsheet Verification Issue"),
           tags$p(style = "color: #7F1D1D; font-size: 0.88rem; max-width: 55ch; margin-bottom: 16px; font-weight: 500;", err),
           tags$div(
             class = "empty-state-features",
-            tags$div(class = "feature-pill", style = "background:#FFF; color:#991B1B; border-color:#FCA5A5;", "💡 Tip: Ensure file has clear header columns (e.g., Name, Phone, ID, District)"),
-            tags$div(class = "feature-pill", style = "background:#FFF; color:#991B1B; border-color:#FCA5A5;", "💡 Tip: Supported file extensions are .xlsx, .xls, and .csv"),
-            tags$div(class = "feature-pill", style = "background:#FFF; color:#991B1B; border-color:#FCA5A5;", "💡 Tip: Download and compare against the CCY standard template on the left")
+            tags$div(class = "feature-pill", style = "background:#FFF; color:#991B1B; border-color:#FCA5A5;", tagList(icon_svg("info", size = 13, class = "me-1 text-danger"), "Tip: Ensure file has clear header columns (e.g., Name, Phone, ID, District)")),
+            tags$div(class = "feature-pill", style = "background:#FFF; color:#991B1B; border-color:#FCA5A5;", tagList(icon_svg("info", size = 13, class = "me-1 text-danger"), "Tip: Supported file extensions are .xlsx, .xls, and .csv")),
+            tags$div(class = "feature-pill", style = "background:#FFF; color:#991B1B; border-color:#FCA5A5;", tagList(icon_svg("info", size = 13, class = "me-1 text-danger"), "Tip: Download and compare against the CCY standard template on the left"))
           )
         )
       )
@@ -1875,14 +1998,14 @@ server <- function(input, output, session) {
       return(
         tags$div(
           class = "empty-state-card",
-          tags$div(class = "empty-state-icon", tags$span(style = "font-size: 2.2rem; color: var(--app-sea);", "📁")),
+          tags$div(class = "empty-state-icon", icon_svg("file", size = 36, class = "text-secondary")),
           tags$h5("No spreadsheet uploaded yet"),
           tags$p("Upload an Excel (.xlsx/.xls) or CSV partner list on the left to verify record health, run automated hygiene audits, and preview rows."),
           tags$div(
             class = "empty-state-features",
-            tags$div(class = "feature-pill", tags$strong("⚡ Instant Health Check: "), "Coverage analysis for IDs & phone numbers"),
-            tags$div(class = "feature-pill", tags$strong("🛡️ Data Hygiene Audits: "), "Automatic scans for scientific notation (e.g. 7.71E+08), Excel formula errors, empty rows, duplicate headers, and placeholder sequences"),
-            tags$div(class = "feature-pill", tags$strong("🔒 Data Protection: "), "Zero external transmission; processed in-memory")
+            tags$div(class = "feature-pill", tags$strong(tagList(icon_svg("zap", size = 14, class = "me-1 text-success"), "Instant Health Check: ")), "Coverage analysis for IDs & phone numbers"),
+            tags$div(class = "feature-pill", tags$strong(tagList(icon_svg("shield-check", size = 14, class = "me-1 text-success"), "Data Hygiene Audits: ")), "Automatic scans for scientific notation (e.g. 7.71E+08), Excel formula errors, empty rows, duplicate headers, and placeholder sequences"),
+            tags$div(class = "feature-pill", tags$strong(tagList(icon_svg("lock", size = 14, class = "me-1 text-success"), "Data Protection: ")), "Zero external transmission; processed in-memory")
           )
         )
       )
@@ -1934,18 +2057,19 @@ server <- function(input, output, session) {
 
     tagList(
       tags$div(
-        style = "display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: var(--app-radius-xs); margin-bottom: 12px;",
+        class = "file-verified-banner",
         tags$div(
-          tags$strong(style = "color: #166534; font-size: 0.88rem;", paste0("📄 ", fname)),
-          tags$span(style = "color: #15803D; font-size: 0.78rem; margin-left: 8px;", paste("(", format(n_records, big.mark = ","), " rows × ", length(cols), " columns)"))
+          class = "d-flex align-items-center flex-wrap gap-1",
+          tags$span(class = "file-verified-title", tagList(icon_svg("file-text", size = 16, class = "text-success"), fname)),
+          tags$span(class = "file-verified-meta", paste("(", format(n_records, big.mark = ","), " rows × ", length(cols), " columns)"))
         ),
-        tags$span(class = "status-pill status-pill-ready", "✓ File Verified")
+        tags$span(class = "status-pill status-pill-ready", tagList(icon_svg("check", size = 12, class = "me-1"), "File Verified"))
       ),
 
       tags$div(
         class = "health-kpi-grid",
         tags$div(
-          class = "health-kpi-chip kpi-good",
+          class = "health-kpi-chip kpi-anchor",
           tags$span(class = "kpi-label", "Total Records"),
           tags$span(class = "kpi-value", format(n_records, big.mark = ","))
         ),
@@ -1958,11 +2082,6 @@ server <- function(input, output, session) {
           class = paste("health-kpi-chip", if (phone_pct >= 80) "kpi-good" else "kpi-warn"),
           tags$span(class = "kpi-label", "Phone Coverage"),
           tags$span(class = "kpi-value", if (!is.null(phone_col)) paste0(phone_pct, "%") else "Unmapped")
-        ),
-        tags$div(
-          class = paste("health-kpi-chip", if (dup_ids == 0) "kpi-good" else "kpi-warn"),
-          tags$span(class = "kpi-label", "Raw Duplicate IDs"),
-          tags$span(class = "kpi-value", if (dup_ids == 0) "0 (Clean)" else paste(dup_ids, "Found"))
         )
       ),
 
@@ -1973,13 +2092,13 @@ server <- function(input, output, session) {
           class = "hygiene-header",
           tags$div(
             class = "hygiene-title",
-            tags$span(style = "font-size: 1.15rem;", "🛡️"),
+            icon_svg("shield-check", size = 18, class = "me-2 text-success"),
             tags$span("Pre-Upload Data Hygiene & Quality Audits")
           ),
           tags$span(
             class = paste0("badge ", if (length(warn_list) == 0) "bg-success" else "bg-warning text-dark"),
             style = "font-size: 0.74rem; padding: 4px 10px; border-radius: 12px; font-weight: 600;",
-            if (length(warn_list) == 0) "✓ All 5 Hygiene Audits Passed" else paste0("⚠️ ", length(warn_list), " Quality Notice(s)")
+            if (length(warn_list) == 0) tagList(icon_svg("check", size = 12, class = "me-1"), "All 5 Hygiene Audits Passed") else tagList(icon_svg("alert-triangle", size = 12, class = "me-1"), paste0(length(warn_list), " Quality Notice(s)"))
           )
         ),
         tags$div(
@@ -1992,9 +2111,9 @@ server <- function(input, output, session) {
               class = "hygiene-card",
               tags$div(
                 class = "hygiene-card-header",
-                tags$div(class = "hygiene-card-name", tags$span("🔬"), "Scientific Format"),
+                tags$div(class = "hygiene-card-name", icon_svg("microscope", size = 14, class = "me-1 text-muted"), "Scientific Format"),
                 tags$span(class = paste("hygiene-badge", if (is_pass) "hygiene-badge-pass" else "hygiene-badge-warn"),
-                          if (is_pass) "✓ Clean" else if (!is.null(c_sci)) c_sci$badge else "Corrupted")
+                          if (is_pass) tagList(icon_svg("check", size = 10, class = "me-1"), "Clean") else if (!is.null(c_sci)) c_sci$badge else "Corrupted")
               ),
               tags$div(class = "hygiene-card-label", if (!is.null(c_sci)) c_sci$label else "No exponential numbers"),
               tags$div(class = "hygiene-card-detail", if (!is.null(c_sci)) c_sci$detail else "Guarantees 9-digit phones and 11-digit IDs are intact.")
@@ -2008,9 +2127,9 @@ server <- function(input, output, session) {
               class = "hygiene-card",
               tags$div(
                 class = "hygiene-card-header",
-                tags$div(class = "hygiene-card-name", tags$span("⚠️"), "Excel Formulas"),
+                tags$div(class = "hygiene-card-name", icon_svg("alert-triangle", size = 14, class = "me-1 text-warning"), "Excel Formulas"),
                 tags$span(class = paste("hygiene-badge", if (is_pass) "hygiene-badge-pass" else "hygiene-badge-warn"),
-                          if (is_pass) "✓ 0 Errors" else if (!is.null(c_form)) c_form$badge else "Errors")
+                          if (is_pass) tagList(icon_svg("check", size = 10, class = "me-1"), "0 Errors") else if (!is.null(c_form)) c_form$badge else "Errors")
               ),
               tags$div(class = "hygiene-card-label", if (!is.null(c_form)) c_form$label else "No broken formula tokens"),
               tags$div(class = "hygiene-card-detail", if (!is.null(c_form)) c_form$detail else "Scans for #REF!, #VALUE!, #N/A formula artifacts.")
@@ -2024,9 +2143,9 @@ server <- function(input, output, session) {
               class = "hygiene-card",
               tags$div(
                 class = "hygiene-card-header",
-                tags$div(class = "hygiene-card-name", tags$span("📑"), "Header Integrity"),
+                tags$div(class = "hygiene-card-name", icon_svg("layers", size = 14, class = "me-1 text-muted"), "Header Integrity"),
                 tags$span(class = paste("hygiene-badge", if (is_pass) "hygiene-badge-pass" else "hygiene-badge-warn"),
-                          if (is_pass) "✓ All Unique" else if (!is.null(c_hdr)) c_hdr$badge else "Duplicates")
+                          if (is_pass) tagList(icon_svg("check", size = 10, class = "me-1"), "All Unique") else if (!is.null(c_hdr)) c_hdr$badge else "Duplicates")
               ),
               tags$div(class = "hygiene-card-label", if (!is.null(c_hdr)) c_hdr$label else "Unique column headers"),
               tags$div(class = "hygiene-card-detail", if (!is.null(c_hdr)) c_hdr$detail else "Prevents column collisions during mapping.")
@@ -2040,9 +2159,9 @@ server <- function(input, output, session) {
               class = "hygiene-card",
               tags$div(
                 class = "hygiene-card-header",
-                tags$div(class = "hygiene-card-name", tags$span("🧹"), "Empty Rows & Spaces"),
+                tags$div(class = "hygiene-card-name", icon_svg("broom", size = 14, class = "me-1 text-muted"), "Empty Rows & Spaces"),
                 tags$span(class = paste("hygiene-badge", if (is_pass) "hygiene-badge-pass" else "hygiene-badge-info"),
-                          if (is_pass) "✓ 0 Blank" else if (!is.null(c_emp)) c_emp$badge else "Cleaned")
+                          if (is_pass) tagList(icon_svg("check", size = 10, class = "me-1"), "0 Blank") else if (!is.null(c_emp)) c_emp$badge else "Cleaned")
               ),
               tags$div(class = "hygiene-card-label", if (!is.null(c_emp)) c_emp$label else "Blank rows auto-pruned"),
               tags$div(class = "hygiene-card-detail", if (!is.null(c_emp)) c_emp$detail else "Blank rows pruned; non-breaking spaces sanitized.")
@@ -2056,9 +2175,9 @@ server <- function(input, output, session) {
               class = "hygiene-card",
               tags$div(
                 class = "hygiene-card-header",
-                tags$div(class = "hygiene-card-name", tags$span("🛡️"), "Placeholder Scan"),
+                tags$div(class = "hygiene-card-name", icon_svg("shield-check", size = 14, class = "me-1 text-muted"), "Placeholder Scan"),
                 tags$span(class = paste("hygiene-badge", if (is_pass) "hygiene-badge-pass" else "hygiene-badge-warn"),
-                          if (is_pass) "✓ Clean" else if (!is.null(c_plc)) c_plc$badge else "Flagged")
+                          if (is_pass) tagList(icon_svg("check", size = 10, class = "me-1"), "Clean") else if (!is.null(c_plc)) c_plc$badge else "Flagged")
               ),
               tags$div(class = "hygiene-card-label", if (!is.null(c_plc)) c_plc$label else "Dummy placeholder filter"),
               tags$div(class = "hygiene-card-detail", if (!is.null(c_plc)) c_plc$detail else "Excludes generic values (e.g. 0000) from exact matching.")
@@ -2071,45 +2190,44 @@ server <- function(input, output, session) {
       if (length(warn_list) > 0) {
         lapply(warn_list, function(w) {
           tags$div(
-            class = "health-alert health-alert-warning",
-            style = "border-left: 4px solid #D97706; background: #FFFBEB; margin-bottom: 8px;",
-            tags$strong("⚠️ Quality Notice:"),
+            class = "health-alert health-alert-warning mb-2",
+            tags$strong(tagList(icon_svg("alert-triangle", size = 14, class = "me-1 text-warning"), "Quality Notice:")),
             tags$span(w)
           )
         })
       },
       if (dup_ids > 0) {
         tags$div(
-          class = "health-alert health-alert-warning",
-          tags$strong("⚠️ Warning:"),
+          class = "health-alert health-alert-warning mb-2",
+          tags$strong(tagList(icon_svg("alert-triangle", size = 14, class = "me-1 text-warning"), "Warning:")),
           tags$span(paste(dup_ids, "duplicate National ID(s) detected within the raw upload file. Internal duplicates will be identified during matching."))
         )
       },
       if (short_phones > 0) {
         tags$div(
-          class = "health-alert health-alert-info",
-          tags$strong("ℹ️ Notice:"),
+          class = "health-alert health-alert-info mb-2",
+          tags$strong(tagList(icon_svg("info", size = 14, class = "me-1 text-info"), "Notice:")),
           tags$span(paste(short_phones, "phone number(s) have fewer than 9 digits and will be normalized."))
         )
       },
       if (!is.null(id_col) && id_pct < 80) {
         tags$div(
-          class = "health-alert health-alert-warning",
-          tags$strong("⚠️ Advisory:"),
+          class = "health-alert health-alert-warning mb-2",
+          tags$strong(tagList(icon_svg("alert-triangle", size = 14, class = "me-1 text-warning"), "Advisory:")),
           tags$span(paste0("National ID coverage is low (", id_pct, "%). The deduplication engine will prioritize Name and Phone fuzzy matching."))
         )
       },
       if (dup_ids == 0 && (is.null(id_col) || id_pct >= 80) && (is.null(phone_col) || phone_pct >= 80)) {
         tags$div(
-          class = "health-alert health-alert-success",
-          tags$strong("✓ Quality Check:"),
+          class = "health-alert health-alert-success mb-2",
+          tags$strong(tagList(icon_svg("check-circle", size = 14, class = "me-1 text-success"), "Quality Check:")),
           tags$span("High field coverage detected. Dataset is healthy and ready for column mapping.")
         )
       },
 
       tags$div(
         style = "display: flex; justify-content: flex-end; margin-top: 16px;",
-        actionButton("confirm_upload_health_btn", "Proceed to Step 2: Confirm Mapping ➔", class = "btn-primary")
+        actionButton("confirm_upload_health_btn", "Confirm Mapping & Continue →", class = "btn-primary")
       )
     )
   })
@@ -2117,7 +2235,7 @@ server <- function(input, output, session) {
   output$upload_validation <- renderUI({
     msg <- upload_error()
     if (!is.null(msg) && isTRUE(nzchar(msg))) {
-      tags$div(style = "color:#b91c1c; margin-top:8px; font-weight:600; font-size:0.85rem;", paste("⚠️", msg))
+      tags$div(class = "text-danger mt-2 fw-semibold", style = "font-size: 0.85rem;", tagList(icon_svg("alert-triangle", size = 14, class = "me-1 text-danger"), msg))
     } else {
       NULL
     }
@@ -2134,7 +2252,7 @@ server <- function(input, output, session) {
         `aria-disabled` = "true",
         `aria-busy` = "true",
         tags$span(class = "spinner-border spinner-border-sm me-2", role = "status", `aria-hidden` = "true"),
-        "Verifying Spreadsheet..."
+        "Verifying Spreadsheet…"
       )
     } else if (is.null(upload_df()) || !is.null(upload_error())) {
       tags$button(
@@ -2148,7 +2266,7 @@ server <- function(input, output, session) {
         "Confirm upload & continue"
       )
     } else {
-      actionButton("confirm_upload", "Confirm upload & continue ➔", class = "btn-primary mt-3")
+      actionButton("confirm_upload", "Confirm upload & continue →", class = "btn-primary mt-3")
     }
   })
 
@@ -2192,7 +2310,7 @@ server <- function(input, output, session) {
 
   output$load_preset_ui <- renderUI({
     presets <- all_presets()
-    choices <- c("Select Saved Preset..." = "", names(presets))
+    choices <- c("Select Saved Preset…" = "", names(presets))
     selectInput("selected_preset", "Mapping Preset:", choices = choices, selected = "", width = "220px")
   })
 
@@ -2216,11 +2334,11 @@ server <- function(input, output, session) {
     showModal(modalDialog(
       title = "Save Mapping Preset",
       textInput("preset_name_input", "Preset Name (e.g. Partner Name):", value = default_name),
-      tags$p(style = "color:#64748B; font-size:0.85rem;", "Saves the current column mapping configuration so it can be quickly auto-loaded for future files from this partner."),
+      tags$p(class = "text-help-muted", "Saves the current column mapping configuration so it can be quickly auto-loaded for future files from this partner."),
       easyClose = TRUE,
       footer = tagList(
         modalButton("Cancel"),
-        actionButton("save_preset_confirm", "Save Preset", class = "btn-primary")
+        actionButton("save_preset_confirm", tagList(icon_svg("save", size = 14, class = "me-1"), "Save Preset"), class = "btn-primary")
       )
     ))
   })
@@ -2294,12 +2412,12 @@ server <- function(input, output, session) {
         style = "padding: 6px 12px; font-size: 0.825rem; font-weight: 600; color: var(--app-forest); border-color: rgba(46, 125, 50, 0.3); opacity: 0.85;",
         `aria-busy` = "true",
         tags$span(class = "spinner-border spinner-border-sm me-2 text-success", role = "status", `aria-hidden` = "true"),
-        "Analyzing Columns & Mapping..."
+        "Analyzing Columns & Mapping…"
       )
     } else {
       actionButton(
         "auto_map_btn",
-        "⚡ Auto-Detect Best Matches",
+        tagList(icon_svg("zap", size = 14, class = "me-1 text-success"), "Auto-Detect Best Matches"),
         class = "btn-secondary btn-sm",
         style = "padding: 6px 12px; font-size: 0.825rem; font-weight: 600; color: var(--app-forest); border-color: rgba(46, 125, 50, 0.3);"
       )
@@ -2317,14 +2435,14 @@ server <- function(input, output, session) {
         tags$span(class = "spinner-border spinner-border-sm text-success flex-shrink-0", role = "status", `aria-hidden` = "true"),
         div(
           tags$strong(style = "color: var(--app-forest);", "Scanning Uploaded Column Headers: "),
-          tags$span(style = "font-size: 0.85rem; color: #334155;", "Cross-referencing spreadsheet fields with the CCY humanitarian standard dictionary, canonical forms, and aliases...")
+          tags$span(style = "font-size: 0.85rem; color: #334155;", "Cross-referencing spreadsheet fields with the CCY humanitarian standard dictionary, canonical forms, and aliases…")
         )
       )
     } else if (isTRUE(auto_map_state$show_summary)) {
       alert_class <- if (identical(auto_map_state$status_type, "success")) "health-alert-success" else "health-alert-warning"
       border_color <- if (identical(auto_map_state$status_type, "success")) "var(--app-forest)" else "#d97706"
       bg_color <- if (identical(auto_map_state$status_type, "success")) "rgba(82, 179, 45, 0.08)" else "rgba(217, 119, 6, 0.08)"
-      icon_symbol <- if (identical(auto_map_state$status_type, "success")) "✓" else "ℹ"
+      icon_el <- if (identical(auto_map_state$status_type, "success")) icon_svg("check-circle", size = 15, class = "text-success") else icon_svg("info", size = 15, class = "text-warning")
       
       div(
         class = paste("health-alert mb-3 d-flex align-items-center justify-content-between", alert_class),
@@ -2333,10 +2451,10 @@ server <- function(input, output, session) {
         style = paste0("border-left: 4px solid ", border_color, "; background: ", bg_color, "; padding: 10px 14px; border-radius: 6px;"),
         div(
           class = "d-flex align-items-center gap-2",
-          tags$strong(style = paste0("color: ", border_color, "; font-size: 1rem;"), icon_symbol),
+          icon_el,
           tags$span(style = "font-size: 0.85rem; color: #1e293b; font-weight: 500;", auto_map_state$status_message)
         ),
-        actionLink("dismiss_auto_map_banner", "✕ Dismiss", style = "font-size: 0.8rem; text-decoration: none; color: #64748b; font-weight: 600; cursor: pointer;")
+        actionLink("dismiss_auto_map_banner", tagList(icon_svg("x", size = 12, class = "me-1"), "Dismiss"), class = "text-help-muted text-decoration-none fw-semibold")
       )
     } else {
       NULL
@@ -2379,7 +2497,7 @@ server <- function(input, output, session) {
       msg <- paste0("Auto-detected and aligned ", matched_count, " of ", total_req, " fields based on CCY standard headers.")
       auto_map_state$status_type <- "success"
       auto_map_state$status_message <- msg
-      showNotification(paste0("⚡ ", msg), type = "message")
+      showNotification(msg, type = "message")
     } else {
       msg <- "No automatic matches detected. Please map columns manually or load a saved preset."
       auto_map_state$status_type <- "warning"
@@ -2398,37 +2516,9 @@ server <- function(input, output, session) {
     showNotification("All field mappings cleared.", type = "message")
   })
 
-  # Reactive check: is the Column Alignment Workbench fully loaded and bound in the client?
-  mapping_workbench_ready <- reactive({
-    req(upload_df())
-    req_cols <- required_columns()
-    if (is.null(req_cols) || length(req_cols) == 0) return(FALSE)
-
-    # All required column mapping inputs must be bound and reported by Shiny
-    bound <- vapply(req_cols, function(rc) {
-      !is.null(input[[paste0("map_", rc)]])
-    }, logical(1))
-
-    all(bound)
-  })
-
-  # Dynamic Confirm Mapping Button Container (prevents premature clicks while workbench loads)
+  # Dynamic Confirm Mapping Button Container
   output$confirm_mapping_btn_container <- renderUI({
-    if (!isTRUE(mapping_workbench_ready())) {
-      tags$button(
-        id = "confirm_mapping",
-        type = "button",
-        class = "btn btn-primary disabled",
-        disabled = "disabled",
-        style = "cursor: not-allowed; opacity: 0.65; pointer-events: none;",
-        `aria-disabled` = "true",
-        `aria-busy` = "true",
-        tags$span(class = "spinner-border spinner-border-sm me-2", role = "status", `aria-hidden` = "true"),
-        "Loading Column Alignment..."
-      )
-    } else {
-      actionButton("confirm_mapping", "Confirm Mapping & Continue ➔", class = "btn-primary")
-    }
+    actionButton("confirm_mapping", "Confirm Mapping & Continue →", class = "btn-primary")
   })
 
   # Real-time mapping progress indicator pill
@@ -2436,17 +2526,6 @@ server <- function(input, output, session) {
     req_cols <- required_columns()
     df <- upload_df()
     if (is.null(req_cols) || length(req_cols) == 0 || is.null(df)) return(NULL)
-
-    if (!isTRUE(mapping_workbench_ready())) {
-      return(
-        tags$div(
-          class = "mapping-progress-pill pill-partial",
-          tags$span(class = "spinner-border spinner-border-sm text-secondary me-1", style = "width: 12px; height: 12px; border-width: 2px;", role = "status", `aria-hidden` = "true"),
-          tags$strong("Analyzing Headers..."),
-          tags$span(class = "pill-tag", "In Progress")
-        )
-      )
-    }
 
     total <- length(req_cols)
     mapped_count <- sum(vapply(req_cols, function(rc) {
@@ -2484,16 +2563,6 @@ server <- function(input, output, session) {
     df <- upload_df()
     if (is.null(req_cols) || length(req_cols) == 0 || is.null(df)) return(NULL)
 
-    if (!isTRUE(mapping_workbench_ready())) {
-      return(
-        tags$div(
-          class = "mapping-hint-text text-muted d-flex align-items-center gap-1",
-          tags$span(class = "spinner-grow spinner-grow-sm text-primary", role = "status", `aria-hidden` = "true"),
-          tags$span("Aligning spreadsheet headers and checking criteria...")
-        )
-      )
-    }
-
     unmapped <- req_cols[!vapply(req_cols, function(rc) {
       val <- input[[paste0("map_", rc)]]
       !is.null(val) && nzchar(trimws(val)) && val %in% names(df)
@@ -2502,13 +2571,13 @@ server <- function(input, output, session) {
     if (length(unmapped) == 0) {
       tags$div(
         class = "mapping-hint-text text-success d-flex align-items-center gap-1",
-        tags$span(style = "font-size: 1rem;", "✓"),
+        icon_svg("check-circle", size = 15, class = "text-success me-1"),
         tags$span("All required fields are mapped. Ready to proceed to matching parameters.")
       )
     } else {
       tags$div(
         class = "mapping-hint-text text-muted d-flex align-items-center gap-1",
-        tags$span(style = "font-size: 1rem; color: #D97706;", "⚠️"),
+        icon_svg("alert-triangle", size = 15, class = "text-warning me-1"),
         tags$span(paste(length(unmapped), "required fields unmapped. Select source columns to continue."))
       )
     }
@@ -2528,14 +2597,14 @@ server <- function(input, output, session) {
           if (is.null(sel) || !nzchar(trimws(sel)) || !sel %in% names(df)) {
             tags$div(
               class = "mapping-preview-wrap status-unmapped",
-              tags$span(class = "badge-status-unmapped", "⚠️ Unmapped"),
+              tags$span(class = "badge-status-unmapped", tagList(icon_svg("alert-triangle", size = 12, class = "me-1"), "Unmapped")),
               tags$span(class = "preview-note text-muted", "Select a column")
             )
           } else {
             sample_val <- get_sample_preview_value(df, sel)
             tags$div(
               class = "mapping-preview-wrap status-mapped",
-              tags$span(class = "badge-status-mapped", "✓ Mapped"),
+              tags$span(class = "badge-status-mapped", tagList(icon_svg("check", size = 12, class = "me-1"), "Mapped")),
               tags$div(
                 class = "mapping-sample-chip",
                 tags$span(class = "chip-prefix", "Sample:"),
@@ -2622,25 +2691,29 @@ server <- function(input, output, session) {
     groups <- list(
       list(
         id = "grp_identity",
-        title = "👤 Personal Identity & Demographics",
+        title = "Personal Identity & Demographics",
+        icon = "user",
         title_ar = "الهوية والبيانات الديموغرافية",
         cols = c("hoh_arabic_name", "hoh_spouse_name", "hoh_ID_number", "id_type", "sex", "age", "marital_status", "household_size")
       ),
       list(
         id = "grp_contact",
-        title = "📞 Contact Information",
+        title = "Contact Information",
+        icon = "phone",
         title_ar = "بيانات التواصل",
         cols = c("phone_number", "secondary_phone_number")
       ),
       list(
         id = "grp_geo",
-        title = "📍 Geographic Hierarchy",
+        title = "Geographic Hierarchy",
+        icon = "map-pin",
         title_ar = "الموقع الجغرافي",
         cols = c("governorate", "district", "subdistrict", "village")
       ),
       list(
         id = "grp_admin",
-        title = "🏛️ Administrative & Project Metadata",
+        title = "Administrative & Project Metadata",
+        icon = "building",
         title_ar = "البيانات الإدارية والمشروع",
         cols = c("partner", "record_id", "qa_code_sn", "system_date", "interviewer", "main_ref", "beneficiary_status", "dist_type", "dist_date_calc_new")
       )
@@ -2666,6 +2739,7 @@ server <- function(input, output, session) {
             class = "mapping-category-header",
             tags$div(
               class = "d-flex align-items-center gap-2",
+              icon_svg(grp$icon, size = 15, class = "text-success"),
               tags$span(paste0(grp$title, " (", grp$title_ar, ")"))
             ),
             tags$span(class = "category-badge-chip", paste(length(req_subset), "active criteria"))
@@ -2681,10 +2755,6 @@ server <- function(input, output, session) {
 
   observeEvent(input$confirm_mapping, {
     req(upload_df())
-    if (!isTRUE(mapping_workbench_ready())) {
-      showNotification("Please wait for column alignment workbench to finish loading.", type = "warning")
-      return()
-    }
     selected <- input$match_fields
     if (is.null(selected) || length(selected) == 0) {
       showNotification("Select at least one field to match.", type = "error")
@@ -2750,7 +2820,7 @@ server <- function(input, output, session) {
     showModal(modalDialog(
       title = tags$div(
         style = "display: flex; align-items: center; gap: 8px; color: var(--app-forest); font-weight: 700;",
-        tags$span(style = "font-size: 1.3rem;", "⚠️"),
+        icon_svg("alert-triangle", size = 18, class = "text-warning"),
         tags$span("Confirm Deduplication Launch (تأكيد بدء المطابقة)")
       ),
       size = "m",
@@ -2777,11 +2847,11 @@ server <- function(input, output, session) {
             tags$div(tags$strong("Medium Threshold: "), tags$span(paste0(med_th, "%"))),
             tags$div(
               style = "grid-column: span 2;",
-              tags$strong("📅 MPCA Recency Filter: "),
+              tags$strong(tagList(icon_svg("calendar", size = 14, class = "me-1 text-success"), "MPCA Recency Filter: ")),
               if (isTRUE(filter_recent_mpca())) {
-                tags$span(style = "color: #166534; font-weight: 700;", paste0("Active (< ", mpca_window_months(), " months via Dist_Date_Calc_New)"))
+                tags$span(style = "color: var(--app-forest); font-weight: 700;", paste0("Active (< ", mpca_window_months(), " months via Dist_Date_Calc_New)"))
               } else {
-                tags$span(style = "color: #64748B;", "Disabled (All Historical Records)")
+                tags$span(class = "text-muted", "Disabled (All Historical Records)")
               }
             )
           ),
@@ -2791,13 +2861,13 @@ server <- function(input, output, session) {
           )
         ),
         tags$p(
-          style = "font-size: 0.8rem; color: #64748B; margin-bottom: 0;",
+          class = "text-help-muted mb-0",
           "You can halt or cancel a running job at any time using the 'Stop & start over' control on the matching screen."
         )
       ),
       footer = tagList(
         modalButton("Halt & Go Back (إلغاء)"),
-        actionButton("confirm_start_matching_btn", "🚀 Proceed & Start Matching (بدء المطابقة)", class = "btn-primary")
+        actionButton("confirm_start_matching_btn", tagList(icon_svg("zap", size = 14, class = "me-1"), "Proceed & Start Matching (بدء المطابقة)"), class = "btn-primary")
       )
     ))
   })
@@ -2856,25 +2926,116 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$confirm_strategy, {
-    high <- as.numeric(input$threshold_high)
-    medium <- as.numeric(input$threshold_medium)
-    max_cand <- as.numeric(input$max_candidates)
-
-    if (is.na(high) || is.na(medium) || medium >= high || high > 100 || medium < 0) {
-      showNotification("Set valid thresholds where high > medium and both are within 0-100.", type = "error")
-      return()
-    }
-    if (is.na(max_cand) || max_cand < 50 || max_cand > 2000) {
-      showNotification("Set max candidate pairs between 50 and 2000.", type = "error")
+    strat_check <- validate_matching_strategy(
+      high = input$threshold_high,
+      medium = input$threshold_medium,
+      max_candidates = input$max_candidates
+    )
+    if (!isTRUE(strat_check$valid)) {
+      showNotification(strat_check$message, type = "error")
       return()
     }
 
-    fuzzy_high_threshold(high)
-    fuzzy_medium_threshold(medium)
-    max_candidates(as.integer(max_cand))
+    fuzzy_high_threshold(strat_check$high)
+    fuzzy_medium_threshold(strat_check$medium)
+    max_candidates(strat_check$max_candidates)
     filter_recent_mpca(isTRUE(input$filter_recent_mpca))
     mpca_window_months(as.numeric(input$mpca_window_months %||% 6))
     current_step("matching")
+  })
+
+  output$mpca_window_simulator_ui <- renderUI({
+    is_filtered <- isTRUE(input$filter_recent_mpca)
+    months <- as.numeric(input$mpca_window_months %||% 6)
+
+    if (!is_filtered) {
+      return(tags$div(
+        class = "callout callout-neutral",
+        style = "padding: 12px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px;",
+        tags$div(
+          style = "display: flex; align-items: center; gap: 8px;",
+          icon_svg("sliders", size = 16, class = "text-muted"),
+          tags$strong(style = "font-size: 0.85rem; color: #475569;", "Assistance Recency Filter Inactive (تصفية تاريخ الاستلام غير مفعّلة)")
+        ),
+        tags$p(
+          style = "font-size: 0.8rem; color: #64748B; margin: 6px 0 0 0;",
+          "All historical master records will be matched regardless of when they received cash. Check the box on the left to simulate active cycle protection and humanitarian re-eligibility."
+        )
+      ))
+    }
+
+    snap <- last_master_snapshot()
+    sim_res <- compute_mpca_simulator_metrics(snap, window_months = months)
+    if (!isTRUE(sim_res$ready)) {
+      return(tags$div(
+        class = "callout callout-warning",
+        style = "padding: 12px; background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 6px;",
+        tags$strong(style = "font-size: 0.85rem; color: #92400E;", "No Master Snapshot Loaded"),
+        tags$p(
+          style = "font-size: 0.8rem; color: #B45309; margin: 4px 0 0 0;",
+          "Fetch or load a master database snapshot to compute real-time caseload assistance recency."
+        )
+      ))
+    }
+
+    sim <- sim_res$simulation
+    tot_valid <- max(1L, sim$records_with_date)
+
+    p0_3 <- round(100 * (sim$cohorts$c0_3 %||% 0) / tot_valid, 1)
+    p4_6 <- round(100 * (sim$cohorts$c4_6 %||% 0) / tot_valid, 1)
+    p7_12 <- round(100 * (sim$cohorts$c7_12 %||% 0) / tot_valid, 1)
+    p_over12 <- round(100 * (sim$cohorts$c_over12 %||% 0) / tot_valid, 1)
+
+    cutoff_str <- format(sim$cutoff_date, "%d %b %Y")
+
+    tags$div(
+      class = "mpca-simulator-card",
+      style = "background: #FFFFFF; border: 1px solid var(--app-border); border-radius: 8px; padding: 14px;",
+      tags$div(
+        style = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;",
+        tags$span(
+          style = "font-weight: 700; font-size: 0.85rem; color: var(--app-forest);",
+          tagList(icon_svg("activity", size = 14, class = "me-1 text-success"), "Caseload Recency Simulator")
+        ),
+        tags$span(
+          style = "background: #ECFDF5; color: #065F46; font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 4px; border: 1px solid #A7F3D0;",
+          paste0("Cutoff: ", cutoff_str)
+        )
+      ),
+      tags$div(
+        style = "display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;",
+        tags$div(
+          style = "background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 6px; padding: 8px 10px;",
+          tags$div(style = "font-size: 0.72rem; color: #166534; font-weight: 600; text-transform: uppercase;", "In Active Window"),
+          tags$div(style = "font-size: 1.15rem; font-weight: 700; color: #14532D;", format(sim$in_window, big.mark = ",")),
+          tags$div(style = "font-size: 0.72rem; color: #15803D;", paste0(sim$pct_in_window, "% (Matches Deduplicated)"))
+        ),
+        tags$div(
+          style = "background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 8px 10px;",
+          tags$div(style = "font-size: 0.72rem; color: #475569; font-weight: 600; text-transform: uppercase;", "Re-eligible Caseload"),
+          tags$div(style = "font-size: 1.15rem; font-weight: 700; color: #334155;", format(sim$out_of_window, big.mark = ",")),
+          tags$div(style = "font-size: 0.72rem; color: #64748B;", paste0(sim$pct_out_of_window, "% (Outside Window)"))
+        )
+      ),
+      tags$div(
+        style = "margin-bottom: 10px;",
+        tags$div(style = "font-size: 0.75rem; font-weight: 600; color: #475569; margin-bottom: 4px;", "Assistance Cohort Distribution:"),
+        tags$div(
+          style = "display: flex; height: 14px; border-radius: 4px; overflow: hidden; background: #E2E8F0;",
+          if (p0_3 > 0) tags$div(style = paste0("width: ", p0_3, "%; background: #15803d;"), title = paste0("0-3 Months: ", sim$cohorts$c0_3, " (", p0_3, "%)")) else NULL,
+          if (p4_6 > 0) tags$div(style = paste0("width: ", p4_6, "%; background: #22c55e;"), title = paste0("4-6 Months: ", sim$cohorts$c4_6, " (", p4_6, "%)")) else NULL,
+          if (p7_12 > 0) tags$div(style = paste0("width: ", p7_12, "%; background: #f59e0b;"), title = paste0("7-12 Months: ", sim$cohorts$c7_12, " (", p7_12, "%)")) else NULL,
+          if (p_over12 > 0) tags$div(style = paste0("width: ", p_over12, "%; background: #94a3b8;"), title = paste0(">12 Months: ", sim$cohorts$c_over12, " (", p_over12, "%)")) else NULL
+        )
+      ),
+      tags$div(
+        style = "display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.7rem; color: #64748B;",
+        tags$span(tagList(tags$span(style = "display:inline-block; width:8px; height:8px; background:#15803d; border-radius:2px; margin-right:3px;"), "0–3m (Active Lockout)")),
+        tags$span(tagList(tags$span(style = "display:inline-block; width:8px; height:8px; background:#22c55e; border-radius:2px; margin-right:3px;"), "4–6m (Active Cycle)")),
+        tags$span(tagList(tags$span(style = "display:inline-block; width:8px; height:8px; background:#f59e0b; border-radius:2px; margin-right:3px;"), "7–12m (Re-assessment)")),
+        tags$span(tagList(tags$span(style = "display:inline-block; width:8px; height:8px; background:#94a3b8; border-radius:2px; margin-right:3px;"), ">12m (Re-eligible)"))
+      )
+    )
   })
 
   # Dynamic Stepper Container: suppressed entirely in admin area to avoid duplicate headers
@@ -2914,7 +3075,7 @@ server <- function(input, output, session) {
           class = "d-flex align-items-center justify-content-between",
           tags$div(
             tags$strong(style = "color: var(--app-forest); font-size: 1rem;", "System Settings"),
-            tags$span(style = "color: #64748B; font-size: 0.85rem; margin-left: 8px;", "— Settings Area")
+            tags$span(class = "text-help-muted ms-2", "— Settings Area")
           ),
           actionButton("close_settings", "← Back to Workflow", class = "btn-secondary btn-sm")
         )
@@ -2922,8 +3083,11 @@ server <- function(input, output, session) {
     }
 
     n_steps <- length(steps)
-    tags$ul(
-      class = "stepper-progress",
+    pct_progress <- round((cur_idx / n_steps) * 100)
+    cur_step_info <- steps[[cur_idx]]
+
+    desktop_stepper <- tags$ul(
+      class = "stepper-progress stepper-desktop",
       lapply(seq_along(steps), function(i) {
         step_key <- names(steps)[i]
         step_info <- steps[[i]]
@@ -2963,6 +3127,47 @@ server <- function(input, output, session) {
         )
       })
     )
+
+    can_go_back <- cur_idx > 1 && !isTRUE(running)
+    mobile_stepper <- tags$div(
+      class = "stepper-mobile",
+      tags$div(
+        class = "stepper-mobile-header",
+        tags$div(
+          class = "d-flex align-items-center gap-2",
+          if (can_go_back) {
+            actionLink("crumb_mobile_prev", tagList(icon_svg("chevron-left", size = 13), "Back"), class = "stepper-mobile-back-btn")
+          } else {
+            NULL
+          },
+          tags$span(class = "stepper-mobile-counter", paste0("Step ", cur_idx, " of ", n_steps, ":")),
+          tags$strong(class = "stepper-mobile-title", cur_step_info$title)
+        ),
+        tags$span(class = "stepper-mobile-pct", paste0(pct_progress, "%"))
+      ),
+      tags$div(
+        class = "stepper-mobile-bar-track",
+        tags$div(
+          class = "stepper-mobile-bar-fill",
+          style = paste0("width: ", pct_progress, "%;")
+        )
+      )
+    )
+
+    tagList(desktop_stepper, mobile_stepper)
+  })
+
+  observeEvent(input$crumb_mobile_prev, {
+    job <- job_status()
+    if (!is.null(job) && job$status %in% c("queued", "running")) {
+      showNotification("Cannot navigate while matching is running.", type = "message")
+      return()
+    }
+    steps_keys <- c("upload", "mapping", "strategy", "matching", "results")
+    cur_idx <- match(current_step(), steps_keys)
+    if (!is.na(cur_idx) && cur_idx > 1) {
+      current_step(steps_keys[cur_idx - 1])
+    }
   })
 
   observeEvent(input$crumb_upload, {
@@ -3288,7 +3493,7 @@ server <- function(input, output, session) {
     token_cards_html <- if (length(name_tokens) > 0) {
       tags$div(
         class = "name-token-container",
-        tags$div(class = "name-token-header", "🔍 Arabic 4-Part Name Token Analysis:"),
+        tags$div(class = "name-token-header", tagList(icon_svg("search", size = 15, class = "me-1 text-success"), "Arabic 4-Part Name Token Analysis:")),
         tags$div(
           class = "name-token-grid",
           lapply(name_tokens, function(tok) {
@@ -3365,7 +3570,7 @@ server <- function(input, output, session) {
     col_b_header <- if (is_internal) "Uploaded Record (Row B)" else "Master Database Record"
     
     badge_class <- if (conf == "high") "badge-conf-high" else "badge-conf-medium"
-    badge_text <- if (conf == "high") paste0("🚨 High Confidence (", score, "%)") else paste0("🔍 Medium Review (", score, "%)")
+    badge_text <- if (conf == "high") paste0("High Confidence (", score, "%)") else paste0("Medium Review (", score, "%)")
     
     audit_snippet_text <- paste0(
       "[MEAL AUDIT] Pair #", pair_id,
@@ -3390,7 +3595,7 @@ server <- function(input, output, session) {
       tags$div(
         class = "health-alert health-alert-warning mb-3",
         style = "display: flex; align-items: flex-start; gap: 10px; border-left: 4px solid #D97706;",
-        tags$span(style = "font-size: 1.4rem; line-height: 1;", "🏢"),
+        tags$span(class = "flex-shrink-0 mt-1 text-warning", icon_svg("building", size = 20)),
         tags$div(
           tags$strong(paste0("Cross-Agency Overlap: ", toupper(partner_m))),
           tags$p(
@@ -3405,7 +3610,7 @@ server <- function(input, output, session) {
       tags$div(
         class = "health-alert health-alert-info mb-3",
         style = "display: flex; align-items: flex-start; gap: 10px; border-left: 4px solid #0F766E;",
-        tags$span(style = "font-size: 1.4rem; line-height: 1;", "🏢"),
+        tags$span(class = "flex-shrink-0 mt-1 text-info", icon_svg("building", size = 20)),
         tags$div(
           tags$strong(paste0("Same-Agency Historical Record: ", toupper(partner_m))),
           tags$p(style = "margin: 3px 0 0 0; font-size: 0.8rem;", "This record matches a previous registration within your own organization.")
@@ -3455,7 +3660,7 @@ server <- function(input, output, session) {
         # 3. Interactive Triage Workspace
         tags$div(
           class = "triage-workspace-bar",
-          tags$strong(style = "color:var(--app-forest); font-size:0.85rem;", "⚡ IM / MEAL Verification & Triage Decision:"),
+          tags$strong(style = "color:var(--app-forest); font-size:0.85rem;", tagList(icon_svg("shield-check", size = 15, class = "me-1 text-success"), "IM / MEAL Verification & Triage Decision:")),
           tags$div(
             style = "display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px;",
             selectInput(
@@ -3474,21 +3679,21 @@ server <- function(input, output, session) {
               "triage_notes_choice",
               "Reviewer Notes / Justification:",
               value = cur_triage$notes,
-              placeholder = "e.g. Field verification conducted on 2026-08...",
+              placeholder = "e.g. Field verification conducted on 2026-08…",
               width = "100%"
             )
           ),
           tags$div(
             style = "display:flex; justify-content:space-between; align-items:center; margin-top: 8px;",
             tags$span(style = "font-size:0.75rem; color:#64748B;", if (nzchar(cur_triage$reviewer)) paste("Last updated by:", cur_triage$reviewer, "at", cur_triage$timestamp) else "No previous triage record"),
-            actionButton("save_triage_decision_btn", "💾 Save Triage Decision", class = "btn-primary btn-sm")
+            actionButton("save_triage_decision_btn", tagList(icon_svg("save", size = 13, class = "me-1"), "Save Triage Decision"), class = "btn-primary btn-sm")
           )
         ),
 
         # 4. MEAL Audit Snippet
         tags$div(
           class = "audit-snippet-container",
-          tags$span("📋 MEAL Audit Trail Snippet:"),
+          tags$span(tagList(icon_svg("clipboard-check", size = 14, class = "me-1 text-success"), "MEAL Audit Trail Snippet:")),
           tags$div(style = "margin-top:4px; word-break:break-all;", audit_snippet_text)
         )
       ),
@@ -3513,7 +3718,7 @@ server <- function(input, output, session) {
       return(
         tags$div(
           class = "empty-state-card",
-          tags$div(class = "empty-state-icon", tags$span(style = "font-size: 2.2rem; color: var(--app-forest);", "📊")),
+          tags$div(class = "empty-state-icon", icon_svg("chart", size = 36, class = "text-secondary")),
           tags$h5("No matching results available"),
           tags$p("Matching has not been run yet. Return to Step 4 and click 'Run matching' to generate duplicate analysis.")
         )
@@ -3535,7 +3740,7 @@ server <- function(input, output, session) {
       tabsetPanel(
         id = "results_tabset",
         tabPanel(
-          "📊 Executive Summary",
+          "Executive Summary",
           tags$div(
             class = "health-kpi-grid mt-3 mb-3",
             tags$div(
@@ -3571,28 +3776,28 @@ server <- function(input, output, session) {
           )
         ),
         tabPanel(
-          paste0("🚨 High Confidence (", n_high, ")"),
+          paste0("High Confidence (", n_high, ")"),
           tags$div(
             class = "health-alert health-alert-warning mt-3 mb-3",
-            tags$strong("🚨 High-Confidence Matches:"),
+            tags$strong(tagList(icon_svg("alert-triangle", size = 14, class = "me-1 text-warning"), "High-Confidence Matches:")),
             tags$span("Records below have high similarity or exact national ID/phone matches with ActivityInfo. Click any row to inspect field-by-field differences and record triage decisions.")
           ),
           DT::DTOutput("results_high_dt")
         ),
         tabPanel(
-          paste0("🔍 Medium Review (", n_med, ")"),
+          paste0("Medium Review (", n_med, ")"),
           tags$div(
             class = "health-alert health-alert-info mt-3 mb-3",
-            tags$strong("🔍 Medium Review Queue:"),
+            tags$strong(tagList(icon_svg("search", size = 14, class = "me-1 text-info"), "Medium Review Queue:")),
             tags$span("Candidate pairs with moderate similarity flagged for MEAL verification. Click any row to inspect field-by-field differences and record triage decisions.")
           ),
           DT::DTOutput("results_medium_dt")
         ),
         tabPanel(
-          paste0("📋 Internal Duplicates (", n_internal, ")"),
+          paste0("Internal Duplicates (", n_internal, ")"),
           tags$div(
             class = "health-alert health-alert-info mt-3 mb-3",
-            tags$strong("📋 Internal Duplicates:"),
+            tags$strong(tagList(icon_svg("layers", size = 14, class = "me-1 text-info"), "Internal Duplicates:")),
             tags$span("Duplicate records identified internally within the uploaded spreadsheet. Click any row to inspect field-by-field differences and record triage decisions.")
           ),
           DT::DTOutput("results_internal_dt")
@@ -3781,28 +3986,33 @@ server <- function(input, output, session) {
       }, add = TRUE)
       res <- get_job_result(job)
       tryCatch({
+        audit_meta <- compile_export_dossier_meta(
+          upload_path = input$upload_file$datapath,
+          upload_df = upload_df(),
+          master_snapshot_path = last_master_snapshot(),
+          auth_user = auth,
+          job_result = res
+        )
+
         withProgress(message = "Preparing export...", value = 0, {
           incProgress(0.35, detail = "Collecting results")
           triage_list <- reactiveValuesToList(triage_records)
-          write_dedup_workbook(res, file, triage_decisions = triage_list)
+          write_dedup_workbook(res, file, triage_decisions = triage_list, audit_meta = audit_meta)
           incProgress(1, detail = "Done")
         })
 
-        # Log export transaction to audit trail (Pillar 3.2)
-        total_recs <- 0L
-        if (!is.null(res$summary) && !is.null(res$summary$total_pairs)) {
-          total_recs <- as.integer(res$summary$total_pairs)
-        } else if (!is.null(res$list_vs_master_exact)) {
-          total_recs <- as.integer(nrow(as.data.frame(res$list_vs_master_exact)))
-        }
+        # Log export transaction to audit trail (Pillar 3.2 & SHA-256 Manifest)
         log_export_audit(
-          user_email = auth$email %||% "local_user",
-          user_role = auth$role %||% "partner_deduplicator",
-          partner_name = auth$partner_name %||% "CCY",
+          user_email = audit_meta$user_email,
+          user_role = audit_meta$user_role,
+          partner_name = audit_meta$partner_name,
           file_name = paste0("dedup_results_", format(Sys.Date(), "%Y%m%d"), ".xlsx"),
-          record_count = total_recs,
+          record_count = audit_meta$record_count,
           pii_masked = !identical(auth$role, "ccy_master"),
-          job_id = job$id
+          job_id = job$id,
+          upload_sha256 = audit_meta$upload_sha256,
+          master_sha256 = audit_meta$master_sha256,
+          manifest_id = audit_meta$manifest_id
         )
 
         showNotification("Export ready. Download should begin shortly.", type = "message", duration = 6)
@@ -3868,7 +4078,7 @@ server <- function(input, output, session) {
     if (is.null(step) || !is.character(step) || length(step) != 1 || !(step %in% valid_steps)) {
       step <- "upload"
     }
-    switch(step,
+    content <- switch(step,
       upload = upload_step_ui(can_fetch_master = isTRUE(can_fetch_master())),
       mapping = mapping_step_ui(),
       strategy = strategy_step_ui(),
@@ -3880,6 +4090,7 @@ server <- function(input, output, session) {
       admin = admin_step_ui(),
       results = results_step_ui()
     )
+    content
   })
 }
 

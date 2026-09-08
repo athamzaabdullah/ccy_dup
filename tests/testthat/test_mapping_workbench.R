@@ -155,11 +155,11 @@ test_that("mapping_step_ui initializes with loading skeleton and disabled confir
   expect_true(grepl('aria-disabled="true"', step_html))
   expect_true(grepl('aria-busy="true"', step_html))
   expect_true(grepl("spinner-border", step_html))
-  expect_true(grepl("Loading Column Alignment\\.\\.\\.", step_html))
+  expect_true(grepl("Loading Column Alignment[…\\.]", step_html))
 
   # 3. mapping_validation_hint has initial loading progress indicator
   expect_true(grepl('id="mapping_validation_hint"', step_html))
-  expect_true(grepl("Aligning spreadsheet headers and checking criteria\\.\\.\\.", step_html))
+  expect_true(grepl("Aligning spreadsheet headers and checking criteria", step_html))
 })
 
 test_that("data_health_skeleton renders accessible loading skeleton with KPI and hygiene placeholders", {
@@ -184,7 +184,7 @@ test_that("data_health_skeleton renders accessible loading skeleton with KPI and
   expect_equal(lengths(regmatches(skel_html, gregexpr('class="hygiene-card"', skel_html))), 5)
   expect_true(grepl("skeleton-shimmer", skel_html))
   expect_true(grepl('disabled="disabled"', skel_html))
-  expect_true(grepl("Verifying Spreadsheet Health\\.\\.\\.", skel_html))
+  expect_true(grepl("Verifying Spreadsheet Health[…\\.]", skel_html))
 })
 
 test_that("upload_step_ui initializes with disabled confirm upload button container", {

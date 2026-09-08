@@ -59,10 +59,26 @@ v_lev_sim <- function(a, b) {
 }
 
 v_name_similarity <- function(a, b) {
+  a <- bond_arabic_compounds(a)
+  b <- bond_arabic_compounds(b)
+
   jw <- v_safe_text_sim(a, b, method = "jw")
   ts <- v_safe_text_sim(v_token_sort(a), v_token_sort(b), method = "jw")
   lv <- v_lev_sim(a, b)
-  round((jw + ts + lv) / 3, 1)
+  base_sim <- round((jw + ts + lv) / 3, 1)
+
+  # Tribal stem similarity (handles "ال" and "بن" variations)
+  stem_a <- strip_tribal_prefixes(a)
+  stem_b <- strip_tribal_prefixes(b)
+  diff_idx <- (stem_a != a | stem_b != b) & nzchar(stem_a) & nzchar(stem_b)
+  if (any(diff_idx)) {
+    jw_s <- v_safe_text_sim(stem_a[diff_idx], stem_b[diff_idx], method = "jw")
+    ts_s <- v_safe_text_sim(v_token_sort(stem_a[diff_idx]), v_token_sort(stem_b[diff_idx]), method = "jw")
+    lv_s <- v_lev_sim(stem_a[diff_idx], stem_b[diff_idx])
+    stem_sim <- round((jw_s + ts_s + lv_s) / 3, 1)
+    base_sim[diff_idx] <- pmax(base_sim[diff_idx], stem_sim)
+  }
+  base_sim
 }
 
 v_phone_similarity <- function(a, b) {
@@ -178,6 +194,18 @@ build_block_keys <- function(df) {
       block_key = paste0("sdn|", dt$subdistrict_n[idx_sd], "|", substr(dt$hoh_arabic_name_n[idx_sd], 1, 3)),
       priority = 4L
     )
+  }
+
+  # Priority 7: District + Tribal Stem first 3
+  if ("hoh_name_stem_n" %in% names(dt)) {
+    idx_stem_d <- nzchar(dt$district_n) & nzchar(dt$hoh_name_stem_n) & nchar(dt$hoh_name_stem_n) >= 3
+    if (any(idx_stem_d)) {
+      res[[length(res)+1]] <- data.table::data.table(
+        row_id = dt$row_id[idx_stem_d],
+        block_key = paste0("dstem3|", dt$district_n[idx_stem_d], "|", substr(dt$hoh_name_stem_n[idx_stem_d], 1, 3)),
+        priority = 5L
+      )
+    }
   }
 
   # Inversion Blocking: District + Spouse first 3 & Governorate + Spouse first 4
@@ -335,6 +363,76 @@ mask_same_list_columns <- function(df, partner_org = NULL, user_role = NULL) {
   df
 }
 
+simulate_mpca_window <- function(master_df, window_months = 6, ref_date = Sys.Date()) {
+  if (is.null(master_df) || nrow(master_df) == 0) {
+    return(list(
+      total_records = 0L,
+      records_with_date = 0L,
+      in_window = 0L,
+      out_of_window = 0L,
+      pct_in_window = 0,
+      pct_out_of_window = 0,
+      cutoff_date = Sys.Date(),
+      date_field = NA_character_,
+      cohorts = list(c0_3 = 0L, c4_6 = 0L, c7_12 = 0L, c_over12 = 0L)
+    ))
+  }
+
+  date_col <- NULL
+  candidates <- c("dist_date_calc_new", "Dist_Date_Calc_New", "DIST_DATE_CALC_NEW", "Dist_Date", "dist_date", "system_date", "1.4. Today's Date", "todays_date")
+  for (cand in candidates) {
+    if (cand %in% names(master_df)) {
+      date_col <- cand
+      break
+    }
+  }
+
+  if (is.null(date_col)) {
+    return(list(
+      total_records = nrow(master_df),
+      records_with_date = 0L,
+      in_window = nrow(master_df),
+      out_of_window = 0L,
+      pct_in_window = 100,
+      pct_out_of_window = 0,
+      cutoff_date = Sys.Date(),
+      date_field = NA_character_,
+      cohorts = list(c0_3 = 0L, c4_6 = 0L, c7_12 = 0L, c_over12 = 0L)
+    ))
+  }
+
+  raw_dates <- master_df[[date_col]]
+  parsed_dates <- parse_flexible_date(raw_dates)
+  valid_mask <- !is.na(parsed_dates)
+  valid_dates <- parsed_dates[valid_mask]
+
+  ref <- if (!is.null(ref_date)) as.Date(ref_date) else Sys.Date()
+  cutoff <- ref - round(as.numeric(window_months) * 30.4375)
+
+  in_win <- sum(valid_dates >= cutoff)
+  out_win <- sum(valid_dates < cutoff)
+  tot_valid <- length(valid_dates)
+
+  pct_in <- if (tot_valid > 0) round(100 * in_win / tot_valid, 1) else 100
+  pct_out <- if (tot_valid > 0) round(100 * out_win / tot_valid, 1) else 0
+
+  c0_3 <- sum(valid_dates >= (ref - 91))
+  c4_6 <- sum(valid_dates >= (ref - 183) & valid_dates < (ref - 91))
+  c7_12 <- sum(valid_dates >= (ref - 365) & valid_dates < (ref - 183))
+  c_over12 <- sum(valid_dates < (ref - 365))
+
+  list(
+    total_records = nrow(master_df),
+    records_with_date = tot_valid,
+    in_window = in_win,
+    out_of_window = out_win,
+    pct_in_window = pct_in,
+    pct_out_of_window = pct_out,
+    cutoff_date = cutoff,
+    date_field = date_col,
+    cohorts = list(c0_3 = c0_3, c4_6 = c4_6, c7_12 = c7_12, c_over12 = c_over12)
+  )
+}
 
 run_dedup <- function(upload_df,
                       master_df,

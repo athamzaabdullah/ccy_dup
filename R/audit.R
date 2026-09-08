@@ -10,6 +10,26 @@ get_audit_csv_path <- function() {
   file.path(getwd(), "tmp", "audit_export_log.csv")
 }
 
+compute_file_sha256 <- function(path) {
+  if (is.null(path) || !file.exists(path)) return(NA_character_)
+  tryCatch({
+    con <- file(path, "rb")
+    on.exit(close(con), add = TRUE)
+    as.character(openssl::sha256(con))
+  }, error = function(e) {
+    tryCatch({
+      digest::digest(path, algo = "sha256", file = TRUE)
+    }, error = function(e2) NA_character_)
+  })
+}
+
+compute_data_sha256 <- function(df) {
+  if (is.null(df)) return(NA_character_)
+  tryCatch({
+    digest::digest(df, algo = "sha256")
+  }, error = function(e) NA_character_)
+}
+
 empty_audit_log <- function() {
   data.frame(
     timestamp = character(0),
@@ -20,6 +40,9 @@ empty_audit_log <- function() {
     record_count = integer(0),
     pii_masked = logical(0),
     job_id = character(0),
+    upload_sha256 = character(0),
+    master_sha256 = character(0),
+    manifest_id = character(0),
     stringsAsFactors = FALSE
   )
 }
@@ -30,7 +53,10 @@ log_export_audit <- function(user_email = "local_user",
                              file_name = "dedup_results.xlsx",
                              record_count = 0L,
                              pii_masked = TRUE,
-                             job_id = NA_character_) {
+                             job_id = NA_character_,
+                             upload_sha256 = NA_character_,
+                             master_sha256 = NA_character_,
+                             manifest_id = NA_character_) {
   tryCatch({
     tmp_dir <- file.path(getwd(), "tmp")
     if (!dir.exists(tmp_dir)) dir.create(tmp_dir, recursive = TRUE)
@@ -53,8 +79,19 @@ log_export_audit <- function(user_email = "local_user",
       record_count = as.integer(record_count %||% 0L),
       pii_masked = as.logical(pii_masked),
       job_id = as.character(job_id %||% ""),
+      upload_sha256 = as.character(upload_sha256 %||% NA_character_),
+      master_sha256 = as.character(master_sha256 %||% NA_character_),
+      manifest_id = as.character(manifest_id %||% NA_character_),
       stringsAsFactors = FALSE
     )
+
+    # Backwards-compatibility for existing logs
+    for (col in names(new_row)) {
+      if (!col %in% names(existing)) existing[[col]] <- NA_character_
+    }
+    for (col in names(existing)) {
+      if (!col %in% names(new_row)) new_row[[col]] <- NA_character_
+    }
 
     updated <- rbind(existing, new_row)
     saveRDS(updated, rds_path)
