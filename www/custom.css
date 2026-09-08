@@ -65,21 +65,38 @@
     --motion-dur-medium:  0ms;
   }
 
-  *, *::before, *::after {
+  /* Exclude essential functional loading feedback (spinners & skeletons) from animation suppression */
+  *:not(.spinner-border):not(.spinner-grow):not(.skeleton-shimmer):not(.skeleton-shimmer *):not(.spinner-border *):not(.spinner-grow *),
+  *:not(.skeleton-shimmer)::before,
+  *:not(.skeleton-shimmer)::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
 
-  /* Accessible non-animating fallback for loading shimmers */
+  /* Functional loading indicators: Keep continuous rotation at an accessible, steady pace so users know the app hasn't hung */
+  .spinner-border,
+  .spinner-border-sm {
+    -webkit-animation: spinner-border-rotate 1.4s linear infinite !important;
+    animation: spinner-border-rotate 1.4s linear infinite !important;
+  }
+
+  .spinner-grow,
+  .spinner-grow-sm {
+    -webkit-animation: spinner-grow-pulse 1.8s ease-in-out infinite !important;
+    animation: spinner-grow-pulse 1.8s ease-in-out infinite !important;
+  }
+
+  /* Loading skeletons: Display a gentle, low-contrast breathing shimmer rather than hiding or freezing */
   .skeleton-shimmer {
-    animation: none !important;
-    background: #E2E8F0 !important;
+    background-color: #E2E8F0 !important;
   }
   .skeleton-shimmer::after {
-    display: none !important;
-    animation: none !important;
+    display: block !important;
+    -webkit-animation: skeleton-shimmer-sweep 2.2s infinite ease-in-out !important;
+    animation: skeleton-shimmer-sweep 2.2s infinite ease-in-out !important;
+    opacity: 0.45;
   }
 }
 
@@ -2002,10 +2019,14 @@ h1, h2, h3, h4, h5, h6,
 
 .skeleton-shimmer {
   position: relative;
+  display: block;
   overflow: hidden;
   background-color: #E2E8F0 !important;
   border-radius: 4px;
+  min-height: 10px;
+  -webkit-transform: translateZ(0);
   transform: translateZ(0);
+  will-change: transform;
 }
 
 .skeleton-shimmer::after {
@@ -2014,6 +2035,8 @@ h1, h2, h3, h4, h5, h6,
   right: 0;
   bottom: 0;
   left: 0;
+  display: block !important;
+  -webkit-transform: translateX(-100%);
   transform: translateX(-100%);
   background-image: linear-gradient(
     90deg,
@@ -2021,18 +2044,144 @@ h1, h2, h3, h4, h5, h6,
     rgba(255, 255, 255, 0.85) 50%,
     rgba(255, 255, 255, 0) 100%
   );
-  animation: skeleton-shimmer-sweep 1.35s infinite ease-in-out;
+  -webkit-animation: skeleton-shimmer-sweep 1.35s infinite linear !important;
+  animation: skeleton-shimmer-sweep 1.35s infinite linear !important;
   content: '';
   will-change: transform;
   pointer-events: none;
 }
 
-@keyframes skeleton-shimmer-sweep {
+@-webkit-keyframes skeleton-shimmer-sweep {
   0% {
+    -webkit-transform: translateX(-100%);
     transform: translateX(-100%);
   }
   100% {
+    -webkit-transform: translateX(100%);
     transform: translateX(100%);
+  }
+}
+
+@keyframes skeleton-shimmer-sweep {
+  0% {
+    -webkit-transform: translateX(-100%);
+    transform: translateX(-100%);
+  }
+  100% {
+    -webkit-transform: translateX(100%);
+    transform: translateX(100%);
+  }
+}
+
+/* ==========================================================================
+   Continuous Revolving Button Spinners & Loading Indicators
+   ========================================================================== */
+.spinner-border {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  vertical-align: -0.125em;
+  border: 0.15em solid currentColor;
+  border-right-color: transparent !important;
+  border-radius: 50%;
+  -webkit-animation: spinner-border-rotate 0.75s linear infinite !important;
+  animation: spinner-border-rotate 0.75s linear infinite !important;
+  will-change: transform;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  flex-shrink: 0;
+}
+
+.spinner-border-sm {
+  width: 0.875rem;
+  height: 0.875rem;
+  border-width: 0.125em;
+}
+
+.spinner-grow {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  vertical-align: -0.125em;
+  background-color: currentColor;
+  border-radius: 50%;
+  opacity: 0;
+  -webkit-animation: spinner-grow-pulse 0.75s linear infinite !important;
+  animation: spinner-grow-pulse 0.75s linear infinite !important;
+  will-change: transform, opacity;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  flex-shrink: 0;
+}
+
+.spinner-grow-sm {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+/* Ensure spinners inside disabled buttons, action links, and busy cards never freeze */
+.btn:disabled .spinner-border,
+.btn.disabled .spinner-border,
+button[disabled] .spinner-border,
+.btn:disabled .spinner-grow,
+.btn.disabled .spinner-grow,
+button[disabled] .spinner-grow {
+  -webkit-animation: spinner-border-rotate 0.75s linear infinite !important;
+  animation: spinner-border-rotate 0.75s linear infinite !important;
+  pointer-events: none;
+}
+
+@-webkit-keyframes spinner-border-rotate {
+  from {
+    -webkit-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+  to {
+    -webkit-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spinner-border-rotate {
+  from {
+    -webkit-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+  to {
+    -webkit-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+
+@-webkit-keyframes spinner-grow-pulse {
+  0% {
+    -webkit-transform: scale(0);
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    -webkit-transform: scale(1);
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes spinner-grow-pulse {
+  0% {
+    -webkit-transform: scale(0);
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    -webkit-transform: scale(1);
+    transform: scale(1);
+    opacity: 0;
   }
 }
 
