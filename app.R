@@ -159,13 +159,6 @@ ui <- fluidPage(
       btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Preparing Matching Parameters…');
     });
 
-    // Instant button feedback when running matching
-    $(document).on("click", "#run_match", function() {
-      var btn = $(this);
-      btn.addClass("disabled");
-      btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Initializing Matching Engine…');
-    });
-
     // Instant button feedback when restarting deduplication
     $(document).on("click", "#restart_dedup_btn", function() {
       var btn = $(this);
@@ -219,6 +212,7 @@ server <- function(input, output, session) {
   settings_token <- reactiveVal("")
   master_job <- reactiveVal(NULL)
   master_trigger <- reactiveVal(0)
+  match_trigger <- reactiveVal(0)
   admin_form_id <- reactiveVal("")
   admin_user_refresh <- reactiveVal(0)
   admin_backup_refresh <- reactiveVal(0)
@@ -952,30 +946,57 @@ server <- function(input, output, session) {
     job <- job_status()
     if (!is.null(job) && job$status %in% c("queued", "running")) {
       showModal(modalDialog(
-        title = "Stop current run?",
-        p("This will cancel the running job and clear the uploaded data. You will need to start over."),
+        title = tags$div(
+          style = "display: flex; align-items: center; gap: 8px; color: var(--app-forest); font-weight: 700;",
+          icon_svg("alert-triangle", size = 18, class = "text-warning"),
+          "Stop Deduplication Run? (إيقاف المطابقة)"
+        ),
+        p("A deduplication background worker is currently executing. How would you like to proceed?"),
+        tags$div(
+          class = "callout callout-warning",
+          style = "padding: 10px 14px; background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 6px; font-size: 0.825rem; color: #92400E; margin-bottom: 12px;",
+          tags$strong("Notice: "),
+          "Stopping will halt background matching immediately. You can preserve your uploaded spreadsheet and column mappings to tweak strategy, or discard everything."
+        ),
         footer = tagList(
-          actionButton("cancel_confirm", "Yes, stop and reset", class = "btn-danger"),
-          actionButton("cancel_abort", "Keep running", class = "btn-secondary")
+          actionButton("cancel_abort", "Keep running (متابعة)", class = "btn-secondary"),
+          actionButton("cancel_adjust_strategy", tagList(icon_svg("sliders", size = 14, class = "me-1"), "Stop & Adjust Setup"), class = "btn-warning"),
+          actionButton("cancel_confirm", tagList(icon_svg("trash", size = 14, class = "me-1"), "Stop & Discard Everything"), class = "btn-danger")
         ),
         easyClose = TRUE
       ))
       return()
     }
     current_job(NULL)
-    upload_df(NULL)
-    current_step("upload")
+    match_trigger(match_trigger() + 1)
+    current_step("strategy")
+  })
+
+  observeEvent(input$cancel_adjust_strategy, {
+    removeModal()
+    id <- current_job()
+    if (!is.null(id)) {
+      set_job_canceled(id, "Matching halted by user to adjust setup")
+    }
+    current_job(NULL)
+    match_trigger(match_trigger() + 1)
+    session$sendCustomMessage("reset_button", list(id = "run_match", html = "Run matching"))
+    current_step("strategy")
+    showNotification("Matching stopped. Your uploaded dataset and column mappings were preserved.", type = "message", duration = 6)
   })
 
   observeEvent(input$cancel_confirm, {
     removeModal()
     id <- current_job()
     if (!is.null(id)) {
-      set_job_canceled(id)
+      set_job_canceled(id, "Matching stopped and session reset")
     }
     current_job(NULL)
     upload_df(NULL)
+    match_trigger(match_trigger() + 1)
+    session$sendCustomMessage("reset_button", list(id = "run_match", html = "Run matching"))
     current_step("upload")
+    showNotification("Matching stopped and workflow reset.", type = "warning", duration = 6)
   })
 
   observeEvent(input$cancel_abort, removeModal())
@@ -3064,10 +3085,15 @@ server <- function(input, output, session) {
         )
       ),
       footer = tagList(
-        modalButton("Halt & Go Back (إلغاء)"),
+        actionButton("cancel_launch_match", "Halt & Go Back (إلغاء)", class = "btn-secondary"),
         actionButton("confirm_start_matching_btn", tagList(icon_svg("zap", size = 14, class = "me-1"), "Proceed & Start Matching (بدء المطابقة)"), class = "btn-primary")
       )
     ))
+  })
+
+  observeEvent(input$cancel_launch_match, {
+    removeModal()
+    session$sendCustomMessage("reset_button", list(id = "run_match", html = "Run matching"))
   })
 
   observeEvent(input$confirm_start_matching_btn, {
@@ -3121,6 +3147,7 @@ server <- function(input, output, session) {
     )
     current_job(job_id)
     current_step("matching")
+    match_trigger(match_trigger() + 1)
   })
 
   observeEvent(input$confirm_strategy, {
@@ -3418,6 +3445,7 @@ server <- function(input, output, session) {
 
   job_timer <- reactiveTimer(1000)
   job_status <- reactive({
+    match_trigger()
     id <- current_job()
     if (is.null(id)) return(NULL)
     job <- get_job(id)
@@ -3457,12 +3485,42 @@ server <- function(input, output, session) {
     updated_at <- if (!is.null(job$updated_at)) as.POSIXct(job$updated_at) else NA
     elapsed <- if (!is.na(updated_at)) difftime(Sys.time(), updated_at, units = "secs") else NA
     stale <- !is.na(elapsed) && elapsed > 30
-    tagList(
-      p(job$message),
-      if (isTRUE(stale)) p(style = "color:#b91c1c;", "No update in the last 30 seconds. The job may still be running."),
-      div(style = "background: #e2e8f0; height: 10px; border-radius: 6px;",
-        div(style = paste0("width:", job$progress, "%; height: 10px; background:#0f172a; border-radius: 6px;"))
-      )
+
+    tags$div(
+      class = "matching-progress-card card p-3 mb-3 border",
+      style = "background: #F8FAFC; border-radius: 8px;",
+      tags$div(
+        class = "d-flex justify-content-between align-items-center mb-2",
+        tags$span(
+          style = "font-size: 0.85rem; font-weight: 700; color: var(--app-forest);",
+          tagList(icon_svg("activity", size = 14, class = "me-1 text-success"), job$message)
+        ),
+        tags$span(
+          class = "badge bg-primary",
+          style = "font-size: 0.75rem; font-weight: 600;",
+          paste0(job$progress %||% 0, "%")
+        )
+      ),
+      tags$div(
+        class = "progress",
+        style = "height: 10px; border-radius: 6px; background-color: #E2E8F0;",
+        tags$div(
+          class = paste("progress-bar", if (job$status %in% c("queued", "running")) "progress-bar-striped progress-bar-animated bg-success" else "bg-primary"),
+          role = "progressbar",
+          style = paste0("width: ", max(5, job$progress %||% 0), "%; transition: width 0.4s ease;"),
+          `aria-valuenow` = job$progress %||% 0,
+          `aria-valuemin` = 0,
+          `aria-valuemax` = 100
+        )
+      ),
+      if (isTRUE(stale)) {
+        tags$div(
+          class = "text-danger mt-2 d-flex align-items-center gap-1",
+          style = "font-size: 0.75rem;",
+          icon_svg("alert-circle", size = 12),
+          "Worker is processing large candidate volume (active in background)..."
+        )
+      } else NULL
     )
   })
 
@@ -3487,27 +3545,24 @@ server <- function(input, output, session) {
     reached <- which(job$progress >= mins)
     current_idx <- if (length(reached) == 0) 1 else max(reached)
 
-    status_style <- function(status) {
+    status_badge <- function(status) {
       switch(status,
-        done = "color:#166534;",
-        running = "color:#1d4ed8;",
-        "color:#6b7280;"
-      )
-    }
-
-    status_label <- function(status) {
-      switch(status,
-        done = "Done",
-        running = "In progress",
-        "Pending"
+        done = tags$span(class = "badge bg-success text-white ms-2", "Done"),
+        running = tags$span(class = "badge bg-primary text-white ms-2 d-inline-flex align-items-center gap-1",
+          tags$span(class = "spinner-border spinner-border-sm", style = "width: 10px; height: 10px;", role = "status", `aria-hidden` = "true"),
+          "In progress"
+        ),
+        tags$span(class = "badge bg-light text-muted border ms-2", "Pending")
       )
     }
 
     tagList(
       tags$div(
-        class = "mt-3",
-        tags$strong("Matching feedback"),
+        class = "mt-3 card p-3 border",
+        style = "background: #FFFFFF; border-radius: 8px;",
+        tags$strong(style = "font-size: 0.85rem; color: var(--app-forest);", "Matching Engine Stages"),
         tags$ul(
+          class = "list-unstyled mt-2 mb-2",
           lapply(seq_along(stage_defs), function(i) {
             if (job$status == "completed") {
               st <- "done"
@@ -3519,26 +3574,37 @@ server <- function(input, output, session) {
               st <- "pending"
             }
             tags$li(
+              class = "py-1 border-bottom d-flex justify-content-between align-items-center",
+              style = "font-size: 0.825rem;",
               tags$span(stage_defs[[i]]$label),
-              tags$span(
-                style = paste0("margin-left:8px;", status_style(st)),
-                paste0("[", status_label(st), "]")
-              )
+              status_badge(st)
             )
           })
         ),
-        tags$p(style = "color:#475569; margin-top:8px;", paste("Current:", job$message))
+        tags$div(
+          class = "mt-2 pt-2 border-top d-flex justify-content-between align-items-center",
+          tags$span(style = "color:#64748B; font-size:0.75rem;", paste("Current:", job$message)),
+          if (!is.null(job$updated_at)) tags$span(style = "color:#94A3B8; font-size:0.72rem;", paste("Updated:", job$updated_at)) else NULL
+        )
       ),
       if (job$status == "failed") {
-        tags$p(style = "color:#b91c1c; margin-top:8px;", paste("Error:", job$message))
-      },
+        tags$div(
+          class = "alert alert-danger mt-3 d-flex align-items-center gap-2",
+          icon_svg("alert-circle", size = 16),
+          tags$span(paste("Error:", job$message))
+        )
+      } else NULL,
       if (job$status == "canceled") {
-        tags$p(style = "color:#b45309; margin-top:8px;", "Matching was canceled.")
-      }
+        tags$div(
+          class = "alert alert-warning mt-3 d-flex align-items-center gap-2",
+          icon_svg("x-circle", size = 16),
+          tags$span("Matching was stopped by user.")
+        )
+      } else NULL
     )
   })
 
-  output$run_match_button_ui <- renderUI({
+  render_matching_action_button <- function() {
     job <- job_status()
     running <- !is.null(job) && job$status %in% c("queued", "running")
     completed <- !is.null(job) && job$status == "completed"
@@ -3549,21 +3615,51 @@ server <- function(input, output, session) {
         type = "button",
         class = "btn btn-primary disabled btn-matching-running",
         disabled = "disabled",
+        style = "cursor: not-allowed; opacity: 0.85;",
+        `aria-busy` = "true",
         tags$span(class = "spinner-border spinner-border-sm me-2", role = "status", `aria-hidden` = "true"),
-        "Matching in progress..."
+        "Matching in progress…"
       )
     } else if (completed) {
-      actionButton("run_match", "Re-run matching", class = "btn-primary")
+      actionButton(
+        "run_match",
+        tagList(icon_svg("refresh", size = 14, class = "me-1"), "Re-run matching"),
+        class = "btn-primary"
+      )
     } else {
-      actionButton("run_match", "Run matching", class = "btn-primary")
+      actionButton(
+        "run_match",
+        tagList(icon_svg("zap", size = 14, class = "me-1"), "Run matching"),
+        class = "btn-primary"
+      )
     }
+  }
+
+  output$matching_action_btn_container <- renderUI({
+    render_matching_action_button()
+  })
+
+  output$run_match_button_ui <- renderUI({
+    render_matching_action_button()
+  })
+
+  render_matching_cancel_button <- function() {
+    job <- job_status()
+    running <- !is.null(job) && job$status %in% c("queued", "running")
+    if (!running) return(NULL)
+    actionButton(
+      "cancel_job",
+      tagList(icon_svg("x-circle", size = 14, class = "me-1"), "Stop & start over"),
+      class = "btn-danger btn-sm"
+    )
+  }
+
+  output$matching_cancel_btn_container <- renderUI({
+    render_matching_cancel_button()
   })
 
   output$cancel_button <- renderUI({
-    job <- job_status()
-    running <- !is.null(job) && job$status %in% c("queued", "running")
-    class <- if (running) "btn-danger" else "btn-danger disabled"
-    actionButton("cancel_job", "Stop & start over", class = class, disabled = !running)
+    render_matching_cancel_button()
   })
 
   output$status_ui <- renderUI({
@@ -3913,6 +4009,57 @@ server <- function(input, output, session) {
     showNotification(paste0("Triage decision saved for pair: ", pair_id), type = "message")
   })
 
+  output$results_kpi_summary_ui <- renderUI({
+    job <- job_status()
+    req(job)
+    if (job$status != "completed") return(NULL)
+
+    n_upload <- if (!is.null(upload_df())) nrow(upload_df()) else 0
+    n_high <- nrow(high_conf_raw())
+    n_med <- nrow(medium_conf_raw())
+    n_internal <- nrow(internal_dups_raw())
+    total_dups <- n_high + n_med
+    dedup_rate <- if (n_upload > 0) round(100 * total_dups / n_upload, 1) else 0
+
+    triage_update_trigger()
+    all_triages <- reactiveValuesToList(triage_records)
+    n_triaged <- sum(vapply(all_triages, function(x) !is.null(x$status) && x$status != "Unreviewed", logical(1)))
+
+    tags$div(
+      class = "health-kpi-grid mt-3 mb-3",
+      tags$div(
+        class = "health-kpi-chip kpi-good",
+        tags$span(class = "kpi-label", "Upload Records Examined"),
+        tags$span(class = "kpi-value", format(n_upload, big.mark = ","))
+      ),
+      tags$div(
+        class = paste("health-kpi-chip", if (n_high > 0) "kpi-warn" else "kpi-good"),
+        tags$span(class = "kpi-label", "High Confidence Duplicates"),
+        tags$span(class = "kpi-value", format(n_high, big.mark = ","))
+      ),
+      tags$div(
+        class = paste("health-kpi-chip", if (n_med > 0) "kpi-warn" else "kpi-good"),
+        tags$span(class = "kpi-label", "Medium Review Queue"),
+        tags$span(class = "kpi-value", format(n_med, big.mark = ","))
+      ),
+      tags$div(
+        class = paste("health-kpi-chip", if (n_internal > 0) "kpi-warn" else "kpi-good"),
+        tags$span(class = "kpi-label", "Internal Same-List Duplicates"),
+        tags$span(class = "kpi-value", format(n_internal, big.mark = ","))
+      ),
+      tags$div(
+        class = "health-kpi-chip kpi-good",
+        tags$span(class = "kpi-label", "Deduplication Rate"),
+        tags$span(class = "kpi-value", paste0(dedup_rate, "%"))
+      ),
+      tags$div(
+        class = "health-kpi-chip kpi-good",
+        tags$span(class = "kpi-label", "Triage Reviewed"),
+        tags$span(class = "kpi-value", paste0(n_triaged, " / ", total_dups + n_internal))
+      )
+    )
+  })
+
   output$results_dossier_ui <- renderUI({
     job <- job_status()
     if (!is.null(job) && job$status %in% c("queued", "running")) {
@@ -3929,50 +4076,16 @@ server <- function(input, output, session) {
       )
     }
 
-    n_upload <- if (!is.null(upload_df())) nrow(upload_df()) else 0
     n_high <- nrow(high_conf_raw())
     n_med <- nrow(medium_conf_raw())
     n_internal <- nrow(internal_dups_raw())
-    total_dups <- n_high + n_med
-    dedup_rate <- if (n_upload > 0) round(100 * total_dups / n_upload, 1) else 0
-
-    triage_update_trigger()
-    all_triages <- reactiveValuesToList(triage_records)
-    n_triaged <- sum(vapply(all_triages, function(x) !is.null(x$status) && x$status != "Unreviewed", logical(1)))
 
     tagList(
       tabsetPanel(
         id = "results_tabset",
         tabPanel(
           "Executive Summary",
-          tags$div(
-            class = "health-kpi-grid mt-3 mb-3",
-            tags$div(
-              class = "health-kpi-chip kpi-good",
-              tags$span(class = "kpi-label", "Upload Records Examined"),
-              tags$span(class = "kpi-value", format(n_upload, big.mark = ","))
-            ),
-            tags$div(
-              class = paste("health-kpi-chip", if (n_high > 0) "kpi-warn" else "kpi-good"),
-              tags$span(class = "kpi-label", "High Confidence Duplicates"),
-              tags$span(class = "kpi-value", format(n_high, big.mark = ","))
-            ),
-            tags$div(
-              class = paste("health-kpi-chip", if (n_med > 0) "kpi-warn" else "kpi-good"),
-              tags$span(class = "kpi-label", "Medium Review Queue"),
-              tags$span(class = "kpi-value", format(n_med, big.mark = ","))
-            ),
-            tags$div(
-              class = paste("health-kpi-chip", if (n_internal > 0) "kpi-warn" else "kpi-good"),
-              tags$span(class = "kpi-label", "Internal Same-List Duplicates"),
-              tags$span(class = "kpi-value", format(n_internal, big.mark = ","))
-            ),
-            tags$div(
-              class = "health-kpi-chip kpi-good",
-              tags$span(class = "kpi-label", "Deduplication Rate"),
-              tags$span(class = "kpi-value", paste0(dedup_rate, "%"))
-            )
-          ),
+          uiOutput("results_kpi_summary_ui"),
           tags$div(
             style = "margin-top: 16px;",
             tags$strong(style = "font-size:0.85rem; color:var(--app-forest);", "Deduplication Metrics Table:"),
@@ -4250,11 +4363,19 @@ server <- function(input, output, session) {
   observeEvent(job_status(), {
     job <- job_status()
     if (is.null(job)) return()
-    if (job$status == "completed") current_step("results")
-    if (job$status == "canceled") current_step("upload")
-    if (job$status == "failed" && !identical(last_job_notify(), job$id)) {
-      showNotification(job$message, type = "error")
-      last_job_notify(job$id)
+    if (job$status == "completed") {
+      session$sendCustomMessage("reset_button", list(id = "run_match", html = "Re-run matching"))
+      current_step("results")
+    }
+    if (job$status == "canceled") {
+      session$sendCustomMessage("reset_button", list(id = "run_match", html = "Run matching"))
+    }
+    if (job$status == "failed") {
+      session$sendCustomMessage("reset_button", list(id = "run_match", html = "Run matching"))
+      if (!identical(last_job_notify(), job$id)) {
+        showNotification(job$message, type = "error")
+        last_job_notify(job$id)
+      }
     }
   })
 

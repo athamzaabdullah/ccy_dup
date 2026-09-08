@@ -370,6 +370,47 @@ test_that("master database fetch UI and reactive cancellation prevent UI freezes
   expect_true(grepl('session\\$sendCustomMessage\\("reset_button",\\s*list\\(id\\s*=\\s*"fetch_master"', app_r_content))
 })
 
+test_that("matching UI and results dossier use fine-grained reactive updates, isolated containers, and non-destructive cancellation", {
+  source(file.path("..", "..", "R", "ui_helpers.R"))
+
+  # 1. matching_step_ui contains dedicated reactive slots
+  ui_html <- as.character(matching_step_ui())
+  expect_true(grepl('id="matching_action_btn_container"', ui_html))
+  expect_true(grepl('id="matching_cancel_btn_container"', ui_html))
+  expect_true(grepl('id="matching_progress_holder"', ui_html))
+  expect_true(grepl('id="run_match"', ui_html))
+
+  # 2. app.R inspection: no rogue click mutation on #run_match
+  app_r_path <- file.path("..", "..", "app.R")
+  expect_true(file.exists(app_r_path))
+  app_r_content <- paste(readLines(app_r_path, encoding = "UTF-8", warn = FALSE), collapse = "\n")
+
+  # Ensure rogue jQuery click handler is deleted
+  expect_false(grepl('\\$\\(document\\)\\.on\\("click",\\s*"#run_match"', app_r_content))
+
+  # Ensure match_trigger is defined and used for 0ms latency UI refresh
+  expect_true(grepl('match_trigger\\s*<-\\s*reactiveVal\\(0\\)', app_r_content))
+  expect_true(grepl('match_trigger\\(match_trigger\\(\\)\\s*\\+\\s*1\\)', app_r_content))
+
+  # Ensure dedicated matching button containers are defined
+  expect_true(grepl('output\\$matching_action_btn_container\\s*<-\\s*renderUI', app_r_content))
+  expect_true(grepl('output\\$matching_cancel_btn_container\\s*<-\\s*renderUI', app_r_content))
+
+  # Ensure non-destructive cancellation option exists
+  expect_true(grepl('cancel_adjust_strategy', app_r_content))
+
+  # Ensure results dossier decouples KPI summary from tabset container
+  expect_true(grepl('output\\$results_kpi_summary_ui\\s*<-\\s*renderUI', app_r_content))
+  expect_true(grepl('uiOutput\\("results_kpi_summary_ui"\\)', app_r_content))
+
+  # Ensure enqueue_match_job in R/jobs.R is guarded by tryCatch
+  jobs_r_path <- file.path("..", "..", "R", "jobs.R")
+  expect_true(file.exists(jobs_r_path))
+  jobs_r_content <- paste(readLines(jobs_r_path, encoding = "UTF-8", warn = FALSE), collapse = "\n")
+  expect_true(grepl('Failed to initialize background matching worker', jobs_r_content))
+})
+
+
 
 
 

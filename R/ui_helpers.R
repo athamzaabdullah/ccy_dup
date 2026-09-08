@@ -718,28 +718,43 @@ matching_step_ui <- function() {
     class = "app-card",
     card_header(
       div(class = "step-title"),
-      tags$h4("Run Matching")
+      tags$h4(tagList(icon_svg("zap", size = 18, class = "me-2 text-success"), "Run Deduplication Matching Engine"))
     ),
     card_body(
-      # Describe what happens when matching is initiated
       tags$div(
-        class = "matching-description",
+        class = "matching-description mb-3",
         tags$strong("When you run matching:"),
         tags$ul(
-          tags$li("The app will load the latest master snapshot and preprocess the uploaded file."),
-          tags$li("Candidate pairs will be generated using the selected match fields (capped at the configured max candidates)."),
-          tags$li("Each candidate pair is scored and classified into High / Medium confidence."),
-          tags$li("A running job can be stopped using \"Stop & start over\"; stopping will cancel the job and clear uploaded data."),
-          tags$li("Results are saved and an export button will be enabled when matching completes.")
+          tags$li("The engine compares your uploaded records against the central ActivityInfo master database snapshot and across itself."),
+          tags$li("Multi-pass phonetic, fuzzy token decomposition (Jaro-Winkler & Levenshtein), and spatial blocking generate candidate pairs up to the configured limit."),
+          tags$li("Each candidate pair is scored and classified into High Confidence and Medium Review queues."),
+          tags$li("You can halt a running job at any time using \"Stop & start over\" to adjust parameters without losing your uploaded file."),
+          tags$li("Results and triage dossiers are saved, enabling Excel report export once matching completes.")
         )
       ),
       tags$div(
-        class = "matching-actions-bar",
-        uiOutput("run_match_button_ui"),
-        uiOutput("cancel_button"),
+        class = "matching-actions-bar d-flex flex-wrap align-items-center gap-2 mb-3",
+        tags$div(
+          id = "matching_action_btn_container",
+          class = "shiny-html-output d-inline-block",
+          actionButton(
+            "run_match",
+            tagList(icon_svg("zap", size = 14, class = "me-1"), "Run matching"),
+            class = "btn-primary"
+          )
+        ),
+        tags$div(
+          id = "matching_cancel_btn_container",
+          class = "shiny-html-output d-inline-block",
+          uiOutput("cancel_button")
+        ),
         tags$div(id = "matching_feedback_status", class = "matching-instant-feedback")
       ),
-      tags$div(class = "mt-3", uiOutput("progress_ui")),
+      tags$div(
+        id = "matching_progress_holder",
+        class = "mt-2",
+        uiOutput("progress_ui")
+      ),
       uiOutput("matching_feedback_ui"),
       uiOutput("status_ui")
     )

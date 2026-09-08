@@ -174,78 +174,83 @@ enqueue_match_job <- function(upload_df, snapshot_path, mapping = NULL,
   upload_path <- file.path(payload_dir, paste0(id, "_upload.rds"))
   saveRDS(upload_df, upload_path)
 
-  future::future({
-    tryCatch({
-      if (job_is_canceled(id)) return(NULL)
-      set_job_progress(id, 8, "Worker started")
-      if (!file.exists(upload_path)) stop("Uploaded payload not found")
-      if (is.null(snapshot_path) || !file.exists(snapshot_path)) {
-        stop("Local master snapshot not found. Please fetch a fresh master database in Step 1.")
-      }
+  tryCatch({
+    future::future({
+      tryCatch({
+        if (job_is_canceled(id)) return(NULL)
+        set_job_progress(id, 8, "Worker started")
+        if (!file.exists(upload_path)) stop("Uploaded payload not found")
+        if (is.null(snapshot_path) || !file.exists(snapshot_path)) {
+          stop("Local master snapshot not found. Please fetch a fresh master database in Step 1.")
+        }
 
-      set_job_progress(id, 10, "Loading local master snapshot")
-      master_df <- load_master_lean(snapshot_path)
-      if (is.null(master_df)) {
-        lean_path <- gsub("master_snapshot_", "master_lean_", snapshot_path)
-        load_path <- if (file.exists(lean_path)) lean_path else snapshot_path
-        master_df <- readRDS(load_path)
-      }
+        set_job_progress(id, 10, "Loading local master snapshot")
+        master_df <- load_master_lean(snapshot_path)
+        if (is.null(master_df)) {
+          lean_path <- gsub("master_snapshot_", "master_lean_", snapshot_path)
+          load_path <- if (file.exists(lean_path)) lean_path else snapshot_path
+          master_df <- readRDS(load_path)
+        }
 
-      # Self-healing: verify master_df contains an ID number column.
-      # If an older/stale lean snapshot lacked the ID field, re-extract from the full snapshot.
-      has_id_col <- any(grepl("^(upload_)?3[._]12([._ ]|$)|id[-_ ]?number|national[-_ ]?id|nid|hoh[-_ ]?id", names(master_df), ignore.case = TRUE))
-      if (!has_id_col && file.exists(snapshot_path) && !identical(load_path, snapshot_path)) {
-        set_job_progress(id, 15, "Refreshing lean master cache with required ID fields")
-        tryCatch({
-          full_snap <- readRDS(snapshot_path)
-          master_df <- extract_lean_master(full_snap)
-          saveRDS(master_df, lean_path)
-        }, error = function(e) {
-          master_df <<- readRDS(snapshot_path)
-        })
-      }
+        # Self-healing: verify master_df contains an ID number column.
+        # If an older/stale lean snapshot lacked the ID field, re-extract from the full snapshot.
+        has_id_col <- any(grepl("^(upload_)?3[._]12([._ ]|$)|id[-_ ]?number|national[-_ ]?id|nid|hoh[-_ ]?id", names(master_df), ignore.case = TRUE))
+        if (!has_id_col && file.exists(snapshot_path) && !identical(load_path, snapshot_path)) {
+          set_job_progress(id, 15, "Refreshing lean master cache with required ID fields")
+          tryCatch({
+            full_snap <- readRDS(snapshot_path)
+            master_df <- extract_lean_master(full_snap)
+            saveRDS(master_df, lean_path)
+          }, error = function(e) {
+            master_df <<- readRDS(snapshot_path)
+          })
+        }
 
-      if (job_is_canceled(id)) return(NULL)
-      set_job_progress(id, 30, "Loading upload data")
-      upload_df <- readRDS(upload_path)
+        if (job_is_canceled(id)) return(NULL)
+        set_job_progress(id, 30, "Loading upload data")
+        upload_df <- readRDS(upload_path)
 
-      if (job_is_canceled(id)) return(NULL)
-      set_job_progress(id, 40, "Preparing upload")
-      if (!is.null(mapping) && length(mapping) > 0) {
-        for (req_col in names(mapping)) {
-          src <- mapping[[req_col]]
-          if (!req_col %in% names(upload_df) && src %in% names(upload_df)) {
-            upload_df[[req_col]] <- upload_df[[src]]
+        if (job_is_canceled(id)) return(NULL)
+        set_job_progress(id, 40, "Preparing upload")
+        if (!is.null(mapping) && length(mapping) > 0) {
+          for (req_col in names(mapping)) {
+            src <- mapping[[req_col]]
+            if (!req_col %in% names(upload_df) && src %in% names(upload_df)) {
+              upload_df[[req_col]] <- upload_df[[src]]
+            }
           }
         }
-      }
 
-      if (job_is_canceled(id)) return(NULL)
-      set_job_progress(id, 70, "Matching records")
-      result <- run_dedup(
-        upload_df,
-        master_df,
-        upload_filename = upload_filename,
-        upload_time = upload_time,
-        fuzzy_high_threshold = fuzzy_high_threshold,
-        fuzzy_medium_threshold = fuzzy_medium_threshold,
-        weights = weights,
-        match_fields = match_fields,
-        max_candidates = max_candidates,
-        filter_recent_mpca = filter_recent_mpca,
-        mpca_window_months = mpca_window_months,
-        partner_org = partner_org,
-        user_role = user_role
-      )
+        if (job_is_canceled(id)) return(NULL)
+        set_job_progress(id, 70, "Matching records")
+        result <- run_dedup(
+          upload_df,
+          master_df,
+          upload_filename = upload_filename,
+          upload_time = upload_time,
+          fuzzy_high_threshold = fuzzy_high_threshold,
+          fuzzy_medium_threshold = fuzzy_medium_threshold,
+          weights = weights,
+          match_fields = match_fields,
+          max_candidates = max_candidates,
+          filter_recent_mpca = filter_recent_mpca,
+          mpca_window_months = mpca_window_months,
+          partner_org = partner_org,
+          user_role = user_role
+        )
 
-      if (job_is_canceled(id)) return(NULL)
-      set_job_progress(id, 90, "Finalizing")
-      set_job_result(id, result)
-    }, error = function(e) {
-      set_job_error(id, format_job_error(e))
-    }, finally = {
-      if (file.exists(upload_path)) unlink(upload_path)
+        if (job_is_canceled(id)) return(NULL)
+        set_job_progress(id, 90, "Finalizing")
+        set_job_result(id, result)
+      }, error = function(e) {
+        set_job_error(id, format_job_error(e))
+      }, finally = {
+        if (file.exists(upload_path)) unlink(upload_path)
+      })
     })
+  }, error = function(fe) {
+    if (file.exists(upload_path)) unlink(upload_path)
+    set_job_error(id, paste0("Failed to initialize background matching worker: ", format_job_error(fe)))
   })
 
   id
