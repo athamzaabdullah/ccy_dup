@@ -919,6 +919,20 @@ button[disabled] {
   font-size: 0.825rem;
 }
 
+.shiny-label-null,
+label.shiny-label-null,
+label:empty {
+  display: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+label.input-group-btn {
+  margin: 0 !important;
+  margin-bottom: 0 !important;
+  padding: 0 !important;
+}
+
 /* 7. Sliders (ionRangeSlider Aesthetic Overrides) */
 .slider-group {
   margin-bottom: 18px;
@@ -2734,4 +2748,170 @@ button[disabled] .spinner-grow,
   cursor: wait !important;
   pointer-events: none;
 }
+
+/* ==========================================================================
+   23. Harmonized File Input & Upload Controls (Browse Button & Field Alignment)
+   ========================================================================== */
+
+/* File Input Container */
+.form-group:has(.btn-file),
+.shiny-input-container:has(.btn-file),
+.form-group:has(input[type="file"]) {
+  margin-bottom: 8px;
+}
+
+/* Input Group: Unified flex container */
+.shiny-input-container .input-group,
+.input-group:has(.btn-file) {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: stretch !important;
+  width: 100% !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  max-height: 38px !important;
+  border-radius: var(--app-radius-sm) !important;
+  box-sizing: border-box !important;
+  background-color: #FFFFFF !important;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+/* Strip label margins inside input groups */
+.shiny-input-container label.input-group-btn,
+.input-group > label.input-group-btn,
+label.input-group-btn {
+  margin: 0 !important;
+  margin-bottom: 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: stretch !important;
+  height: 100% !important;
+  min-height: 38px !important;
+  max-height: 38px !important;
+  flex: 0 0 auto !important;
+  cursor: pointer !important;
+  border: none !important;
+  background: transparent !important;
+  line-height: normal !important;
+}
+
+/* Browse Button: Sleek, perfectly sized and themed */
+.shiny-input-container .btn-file,
+.input-group .btn-file,
+.btn-file.btn,
+.btn-file {
+  height: 38px !important;
+  min-height: 38px !important;
+  max-height: 38px !important;
+  box-sizing: border-box !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 16px !important;
+  margin: 0 !important;
+  font-family: var(--font-display) !important;
+  font-size: 0.85rem !important;
+  font-weight: 600 !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  color: var(--app-forest) !important;
+  background-color: var(--app-ink-soft) !important;
+  border: 1px solid var(--app-border-strong) !important;
+  border-right: none !important;
+  border-top-left-radius: var(--app-radius-sm) !important;
+  border-bottom-left-radius: var(--app-radius-sm) !important;
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+  cursor: pointer !important;
+  box-shadow: none !important;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease !important;
+}
+
+.shiny-input-container .btn-file:hover,
+.input-group .btn-file:hover,
+.btn-file:hover {
+  background-color: #BBF7D0 !important;
+  color: #14532D !important;
+  border-color: var(--app-ink) !important;
+}
+
+.shiny-input-container .btn-file:active,
+.input-group .btn-file:active,
+.btn-file:active {
+  background-color: #86EFAC !important;
+}
+
+/* File name input box beside Browse button */
+.shiny-input-container .input-group input[type="text"].form-control,
+.input-group:has(.btn-file) input[type="text"].form-control,
+label.input-group-btn + input[type="text"].form-control,
+label.input-group-btn + .form-control {
+  height: 38px !important;
+  min-height: 38px !important;
+  max-height: 38px !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  padding: 0 14px !important;
+  font-family: var(--font-body) !important;
+  font-size: 0.875rem !important;
+  line-height: 36px !important;
+  color: var(--app-text) !important;
+  background-color: #FFFFFF !important;
+  border: 1px solid var(--app-border-strong) !important;
+  border-left: 1px solid var(--app-border) !important;
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+  border-top-right-radius: var(--app-radius-sm) !important;
+  border-bottom-right-radius: var(--app-radius-sm) !important;
+  flex: 1 1 auto !important;
+  width: 1% !important;
+  cursor: default !important;
+  box-shadow: none !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+.shiny-input-container .input-group input[type="text"].form-control::placeholder,
+label.input-group-btn + .form-control::placeholder {
+  color: var(--app-text-muted) !important;
+  opacity: 0.85;
+}
+
+/* Unified Focus state across button and input */
+.shiny-input-container .input-group:focus-within,
+.input-group:has(.btn-file):focus-within {
+  box-shadow: 0 0 0 3px var(--app-focus) !important;
+  border-radius: var(--app-radius-sm) !important;
+}
+
+.shiny-input-container .input-group:focus-within .btn-file,
+.shiny-input-container .input-group:focus-within .form-control,
+.input-group:has(.btn-file):focus-within .btn-file,
+.input-group:has(.btn-file):focus-within .form-control {
+  border-color: var(--app-ink) !important;
+}
+
+/* Upload Progress Bar */
+.shiny-file-input-progress {
+  height: 4px !important;
+  margin-top: 6px !important;
+  margin-bottom: 0 !important;
+  border-radius: 2px !important;
+  background-color: var(--app-border) !important;
+  overflow: hidden !important;
+}
+
+.shiny-file-input-progress:not(.active) {
+  display: none !important;
+}
+
+.shiny-file-input-progress.active {
+  display: block !important;
+}
+
+.shiny-file-input-progress .progress-bar {
+  background-color: var(--app-ink) !important;
+  transition: width 0.2s ease !important;
+}
+
 
