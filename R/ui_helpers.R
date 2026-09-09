@@ -132,7 +132,6 @@ upload_step_ui <- function(can_fetch_master = TRUE) {
     card(
       class = "app-card",
       card_header(
-        div(class = "step-title"),
         tags$h4("Upload & Fetch Data")
       ),
       card_body(
@@ -181,7 +180,6 @@ upload_step_ui <- function(can_fetch_master = TRUE) {
     card(
       class = "app-card",
       card_header(
-        div(class = "step-title"),
         tags$h4("Data Health & Verification")
       ),
       card_body(
@@ -414,7 +412,7 @@ mapping_step_ui <- function() {
             class = "section-header-content",
             tags$h4(
               class = "section-header-title",
-              icon_svg("sliders", size = 18, class = "me-2 text-success"),
+              icon_svg("sliders", size = 18, class = "text-success"),
               "Match Engine Scope & Criteria Configuration"
             ),
             tags$p(
@@ -547,7 +545,7 @@ mapping_step_ui <- function() {
             class = "section-header-content",
             tags$h4(
               class = "section-header-title",
-              icon_svg("clipboard-check", size = 18, class = "me-2 text-success"),
+              icon_svg("clipboard-check", size = 18, class = "text-success"),
               "Column Alignment Workbench"
             ),
             tags$p(
@@ -555,7 +553,10 @@ mapping_step_ui <- function() {
               "Align your uploaded spreadsheet headers with CCY master canonical fields."
             )
           ),
-          uiOutput("mapping_progress_pill")
+          div(
+            class = "section-header-actions",
+            uiOutput("mapping_progress_pill")
+          )
         )
       ),
       card_body(
@@ -627,7 +628,6 @@ strategy_step_ui <- function() {
     card(
       class = "app-card",
       card_header(
-        div(class = "step-title"),
         tags$h4("Configure Matching Parameters")
       ),
       card_body(
@@ -691,7 +691,6 @@ strategy_step_ui <- function() {
     card(
       class = "app-card",
       card_header(
-        div(class = "step-title"),
         tags$h4("Strategy & MPCA Assistance Recency Simulator")
       ),
       card_body(
@@ -717,8 +716,7 @@ matching_step_ui <- function() {
   card(
     class = "app-card",
     card_header(
-      div(class = "step-title"),
-      tags$h4(tagList(icon_svg("zap", size = 18, class = "me-2 text-success"), "Run Deduplication Matching Engine"))
+      tags$h4(tagList(icon_svg("zap", size = 18, class = "text-success"), "Run Deduplication Matching Engine"))
     ),
     card_body(
       tags$div(
@@ -766,7 +764,6 @@ results_step_ui <- function() {
     card(
       class = "app-card",
       card_header(
-        div(class = "step-title"),
         tags$h4("Deduplication Results Dossier")
       ),
       card_body(
@@ -776,7 +773,6 @@ results_step_ui <- function() {
     card(
       class = "app-card",
       card_header(
-        div(class = "step-title"),
         tags$h4("Export & Actions")
       ),
       card_body(
@@ -821,7 +817,7 @@ admin_step_ui <- function() {
       class = "admin-header-bar",
       div(
         class = "admin-header-title",
-        tags$h3(icon_svg("sliders", size = 20, class = "me-2 text-success"), "System Administration & Control Center"),
+        tags$h3(icon_svg("sliders", size = 20, class = "text-success"), "System Administration & Control Center"),
         tags$p("Manage authorized user accounts, partner directories, compliance audit trails, and system backups.")
       ),
       div(

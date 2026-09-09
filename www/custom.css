@@ -752,22 +752,36 @@ h1, h2, h3, h4, h5, h6,
   box-shadow: var(--app-shadow-md);
 }
 
-.card-header {
-  padding: 18px 24px;
-  border-bottom: 1px solid var(--app-border);
-  background: #FAFAFA;
+.card-header,
+.app-card > .card-header {
+  padding: 22px 28px !important;
+  border-bottom: 1px solid var(--app-border) !important;
+  background: #FAFAFA !important;
 }
 
-.card-header h4 {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 700;
-  letter-spacing: -0.015em;
-  color: var(--app-forest);
+.card-header h4,
+.app-card > .card-header h4 {
+  margin: 0 !important;
+  font-size: 1.15rem !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.015em !important;
+  color: var(--app-forest) !important;
+  line-height: 1.35 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.card-header h4 svg,
+.card-header h4 .app-svg-icon,
+.app-card > .card-header h4 svg,
+.app-card > .card-header h4 .app-svg-icon {
+  margin: 0 !important;
+  flex-shrink: 0 !important;
 }
 
 .card-body {
-  padding: 24px;
+  padding: 24px 28px;
 }
 
 .step-title {
@@ -777,6 +791,12 @@ h1, h2, h3, h4, h5, h6,
   font-size: 0.65rem;
   color: var(--app-sea);
   margin-bottom: 4px;
+}
+
+.step-title:empty {
+  display: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 /* 5. Modern Button Hierarchy */
@@ -1437,32 +1457,38 @@ label.input-group-btn {
 
 /* Standardized Section Header Architecture & Spacing */
 .section-header-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 18px;
-  width: 100%;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-start !important;
+  flex-wrap: wrap !important;
+  gap: 16px 24px !important;
+  width: 100% !important;
 }
 
 .section-header-content {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex: 1;
-  min-width: 280px;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  flex: 1 1 auto !important;
+  min-width: 280px !important;
 }
 
 .section-header-title {
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: var(--app-forest);
-  margin: 0;
-  letter-spacing: -0.015em;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  line-height: 1.35;
+  font-size: 1.15rem !important;
+  font-weight: 700 !important;
+  color: var(--app-forest) !important;
+  margin: 0 !important;
+  letter-spacing: -0.015em !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  line-height: 1.35 !important;
+}
+
+.section-header-title svg,
+.section-header-title .app-svg-icon {
+  margin: 0 !important;
+  flex-shrink: 0 !important;
 }
 
 .section-header-icon {
@@ -1472,30 +1498,40 @@ label.input-group-btn {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  margin: 0 !important;
 }
 
 .section-header-desc {
-  font-size: 0.875rem;
-  color: var(--app-text-muted);
-  margin: 0;
-  line-height: 1.5;
+  font-size: 0.85rem !important;
+  color: var(--app-text-muted) !important;
+  margin: 0 !important;
+  line-height: 1.45 !important;
 }
 
-.section-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+.section-header-actions,
+.section-header-bar > #mapping_progress_pill,
+.section-header-bar > .shiny-html-output {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-shrink: 0 !important;
+  align-self: flex-start !important;
+  margin-top: 0 !important;
 }
 
 .section-header-btn {
   font-size: 0.815rem !important;
   font-weight: 600 !important;
-  padding: 6px 14px !important;
+  padding: 5px 14px !important;
+  min-height: 32px !important;
   border-radius: var(--app-radius-sm, 6px) !important;
   border: 1px solid var(--app-border) !important;
   background: #FFFFFF !important;
   color: var(--app-text) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
   transition: background-color var(--motion-dur-micro) var(--motion-ease-std),
               border-color var(--motion-dur-micro) var(--motion-ease-std),
               color var(--motion-dur-micro) var(--motion-ease-std),
@@ -1522,9 +1558,9 @@ label.input-group-btn {
 
 .mapping-scope-card > .card-header,
 .mapping-workbench-card > .card-header {
-  padding: 20px 24px;
-  background: #FAFAFA;
-  border-bottom: 1px solid var(--app-border);
+  padding: 22px 28px !important;
+  background: #FAFAFA !important;
+  border-bottom: 1px solid var(--app-border) !important;
 }
 
 .mapping-scope-card > .card-body {
@@ -1778,13 +1814,16 @@ label.input-group-btn {
 
 /* Mapping Progress & Health Pills */
 .mapping-progress-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 12px;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  box-shadow: var(--app-shadow-xs);
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 5px 12px !important;
+  min-height: 32px !important;
+  border-radius: 20px !important;
+  font-size: 0.8rem !important;
+  box-shadow: var(--app-shadow-xs) !important;
+  line-height: 1 !important;
+  box-sizing: border-box !important;
 }
 
 .mapping-progress-pill.pill-complete {
@@ -2562,31 +2601,49 @@ button[disabled] .spinner-grow,
 }
 
 .admin-header-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 18px 22px;
-  background: #FFFFFF;
-  border: 1px solid var(--app-border);
-  border-radius: var(--app-radius-md);
-  margin-bottom: 20px;
-  box-shadow: var(--app-shadow-xs);
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  padding: 22px 28px !important;
+  background: #FFFFFF !important;
+  border: 1px solid var(--app-border) !important;
+  border-radius: var(--app-radius-md) !important;
+  margin-bottom: 24px !important;
+  box-shadow: var(--app-shadow-xs) !important;
+  gap: 16px 24px !important;
+  flex-wrap: wrap !important;
+}
+
+.admin-header-title {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  flex: 1 1 auto !important;
+  min-width: 280px !important;
 }
 
 .admin-header-title h3 {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--app-forest);
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  font-size: 1.25rem !important;
+  font-weight: 700 !important;
+  color: var(--app-forest) !important;
+  margin: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  line-height: 1.35 !important;
+}
+
+.admin-header-title h3 svg,
+.admin-header-title h3 .app-svg-icon {
+  margin: 0 !important;
+  flex-shrink: 0 !important;
 }
 
 .admin-header-title p {
-  margin: 2px 0 0;
-  font-size: 0.82rem;
-  color: var(--app-text-muted);
+  margin: 0 !important;
+  font-size: 0.85rem !important;
+  color: var(--app-text-muted) !important;
+  line-height: 1.45 !important;
 }
 
 .admin-card-surface {
@@ -2913,5 +2970,17 @@ label.input-group-btn + .form-control::placeholder {
   background-color: var(--app-ink) !important;
   transition: width 0.2s ease !important;
 }
+
+/* Responsive Card & Section Header Breathing Room */
+@media (max-width: 640px) {
+  .card-header,
+  .app-card > .card-header,
+  .mapping-scope-card > .card-header,
+  .mapping-workbench-card > .card-header,
+  .admin-header-bar {
+    padding: 16px 20px !important;
+  }
+}
+
 
 
