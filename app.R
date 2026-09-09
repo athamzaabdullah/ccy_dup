@@ -10,9 +10,30 @@ library(shiny)
 library(promises)
 library(future)
 
-cores <- parallel::detectCores()
-worker_count <- if (is.na(cores) || cores <= 1) 1L else max(1L, min(as.integer(cores - 1L), 4L))
-future::plan(future::multisession, workers = worker_count)
+# Determine available cores safely, respecting container/cgroups CPU quotas (e.g. Posit Connect Cloud, Docker)
+avail_cores <- tryCatch({
+  if (requireNamespace("parallelly", quietly = TRUE)) {
+    as.integer(parallelly::availableCores())
+  } else {
+    as.integer(parallel::detectCores())
+  }
+}, error = function(e) 1L)
+
+worker_count <- if (is.na(avail_cores) || avail_cores <= 1L) {
+  1L
+} else {
+  max(1L, min(as.integer(avail_cores - 1L), 4L))
+}
+
+# Set maxWorkers.localhost protection options to allow single worker in constrained containers
+options(parallelly.maxWorkers.localhost = c(1.0, 3.0))
+
+tryCatch({
+  future::plan(future::multisession, workers = worker_count)
+}, error = function(e) {
+  warning("Failed to initialize multisession workers (", e$message, "); falling back to sequential plan.")
+  future::plan(future::sequential)
+})
 
 # Log Shiny server errors to tmp/shiny_error.log for diagnostics
 if (!dir.exists("tmp")) dir.create("tmp", recursive = TRUE)

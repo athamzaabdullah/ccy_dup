@@ -3566,13 +3566,13 @@
   },
   "files": {
     "app.R": {
-      "checksum": "d71977394a5397057011b2e58204400d"
+      "checksum": "f6eeb6ec6890d5d5f95e867ce950ac22"
     },
     "install.R": {
-      "checksum": "b87e093cdb9ed616f89865566065aadd"
+      "checksum": "dee1363ed8af822aae6c34b231177012"
     },
     "R/activityinfo.R": {
-      "checksum": "27c416118b1c7d081a31d6b7e8c96df3"
+      "checksum": "974ea18636b1ab3f0c57a0815176e10f"
     },
     "R/auth.R": {
       "checksum": "0f5595f05383cc901f65fc6daf581c00"
@@ -3599,10 +3599,10 @@
       "checksum": "ce087a07959c8842f26eac31bc99f74c"
     },
     "R/ui_helpers.R": {
-      "checksum": "7bee98b997239d024ba4d44b3a42d3ce"
+      "checksum": "38c1829a1fedf928ccb5cef18bedf122"
     },
     "README.md": {
-      "checksum": "b3086eec1ca2eefce49a17b3b6a7ce39"
+      "checksum": "86ef13db0a5da6d59e08dd80e86ffdc2"
     },
     "tests/testthat.R": {
       "checksum": "6541185769d43f4021ca05aa330e54a0"
@@ -3641,7 +3641,7 @@
       "checksum": "77846f03840b34af59474854e9b0b31b"
     },
     "www/custom.css": {
-      "checksum": "9322a06399475b9ab9cfdd990f33b69a"
+      "checksum": "6804ba3f4723c0e4bf03745bdd170543"
     }
   },
   "users": null
